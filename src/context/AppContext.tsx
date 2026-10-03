@@ -286,12 +286,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Local storage persistence initialization
   const [user, setUser] = useState<UserProfile | null>(() => {
     const savedUser = localStorage.getItem('thingor_user');
-    return savedUser ? JSON.parse(savedUser) : {
-      id: 'demo-user-123',
-      user_id: 'demo-user-123',
-      display_name: 'Alex Sterling',
-      email: 'alex@thingor.app'
-    };
+    return savedUser ? JSON.parse(savedUser) : null;
   });
 
   const [items, setItems] = useState<Item[]>(() => {
@@ -330,7 +325,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   // UI state
-  const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
+  const [currentView, setCurrentView] = useState<ViewMode>('landing');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isAddEditItemModalOpen, setIsAddEditItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
