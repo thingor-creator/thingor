@@ -254,7 +254,6 @@ export const AuthModal: React.FC = () => {
                   <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="text"
-                    placeholder={language === 'hu' ? 'Kovács Alex' : 'Alex Sterling'}
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     required
@@ -275,7 +274,6 @@ export const AuthModal: React.FC = () => {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="email"
-                    placeholder="alex@thingor.app"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -309,7 +307,6 @@ export const AuthModal: React.FC = () => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -339,7 +336,6 @@ export const AuthModal: React.FC = () => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
