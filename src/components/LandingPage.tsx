@@ -12,7 +12,6 @@ import {
   Car,
   Sparkles,
   CheckCircle2,
-  Clock,
   Layers,
   FolderTree
 } from 'lucide-react';
@@ -48,108 +47,122 @@ export const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       
       {/* HERO SECTION */}
-      <section className="relative pt-20 pb-24 md:pt-32 md:pb-36 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
+      <section className="relative pt-12 pb-20 md:pt-20 md:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
         {/* Background glow effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-emerald-500/10 blur-[130px] rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 left-1/3 w-[300px] h-[300px] bg-teal-500/10 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-emerald-500/10 blur-[140px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/3 right-1/4 w-[350px] h-[350px] bg-teal-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-        {/* Hero badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900/80 text-emerald-400 text-xs font-semibold tracking-wide mb-8 animate-fade-in shadow-inner">
-          <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-          <span>{language === 'hu' ? 'SZEMÉLYES TÁRGYNYILVÁNTARTÓ ÉS RENDSZEREZŐ PLATFORM' : 'PERSONAL INVENTORY & ORGANIZER PLATFORM'}</span>
-        </div>
-
-        {/* Title & Tagline Logo */}
-        <div className="flex justify-center mb-8">
-          <img
-            src="/logo.png"
-            alt="Thingor Logo"
-            className="h-44 sm:h-64 md:h-80 lg:h-96 w-auto max-w-full object-contain drop-shadow-[0_20px_40px_rgba(16,185,129,0.25)] transition-transform hover:scale-105 duration-300"
-          />
-        </div>
-        <p className="text-2xl sm:text-3xl font-semibold text-emerald-400 mt-2 tracking-tight">
-          {t('tagline')}
-        </p>
-
-        {/* Short explanation */}
-        <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
-          {t('tagline_sub')}
-        </p>
-
-        {/* CTAs */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button
-            onClick={handleStartOrganizing}
-            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-base shadow-lg shadow-emerald-950/50 hover:shadow-emerald-900/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-          >
-            {t('start_organizing')}
-            <ArrowRight className="h-5 w-5 stroke-[2.5]" />
-          </button>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           
-          <button
-            onClick={handleSeeHowItWorks}
-            className="w-full sm:w-auto px-7 py-4 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800/80 text-slate-200 font-semibold text-base transition-all flex items-center justify-center gap-2"
-          >
-            {t('see_how_it_works')}
-          </button>
-        </div>
-
-        {/* Hero Interactive App Teaser / Mock Dashboard Card */}
-        <div className="mt-16 relative mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900/90 p-4 sm:p-6 shadow-2xl shadow-emerald-950/20 backdrop-blur">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-red-500/80" />
-              <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-              <div className="h-3 w-3 rounded-full bg-emerald-500/80" />
-              <span className="ml-2 text-xs font-mono text-slate-400">thingor.app/dashboard</span>
+          {/* LEFT COLUMN: Primary Text & Main CTA (7 cols on lg) */}
+          <div className="lg:col-span-7 text-center lg:text-left space-y-6">
+            
+            {/* Hero badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900/90 text-emerald-400 text-xs font-semibold tracking-wide shadow-inner">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+              <span>{language === 'hu' ? 'SZEMÉLYES TÁRGYNYILVÁNTARTÓ PLATFORM' : 'PERSONAL INVENTORY PLATFORM'}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 font-medium">128 {language === 'hu' ? 'tárgy rögzítve' : 'Items Tracked'}</span>
-              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300">{language === 'hu' ? 'Összérték' : 'Total Value'}: €12,450</span>
+
+            {/* Logo Image & Tagline Headline */}
+            <div className="space-y-4">
+              <img
+                src="/logo.png"
+                alt="Thingor Logo"
+                className="h-20 sm:h-28 md:h-32 w-auto object-contain mx-auto lg:mx-0 drop-shadow-[0_15px_30px_rgba(16,185,129,0.2)]"
+              />
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
+                {t('tagline')}
+              </h1>
+            </div>
+
+            {/* Short explanation */}
+            <p className="text-base sm:text-lg text-slate-300 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
+              {t('tagline_sub')}
+            </p>
+
+            {/* Primary & Secondary CTAs */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+              <button
+                onClick={handleStartOrganizing}
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base shadow-xl shadow-emerald-950/60 hover:shadow-emerald-900/60 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center justify-center gap-2 group ring-2 ring-emerald-400/30"
+              >
+                <span>{t('start_organizing')}</span>
+                <ArrowRight className="h-5 w-5 stroke-[2.5] group-hover:translate-x-1 transition-transform" />
+              </button>
+              
+              <button
+                onClick={handleSeeHowItWorks}
+                className="w-full sm:w-auto px-6 py-4 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold text-sm transition-all flex items-center justify-center gap-2"
+              >
+                {t('see_how_it_works')}
+              </button>
+            </div>
+
+            {/* Trust highlights */}
+            <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <span>{language === 'hu' ? 'Azonnali használat' : 'Instant Setup'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                <span>{language === 'hu' ? 'Biztonságos adattárolás' : 'Secure Data Storage'}</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: De-cluttered, compact dashboard preview (5 cols on lg) */}
+          <div className="lg:col-span-5 relative mx-auto w-full max-w-lg lg:max-w-none">
+            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/80 p-4 sm:p-5 shadow-2xl shadow-emerald-950/30 backdrop-blur-md">
+              
+              {/* Mockup Topbar */}
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3 mb-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
+                  <span className="ml-2 text-[11px] font-mono text-slate-400">thingor.app/dashboard</span>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/40 font-semibold">
+                  128 {language === 'hu' ? 'tárgy' : 'Items'}
+                </span>
+              </div>
+
+              {/* 2 Clean Item Cards */}
+              <div className="space-y-3 text-left">
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-slate-700 transition-colors">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-white">Makita DHP486 Ütvefúró</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/40 font-medium">{language === 'hu' ? 'Jó állapot' : 'Good'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">{language === 'hu' ? 'Helyszín' : 'Location'}: Otthon → Garázs → Műhely</p>
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+                    <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-emerald-400 font-semibold">€180</strong></span>
+                    <span className="text-emerald-400 flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> {language === 'hu' ? 'Garancia 2028-ig' : 'Warranty 2028'}</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-slate-700 transition-colors">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-white">MacBook Pro 16"</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/40 font-medium">{language === 'hu' ? 'Kitűnő' : 'Excellent'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">{language === 'hu' ? 'Helyszín' : 'Location'}: Otthon → Dolgozó → Íróasztal</p>
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+                    <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-emerald-400 font-semibold">€3,200</strong></span>
+                    <span className="text-emerald-400 flex items-center gap-1"><FileText className="h-3 w-3" /> {language === 'hu' ? '2 dokumentum' : '2 Docs'}</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/60">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-400">Makita DHP486 fúró</span>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/50">{language === 'hu' ? 'Jó állapot' : 'Good Condition'}</span>
-              </div>
-              <p className="text-xs text-slate-300 font-medium">{language === 'hu' ? 'Helyszín' : 'Location'}: Otthon → Garázs → Műhely → Szerszámos szekrény</p>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-                <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-white">€180</strong></span>
-                <span className="text-emerald-400 flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> {language === 'hu' ? 'Garancia aktív' : 'Warranty Active'}</span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/60">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-400">MacBook Pro 16"</span>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/50">{language === 'hu' ? 'Kitűnő állapot' : 'Excellent'}</span>
-              </div>
-              <p className="text-xs text-slate-300 font-medium">{language === 'hu' ? 'Helyszín' : 'Location'}: Otthon → Dolgozó szoba → Íróasztal</p>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-                <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-white">€3,200</strong></span>
-                <span className="text-emerald-400 flex items-center gap-1"><FileText className="h-3 w-3" /> {language === 'hu' ? '2 dokumentum' : '2 Docs Attached'}</span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/60">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-400">Trek FX 3 kerékpár</span>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-300 border border-amber-800/50">{language === 'hu' ? 'Garancia lejáróban' : 'Warranty Expiring'}</span>
-              </div>
-              <p className="text-xs text-slate-300 font-medium">{language === 'hu' ? 'Helyszín' : 'Location'}: Otthon → Garázs</p>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-                <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-white">€750</strong></span>
-                <span className="text-amber-400 flex items-center gap-1"><Clock className="h-3 w-3" /> {language === 'hu' ? 'Hamarosan lejár' : 'Expiring Soon'}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* SECTION 1: EVERY ITEM IN ONE PLACE */}
+      {/* SECTION 1: EVERY ITEM IN ONE PLACE (Categories Grid) */}
       <section id="how-it-works" className="py-20 bg-slate-900/50 border-y border-slate-800/80 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -159,7 +172,7 @@ export const LandingPage: React.FC = () => {
             <h3 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
               Minden tárgyad egy helyen
             </h3>
-            <p className="mt-4 text-slate-400 text-base sm:text-lg">
+            <p className="mt-4 text-slate-400 text-base sm:text-lg leading-relaxed">
               {language === 'hu'
                 ? 'Legyen szó a műhelyben lévő szerszámokról, az íróasztalon lévő elektronikáról vagy a raktárban tárolt értékes berendezésekről, a Thingor mindent zökkenőmentesen kezel.'
                 : "Whether it's power tools in the workshop, electronics on your desk, or high-value equipment in storage, Thingor handles everything seamlessly."}
@@ -189,7 +202,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 2: MORE THAN A LIST */}
+      {/* SECTION 2: MORE THAN A LIST (Left: Text + Checklist, Right: Rich Card) */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -255,7 +268,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 3: KNOW WHERE IT IS (LOCATION HIERARCHY) */}
+      {/* SECTION 3: KNOW WHERE IT IS (LOCATION HIERARCHY - Centered Tree) */}
       <section className="py-20 bg-slate-900/40 border-y border-slate-800/80 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3">
@@ -264,7 +277,7 @@ export const LandingPage: React.FC = () => {
           <h3 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             Tudd, hol van
           </h3>
-          <p className="mt-4 text-slate-400 text-base max-w-xl mx-auto">
+          <p className="mt-4 text-slate-400 text-base max-w-xl mx-auto leading-relaxed">
             {language === 'hu'
               ? 'Soha többé ne pazarolj időt fiókok vagy dobozok keresgélésére. Rendszerezd a tárgyaidat több szintű hierarchikus struktúrába.'
               : 'Never waste time searching drawers or boxes again. Organize your items into multi-level hierarchical structures.'}
@@ -305,11 +318,13 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 4: DOCUMENTS & WARRANTY */}
+      {/* SECTION 4: DOCUMENTS & WARRANTY (Alternating Layout: Left Cards, Right Text) */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="order-2 md:order-1 space-y-4">
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 flex items-center gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          
+          {/* Left Cards */}
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 flex items-center gap-4 hover:border-slate-700 transition-colors">
               <div className="p-3 rounded-lg bg-emerald-950 text-emerald-400">
                 <FileText className="h-6 w-6" />
               </div>
@@ -329,7 +344,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 flex items-center gap-4">
+            <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 flex items-center gap-4 hover:border-slate-700 transition-colors">
               <div className="p-3 rounded-lg bg-slate-800 text-slate-300">
                 <FileText className="h-6 w-6" />
               </div>
@@ -340,7 +355,8 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="order-1 md:order-2">
+          {/* Right Text */}
+          <div>
             <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3">
               {language === 'hu' ? 'MINDEN EGY HELYEN' : 'ALL IN ONE PLACE'}
             </h2>
@@ -353,6 +369,7 @@ export const LandingPage: React.FC = () => {
                 : 'Never search through emails or paper drawers when an item breaks. Attach invoices, user manuals, certificates, and warranty papers directly to each item.'}
             </p>
           </div>
+
         </div>
       </section>
 
@@ -365,7 +382,7 @@ export const LandingPage: React.FC = () => {
           <h3 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             Folyamatosan bővülő platform
           </h3>
-          <p className="mt-4 text-slate-400 text-base max-w-2xl mx-auto">
+          <p className="mt-4 text-slate-400 text-base max-w-2xl mx-auto leading-relaxed">
             {language === 'hu'
               ? 'A Thingor egy olyan skálázható architektúrára épül, amely fel van készítve a jövőbeli funkciók fogadására:'
               : 'Thingor is built on an extensible architectural foundation designed to support upcoming advanced features:'}
