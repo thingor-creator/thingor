@@ -50,98 +50,98 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
-      <div className="mx-auto flex h-24 sm:h-28 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         
         {/* Logo & Brand */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 xl:gap-8 shrink min-w-0">
           <button
             onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
-            className="flex items-center gap-3 text-left focus:outline-none group py-1"
+            className="flex items-center gap-3 text-left focus:outline-none group py-1 shrink-0"
           >
             <img
               src="/logo.png"
               alt="Thingor Logo"
-              className="h-16 sm:h-20 md:h-22 lg:h-24 w-auto object-contain group-hover:scale-105 transition-all"
+              className="h-10 sm:h-12 w-auto object-contain group-hover:scale-105 transition-all shrink-0"
             />
-            <span className="text-xs font-medium tracking-wider text-slate-400 hidden xl:inline">
+            <span className="text-xs font-medium tracking-wider text-slate-400 hidden xl:inline whitespace-nowrap">
               {t('tagline')}
             </span>
           </button>
 
           {/* Desktop Nav Links (Authenticated) */}
           {isAuthenticated && (
-            <nav className="hidden md:flex items-center space-x-1">
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-2 shrink">
               <button
                 onClick={() => handleNav('dashboard')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'dashboard'
-                    ? 'bg-slate-800 text-emerald-400'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
-                <LayoutDashboard className="h-4 w-4" />
-                {t('dashboard')}
+                <LayoutDashboard className="h-4 w-4 shrink-0" />
+                <span>{t('dashboard')}</span>
               </button>
 
               <button
                 onClick={() => handleNav('items')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'items'
-                    ? 'bg-slate-800 text-emerald-400'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
-                <Boxes className="h-4 w-4" />
-                {t('my_things')}
+                <Boxes className="h-4 w-4 shrink-0" />
+                <span>{t('my_things')}</span>
               </button>
 
               <button
                 onClick={() => handleNav('locations')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'locations'
-                    ? 'bg-slate-800 text-emerald-400'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
-                <MapPin className="h-4 w-4" />
-                {t('locations')}
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span>{t('locations')}</span>
               </button>
 
               <button
                 onClick={() => handleNav('categories')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'categories'
-                    ? 'bg-slate-800 text-emerald-400'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
-                <Tag className="h-4 w-4" />
-                {t('categories')}
+                <Tag className="h-4 w-4 shrink-0" />
+                <span>{t('categories')}</span>
               </button>
 
               <button
                 onClick={() => handleNav('documents')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'documents'
-                    ? 'bg-slate-800 text-emerald-400'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                 }`}
               >
-                <FileText className="h-4 w-4" />
-                {t('documents')}
+                <FileText className="h-4 w-4 shrink-0" />
+                <span>{t('documents')}</span>
               </button>
 
               {isAdmin && (
                 <button
                   onClick={() => handleNav('admin')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
                     currentView === 'admin'
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60 shadow-sm'
                       : 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50'
                   }`}
                 >
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  {t('admin_panel')}
+                  <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <span>{t('admin_panel')}</span>
                 </button>
               )}
             </nav>
@@ -149,7 +149,7 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Right Action buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           
           {/* LANGUAGE SELECTOR TOGGLE */}
           <div className="relative">
@@ -285,7 +285,7 @@ export const Navbar: React.FC = () => {
           {/* Mobile hamburger menu toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-300 hover:bg-slate-800 focus:outline-none"
+            className="lg:hidden p-2 rounded-lg text-slate-300 hover:bg-slate-800 focus:outline-none shrink-0"
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -294,7 +294,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2">
+        <div className="lg:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150">
           {isAuthenticated ? (
             <>
               <button
