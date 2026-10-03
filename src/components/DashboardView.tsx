@@ -80,10 +80,10 @@ export const DashboardView: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={handleOpenAddThing}
-            className="flex items-center justify-center p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-105 active:scale-95"
-            title={t('add_thing')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Plus className="h-5 w-5 stroke-[2.5]" />
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <span>{t('add_thing')}</span>
           </button>
           
           <button
