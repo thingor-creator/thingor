@@ -1,0 +1,523 @@
+import React, { useState } from 'react';
+import { useApp } from '../context/AppContext';
+import type { ItemDocument } from '../types';
+import {
+  X,
+  Edit3,
+  Trash2,
+  MapPin,
+  Tag,
+  ShieldCheck,
+  FileText,
+  Calendar,
+  Euro,
+  Store,
+  Plus,
+  AlertTriangle,
+  ExternalLink,
+  FileCode,
+  Image as ImageIcon
+} from 'lucide-react';
+
+export const ItemDetailModal: React.FC = () => {
+  const {
+    selectedItemId,
+    setSelectedItemId,
+    items,
+    documents,
+    deleteItem,
+    setEditingItem,
+    setIsAddEditItemModalOpen,
+    getLocationPath,
+    getCategoryName,
+    addDocument,
+    deleteDocument
+  } = useApp();
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'photos' | 'notes'>('overview');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // New Document Upload State
+  const [isAddDocOpen, setIsAddDocOpen] = useState(false);
+  const [newDocName, setNewDocName] = useState('');
+  const [newDocType, setNewDocType] = useState<ItemDocument['document_type']>('Invoice');
+  const [newDocUrl, setNewDocUrl] = useState('');
+
+  if (!selectedItemId) return null;
+
+  const item = items.find(i => i.id === selectedItemId);
+  if (!item) return null;
+
+  const itemDocs = documents.filter(d => d.item_id === item.id);
+  const locationPath = getLocationPath(item.location_id);
+  const categoryName = getCategoryName(item.category_id);
+
+  const handleDelete = async () => {
+    await deleteItem(item.id);
+    setSelectedItemId(null);
+  };
+
+  const handleEdit = () => {
+    setEditingItem(item);
+    setIsAddEditItemModalOpen(true);
+  };
+
+  const handleAddDocSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocName.trim()) return;
+
+    await addDocument(
+      item.id,
+      newDocName,
+      newDocUrl || '#',
+      newDocType
+    );
+
+    setNewDocName('');
+    setNewDocUrl('');
+    setIsAddDocOpen(false);
+  };
+
+  // Warranty status calculation
+  let warrantyStatus: 'active' | 'expiring' | 'expired' | 'none' = 'none';
+  let daysRemaining = 0;
+
+  if (item.warranty_end) {
+    const now = new Date();
+    const expDate = new Date(item.warranty_end);
+    const diffTime = expDate.getTime() - now.getTime();
+    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (daysRemaining < 0) {
+      warrantyStatus = 'expired';
+    } else if (daysRemaining <= 30) {
+      warrantyStatus = 'expiring';
+    } else {
+      warrantyStatus = 'active';
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl overflow-hidden">
+        
+        {/* Close Button */}
+        <button
+          onClick={() => setSelectedItemId(null)}
+          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        {/* Modal Header with Hero Banner */}
+        <div className="relative border-b border-slate-800 bg-slate-950">
+          <div className="flex flex-col md:flex-row gap-6 p-6">
+            
+            {/* Main Photo */}
+            <div className="h-40 w-full md:w-48 rounded-xl bg-slate-900 overflow-hidden flex-shrink-0 border border-slate-800 relative">
+              {item.photo_url ? (
+                <img
+                  src={item.photo_url}
+                  alt={item.name}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';
+                  }}
+                />
+              ) : (
+                <div className="h-full w-full flex flex-col items-center justify-center text-slate-600">
+                  <ImageIcon className="h-8 w-8 mb-1" />
+                  <span className="text-xs">No photo</span>
+                </div>
+              )}
+            </div>
+
+            {/* Header Meta */}
+            <div className="flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1">
+                    <Tag className="h-3 w-3" />
+                    {categoryName}
+                  </span>
+
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
+                    {item.condition} condition
+                  </span>
+                </div>
+
+                <h2 className="text-2xl font-extrabold text-white tracking-tight">{item.name}</h2>
+
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+                  <MapPin className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                  <span className="font-medium text-slate-300">{locationPath}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons: Edit & Delete */}
+              <div className="mt-4 flex items-center gap-2">
+                <button
+                  onClick={handleEdit}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow transition-all"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Edit Thing
+                </button>
+
+                {isDeleting ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDelete}
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
+                    >
+                      Confirm Delete
+                    </button>
+                    <button
+                      onClick={() => setIsDeleting(false)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsDeleting(true)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-rose-950 hover:text-rose-300 hover:border-rose-800/60 text-slate-400 text-xs transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="flex border-t border-slate-800 px-6 gap-2 text-xs font-semibold overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-3 px-3 border-b-2 transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-emerald-400 text-emerald-400'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('documents')}
+              className={`py-3 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+                activeTab === 'documents'
+                  ? 'border-emerald-400 text-emerald-400'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              Documents ({itemDocs.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('photos')}
+              className={`py-3 px-3 border-b-2 transition-colors ${
+                activeTab === 'photos'
+                  ? 'border-emerald-400 text-emerald-400'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              Photos ({(item.additional_photos?.length || 0) + (item.photo_url ? 1 : 0)})
+            </button>
+            <button
+              onClick={() => setActiveTab('notes')}
+              className={`py-3 px-3 border-b-2 transition-colors ${
+                activeTab === 'notes'
+                  ? 'border-emerald-400 text-emerald-400'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              Notes
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Body Tab Content */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+          
+          {/* TAB 1: OVERVIEW & WARRANTY (Section 11) */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              
+              {/* Description */}
+              {item.description && (
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</h3>
+                  <p className="text-sm text-slate-300 leading-relaxed">{item.description}</p>
+                </div>
+              )}
+
+              {/* Specs Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
+                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-emerald-400" /> Purchase Date
+                  </span>
+                  <span className="text-sm font-bold text-white mt-1 block">
+                    {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
+                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> Purchase Price
+                  </span>
+                  <span className="text-sm font-bold text-white mt-1 block">
+                    {item.purchase_price ? `€${item.purchase_price}` : 'N/A'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
+                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> Current Value
+                  </span>
+                  <span className="text-sm font-bold text-emerald-400 mt-1 block">
+                    {item.current_value ? `€${item.current_value}` : 'N/A'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
+                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                    <Store className="h-3.5 w-3.5 text-emerald-400" /> Store / Seller
+                  </span>
+                  <span className="text-sm font-semibold text-white mt-1 block truncate">
+                    {item.store_seller || 'Unspecified'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
+                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-emerald-400" /> Location
+                  </span>
+                  <span className="text-xs font-semibold text-white mt-1 block truncate">
+                    {locationPath}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
+                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5 text-emerald-400" /> Condition
+                  </span>
+                  <span className="text-sm font-bold text-white mt-1 block">
+                    {item.condition}
+                  </span>
+                </div>
+              </div>
+
+              {/* WARRANTY CARD (Section 11) */}
+              <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                    Warranty Info
+                  </h3>
+
+                  {warrantyStatus === 'active' && (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/60">
+                      Warranty Active
+                    </span>
+                  )}
+                  {warrantyStatus === 'expiring' && (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800/60 flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Expiring Soon ({daysRemaining} days left)
+                    </span>
+                  )}
+                  {warrantyStatus === 'expired' && (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-950 text-rose-300 border border-rose-800/60">
+                      Warranty Expired
+                    </span>
+                  )}
+                  {warrantyStatus === 'none' && (
+                    <span className="text-xs text-slate-500">No warranty dates set</span>
+                  )}
+                </div>
+
+                {item.warranty_end && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-800/80 text-xs">
+                    <div>
+                      <span className="text-slate-400 block">Warranty Start</span>
+                      <span className="font-semibold text-white">
+                        {item.warranty_start ? new Date(item.warranty_start).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block">Expires</span>
+                      <span className="font-semibold text-white">
+                        {new Date(item.warranty_end).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 2: DOCUMENTS (Section 11) */}
+          {activeTab === 'documents' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-emerald-400" />
+                  Attached Documents
+                </h3>
+
+                <button
+                  onClick={() => setIsAddDocOpen(!isAddDocOpen)}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Upload Document
+                </button>
+              </div>
+
+              {/* Add document mini-form */}
+              {isAddDocOpen && (
+                <form onSubmit={handleAddDocSubmit} className="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-3">
+                  <h4 className="text-xs font-bold text-white">Add New Document Record</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-slate-400 mb-1">Document Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Invoice_Receipt.pdf"
+                        value={newDocName}
+                        onChange={(e) => setNewDocName(e.target.value)}
+                        required
+                        className="w-full p-2 rounded-lg border border-slate-800 bg-slate-900 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 mb-1">Document Type</label>
+                      <select
+                        value={newDocType}
+                        onChange={(e) => setNewDocType(e.target.value as ItemDocument['document_type'])}
+                        className="w-full p-2 rounded-lg border border-slate-800 bg-slate-900 text-white"
+                      >
+                        <option value="Invoice">Invoice / Receipt</option>
+                        <option value="Warranty">Warranty Certificate</option>
+                        <option value="Manual">User Manual</option>
+                        <option value="Certificate">Certificate</option>
+                        <option value="Photo">Photo Record</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddDocOpen(false)}
+                      className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 text-xs font-bold bg-emerald-500 text-slate-950 rounded-lg"
+                    >
+                      Save Document
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Documents List */}
+              {itemDocs.length === 0 ? (
+                <div className="p-8 text-center rounded-xl border border-slate-800 bg-slate-950/40 text-slate-400 text-xs">
+                  No documents attached to this item yet. Click "Upload Document" to add invoices or manuals.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {itemDocs.map(doc => (
+                    <div
+                      key={doc.id}
+                      className="p-3.5 rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-between hover:border-slate-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-lg bg-slate-900 text-emerald-400 flex-shrink-0">
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{doc.file_name}</p>
+                          <p className="text-[11px] text-slate-400">
+                            {doc.document_type} • Added {new Date(doc.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={doc.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 text-xs flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" /> View
+                        </a>
+                        <button
+                          onClick={() => deleteDocument(doc.id)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400"
+                          title="Delete document"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {/* TAB 3: PHOTOS (Section 11) */}
+          {activeTab === 'photos' && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-emerald-400" />
+                Photo Gallery
+              </h3>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {item.photo_url && (
+                  <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative group">
+                    <img src={item.photo_url} alt="Primary" className="w-full h-full object-cover" />
+                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-bold text-emerald-400">Primary Photo</span>
+                  </div>
+                )}
+
+                {item.additional_photos?.map((url, idx) => (
+                  <div key={idx} className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative">
+                    <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: NOTES (Section 11) */}
+          {activeTab === 'notes' && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <FileCode className="h-4 w-4 text-emerald-400" />
+                Item Notes & Maintenance Log
+              </h3>
+
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-950 text-sm text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
+                {item.notes || 'No custom notes added to this item yet. Click "Edit Thing" to add serial numbers, maintenance notes, or accessories.'}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+      </div>
+    </div>
+  );
+};
