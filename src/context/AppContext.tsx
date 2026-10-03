@@ -186,6 +186,8 @@ export const DEFAULT_DOCUMENTS: ItemDocument[] = [
   }
 ];
 
+export type AuthModalMode = 'login' | 'signup' | 'reset' | 'update_password';
+
 interface AppContextType {
   // Language / i18n
   language: Language;
@@ -196,7 +198,9 @@ interface AppContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, pass: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, pass: string, name: string) => Promise<{ success: boolean; error?: string; emailConfirmationRequired?: boolean }>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   
   // Navigation & Modals
@@ -212,8 +216,8 @@ interface AppContextType {
   
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  authModalMode: 'login' | 'signup' | 'reset';
-  setAuthModalMode: (mode: 'login' | 'signup' | 'reset') => void;
+  authModalMode: AuthModalMode;
+  setAuthModalMode: (mode: AuthModalMode) => void;
   
   isLocationModalOpen: boolean;
   setIsLocationModalOpen: (open: boolean) => void;
@@ -331,7 +335,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isAddEditItemModalOpen, setIsAddEditItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | 'reset'>('login');
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSupabaseInfoOpen, setIsSupabaseInfoOpen] = useState(false);
@@ -378,7 +382,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthModalMode('update_password');
+        setIsAuthModalOpen(true);
+      }
       if (session?.user) {
         setUser({
           id: session.user.id,
@@ -423,22 +431,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const signup = async (email: string, pass: string, name: string) => {
     if (isSupabaseConfigured && supabase) {
+      const redirectUrl = window.location.origin;
       const { data, error } = await supabase.auth.signUp({
         email,
         password: pass,
-        options: { data: { display_name: name } }
+        options: {
+          data: { display_name: name },
+          emailRedirectTo: redirectUrl
+        }
       });
       if (error) return { success: false, error: error.message };
-      if (data.user) {
+
+      if (data.user && !data.session) {
+        // Email confirmation is required by Supabase auth policy
+        return { success: true, emailConfirmationRequired: true };
+      }
+
+      if (data.user && data.session) {
         setUser({
           id: data.user.id,
           user_id: data.user.id,
-          display_name: name,
+          display_name: name || data.user.user_metadata?.display_name || email.split('@')[0],
           email: email
         });
+        setIsAuthModalOpen(false);
       }
-      setIsAuthModalOpen(false);
-      return { success: true };
+      return { success: true, emailConfirmationRequired: false };
     }
 
     // Fallback Signup
@@ -448,6 +466,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       display_name: name || email.split('@')[0],
       email: email
     });
+    setIsAuthModalOpen(false);
+    return { success: true, emailConfirmationRequired: false };
+  };
+
+  const resetPassword = async (email: string) => {
+    if (isSupabaseConfigured && supabase) {
+      const redirectUrl = window.location.origin;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    }
+    return { success: true };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { success: false, error: error.message };
+      setIsAuthModalOpen(false);
+      return { success: true };
+    }
     setIsAuthModalOpen(false);
     return { success: true };
   };
@@ -609,6 +650,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         isAuthenticated: !!user,
         login,
         signup,
+        resetPassword,
+        updatePassword,
         logout,
 
         currentView,
