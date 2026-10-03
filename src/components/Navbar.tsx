@@ -50,30 +50,30 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-3 xl:gap-6 px-4 sm:px-6 lg:px-8">
         
         {/* Logo & Brand */}
-        <div className="flex items-center gap-4 xl:gap-8 shrink min-w-0">
+        <div className="flex items-center gap-3 xl:gap-6 shrink min-w-0">
           <button
             onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
-            className="flex items-center gap-3 text-left focus:outline-none group py-1 shrink-0"
+            className="flex items-center gap-2.5 text-left focus:outline-none group py-1 shrink-0"
           >
             <img
               src="/logo.png"
               alt="Thingor Logo"
-              className="h-10 sm:h-12 w-auto object-contain group-hover:scale-105 transition-all shrink-0"
+              className="h-9 sm:h-10 md:h-11 max-w-[160px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
             />
-            <span className="text-xs font-medium tracking-wider text-slate-400 hidden xl:inline whitespace-nowrap">
+            <span className="text-[11px] font-medium tracking-wider text-slate-400 hidden 2xl:inline whitespace-nowrap">
               {t('tagline')}
             </span>
           </button>
 
-          {/* Desktop Nav Links (Authenticated) */}
+          {/* Desktop Nav Links (Authenticated) - xl:flex (1280px+) for zero crowding */}
           {isAuthenticated && (
-            <nav className="hidden lg:flex items-center gap-1 xl:gap-2 shrink">
+            <nav className="hidden xl:flex items-center gap-1.5 2xl:gap-2.5 shrink">
               <button
                 onClick={() => handleNav('dashboard')}
-                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'dashboard'
                     ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -85,7 +85,7 @@ export const Navbar: React.FC = () => {
 
               <button
                 onClick={() => handleNav('items')}
-                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'items'
                     ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -97,7 +97,7 @@ export const Navbar: React.FC = () => {
 
               <button
                 onClick={() => handleNav('locations')}
-                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'locations'
                     ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -109,7 +109,7 @@ export const Navbar: React.FC = () => {
 
               <button
                 onClick={() => handleNav('categories')}
-                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'categories'
                     ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -121,7 +121,7 @@ export const Navbar: React.FC = () => {
 
               <button
                 onClick={() => handleNav('documents')}
-                className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all ${
                   currentView === 'documents'
                     ? 'bg-slate-800 text-emerald-400 shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -134,7 +134,7 @@ export const Navbar: React.FC = () => {
               {isAdmin && (
                 <button
                   onClick={() => handleNav('admin')}
-                  className={`flex items-center gap-2 px-2.5 xl:px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all ${
                     currentView === 'admin'
                       ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60 shadow-sm'
                       : 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50'
@@ -285,7 +285,7 @@ export const Navbar: React.FC = () => {
           {/* Mobile hamburger menu toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg text-slate-300 hover:bg-slate-800 focus:outline-none shrink-0"
+            className="xl:hidden p-2 rounded-lg text-slate-300 hover:bg-slate-800 focus:outline-none shrink-0"
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -294,7 +294,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150">
+        <div className="xl:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150">
           {isAuthenticated ? (
             <>
               <button
