@@ -10,13 +10,11 @@ import {
   FileText,
   Plus,
   LogOut,
-  Database,
   Menu,
   X,
   ChevronRight,
   Globe
 } from 'lucide-react';
-import { isSupabaseConfigured } from '../lib/supabase';
 
 export const Navbar: React.FC = () => {
   const {
@@ -29,7 +27,6 @@ export const Navbar: React.FC = () => {
     setAuthModalMode,
     setIsAddEditItemModalOpen,
     setEditingItem,
-    setIsSupabaseInfoOpen,
     language,
     setLanguage,
     t,
@@ -180,17 +177,6 @@ export const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Supabase status indicator badge */}
-          <button
-            onClick={() => setIsSupabaseInfoOpen(true)}
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 transition-colors"
-            title="Database Connection Status"
-          >
-            <Database className="h-3 w-3 text-emerald-400" />
-            <span className="font-mono text-[11px]">
-              {isSupabaseConfigured ? 'Supabase Connected' : 'Local Demo Storage'}
-            </span>
-          </button>
 
           {isAuthenticated ? (
             <>
@@ -239,13 +225,6 @@ export const Navbar: React.FC = () => {
                     >
                       <Boxes className="h-3.5 w-3.5 text-slate-400" />
                       {t('my_things')}
-                    </button>
-                    <button
-                      onClick={() => setIsSupabaseInfoOpen(true)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors"
-                    >
-                      <Database className="h-3.5 w-3.5 text-slate-400" />
-                      Database Setup
                     </button>
                     <div className="my-1 border-t border-slate-800" />
                     <button
