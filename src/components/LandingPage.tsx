@@ -60,11 +60,11 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Title & Tagline Logo */}
-        <div className="flex justify-center mb-4">
+        <div className="flex justify-center mb-6">
           <img
             src="/logo.png"
             alt="Thingor Logo"
-            className="h-16 sm:h-24 w-auto object-contain drop-shadow-2xl"
+            className="h-28 sm:h-44 md:h-56 lg:h-64 w-auto object-contain drop-shadow-2xl transition-transform hover:scale-105 duration-300"
           />
         </div>
         <p className="text-2xl sm:text-3xl font-semibold text-emerald-400 mt-2 tracking-tight">
@@ -393,8 +393,8 @@ export const LandingPage: React.FC = () => {
       {/* FOOTER CTA */}
       <footer className="py-16 bg-slate-950 border-t border-slate-800 text-slate-400 text-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Thingor Logo" className="h-9 w-auto object-contain" />
+          <div className="flex items-center gap-4">
+            <img src="/logo.png" alt="Thingor Logo" className="h-12 sm:h-14 w-auto object-contain" />
             <div>
               <span className="block text-xs text-slate-400">{t('tagline')}</span>
             </div>

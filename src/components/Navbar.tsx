@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-20 sm:h-22 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
         {/* Logo & Brand */}
         <div className="flex items-center gap-8">
@@ -60,9 +60,9 @@ export const Navbar: React.FC = () => {
             <img
               src="/logo.png"
               alt="Thingor Logo"
-              className="h-10 w-auto object-contain group-hover:scale-105 transition-all"
+              className="h-12 sm:h-14 md:h-16 w-auto object-contain group-hover:scale-105 transition-all"
             />
-            <span className="text-[10px] font-medium tracking-wider text-slate-400 hidden lg:inline">
+            <span className="text-xs font-medium tracking-wider text-slate-400 hidden xl:inline">
               {t('tagline')}
             </span>
           </button>
