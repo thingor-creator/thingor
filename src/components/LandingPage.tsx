@@ -47,44 +47,46 @@ export const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       
       {/* HERO SECTION */}
-      <section className="relative pt-12 pb-20 md:pt-20 md:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
+      <section className="relative pt-8 pb-16 md:pt-12 md:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
         {/* Background glow effects */}
         <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-emerald-500/10 blur-[140px] rounded-full pointer-events-none" />
         <div className="absolute top-1/3 right-1/4 w-[350px] h-[350px] bg-teal-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
           
           {/* LEFT COLUMN: Primary Text & Main CTA (7 cols on lg) */}
-          <div className="lg:col-span-7 text-center lg:text-left space-y-6">
+          <div className="lg:col-span-7 text-center lg:text-left">
             
-            {/* Hero badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900/90 text-emerald-400 text-xs font-semibold tracking-wide shadow-inner">
+            {/* Hero badge (Eyebrow) */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-slate-800 bg-slate-900/90 text-emerald-400 text-xs font-semibold tracking-wide shadow-inner mb-3 sm:mb-4">
               <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
               <span>{language === 'hu' ? 'SZEMÉLYES TÁRGYNYILVÁNTARTÓ PLATFORM' : 'PERSONAL INVENTORY PLATFORM'}</span>
             </div>
 
-            {/* Logo Image & Tagline Headline */}
-            <div className="space-y-4">
+            {/* Logo Image */}
+            <div className="mb-3 sm:mb-4">
               <img
                 src="/logo.png"
                 alt="Thingor Logo"
-                className="h-20 sm:h-28 md:h-32 w-auto object-contain mx-auto lg:mx-0 drop-shadow-[0_15px_30px_rgba(16,185,129,0.2)]"
+                className="h-16 sm:h-22 md:h-26 w-auto object-contain mx-auto lg:mx-0 drop-shadow-[0_12px_24px_rgba(16,185,129,0.2)]"
               />
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
-                {t('tagline')}
-              </h1>
             </div>
 
+            {/* Main Headline */}
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
+              {t('tagline')}
+            </h1>
+
             {/* Short explanation */}
-            <p className="text-base sm:text-lg text-slate-300 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
+            <p className="mt-3.5 sm:mt-4 text-base sm:text-lg text-slate-300 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
               {t('tagline_sub')}
             </p>
 
             {/* Primary & Secondary CTAs */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <div className="mt-6 sm:mt-7 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 sm:gap-4">
               <button
                 onClick={handleStartOrganizing}
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base shadow-xl shadow-emerald-950/60 hover:shadow-emerald-900/60 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center justify-center gap-2 group ring-2 ring-emerald-400/30"
+                className="w-full sm:w-auto px-8 py-3.5 sm:py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base shadow-xl shadow-emerald-950/60 hover:shadow-emerald-900/60 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center justify-center gap-2 group ring-2 ring-emerald-400/30"
               >
                 <span>{t('start_organizing')}</span>
                 <ArrowRight className="h-5 w-5 stroke-[2.5] group-hover:translate-x-1 transition-transform" />
@@ -92,14 +94,14 @@ export const LandingPage: React.FC = () => {
               
               <button
                 onClick={handleSeeHowItWorks}
-                className="w-full sm:w-auto px-6 py-4 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3.5 sm:py-4 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold text-sm transition-all flex items-center justify-center gap-2"
               >
                 {t('see_how_it_works')}
               </button>
             </div>
 
             {/* Trust highlights */}
-            <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-slate-400">
+            <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-slate-400">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                 <span>{language === 'hu' ? 'Azonnali használat' : 'Instant Setup'}</span>
