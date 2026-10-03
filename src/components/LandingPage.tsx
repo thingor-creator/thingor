@@ -60,11 +60,11 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Title & Tagline Logo */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-8">
           <img
             src="/logo.png"
             alt="Thingor Logo"
-            className="h-28 sm:h-44 md:h-56 lg:h-64 w-auto object-contain drop-shadow-2xl transition-transform hover:scale-105 duration-300"
+            className="h-44 sm:h-64 md:h-80 lg:h-96 w-auto max-w-full object-contain drop-shadow-[0_20px_40px_rgba(16,185,129,0.25)] transition-transform hover:scale-105 duration-300"
           />
         </div>
         <p className="text-2xl sm:text-3xl font-semibold text-emerald-400 mt-2 tracking-tight">
