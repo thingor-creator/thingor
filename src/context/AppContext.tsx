@@ -197,6 +197,7 @@ interface AppContextType {
   // Auth state
   user: UserProfile | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, pass: string, name: string) => Promise<{ success: boolean; error?: string; emailConfirmationRequired?: boolean }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -443,15 +444,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
 
+    // Check if logging in as Admin via provided credentials
+    const isAdminAccount = cleanEmail === 'mythingor@gmail.com' && pass === 'PocoPoco83';
+
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
+      
+      // If admin credentials supplied locally but Supabase auth fails (e.g. unconfirmed or not in Supabase yet), fall back to local admin session
+      if (error && isAdminAccount) {
+        setUser({
+          id: 'admin-1',
+          user_id: 'admin-1',
+          display_name: 'Admin (Thingor)',
+          email: 'mythingor@gmail.com',
+          is_admin: true,
+        });
+        setIsAuthModalOpen(false);
+        return { success: true };
+      }
+
       if (error) return { success: false, error: formatAuthError(error.message) };
+
       if (data.user) {
         setUser({
           id: data.user.id,
           user_id: data.user.id,
-          display_name: data.user.user_metadata?.display_name || cleanEmail.split('@')[0],
-          email: cleanEmail
+          display_name: data.user.user_metadata?.display_name || (cleanEmail === 'mythingor@gmail.com' ? 'Admin (Thingor)' : cleanEmail.split('@')[0]),
+          email: cleanEmail,
+          is_admin: cleanEmail === 'mythingor@gmail.com',
         });
       }
       setIsAuthModalOpen(false);
@@ -459,6 +479,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // Local Storage Offline Fallback Auth
+    if (isAdminAccount) {
+      setUser({
+        id: 'admin-1',
+        user_id: 'admin-1',
+        display_name: 'Admin (Thingor)',
+        email: 'mythingor@gmail.com',
+        is_admin: true,
+      });
+      setIsAuthModalOpen(false);
+      return { success: true };
+    }
+
     const savedRegs = localStorage.getItem('thingor_registered_users');
     const registeredUsers: Array<{ email: string; pass: string; name: string; id: string }> = savedRegs ? JSON.parse(savedRegs) : [];
     const matched = registeredUsers.find(u => u.email.toLowerCase() === cleanEmail && u.pass === pass);
@@ -476,7 +508,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: matched.id,
       user_id: matched.id,
       display_name: matched.name,
-      email: matched.email
+      email: matched.email,
+      is_admin: matched.email.toLowerCase() === 'mythingor@gmail.com',
     });
     setIsAuthModalOpen(false);
     return { success: true };
@@ -724,6 +757,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         user,
         isAuthenticated: !!user,
+        isAdmin: !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin),
         login,
         signup,
         resetPassword,

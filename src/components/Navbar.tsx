@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  Globe
+  Globe,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -21,6 +22,7 @@ export const Navbar: React.FC = () => {
     setCurrentView,
     user,
     isAuthenticated,
+    isAdmin,
     logout,
     setIsAuthModalOpen,
     setAuthModalMode,
@@ -128,6 +130,20 @@ export const Navbar: React.FC = () => {
                 <FileText className="h-4 w-4" />
                 {t('documents')}
               </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => handleNav('admin')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    currentView === 'admin'
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                      : 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                  {t('admin_panel')}
+                </button>
+              )}
             </nav>
           )}
         </div>
@@ -222,6 +238,15 @@ export const Navbar: React.FC = () => {
                       <Boxes className="h-3.5 w-3.5 text-slate-400" />
                       {t('my_things')}
                     </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleNav('admin')}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 rounded-lg transition-colors"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                        {t('admin_panel')}
+                      </button>
+                    )}
                     <div className="my-1 border-t border-slate-800" />
                     <button
                       onClick={logout}
@@ -336,6 +361,21 @@ export const Navbar: React.FC = () => {
                 </div>
                 <ChevronRight className="h-4 w-4 opacity-60" />
               </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => handleNav('admin')}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold ${
+                    currentView === 'admin' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60' : 'text-emerald-400'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                    {t('admin_panel')}
+                  </div>
+                  <ChevronRight className="h-4 w-4 opacity-60" />
+                </button>
+              )}
 
               <div className="pt-2 flex flex-col gap-2">
                 <button

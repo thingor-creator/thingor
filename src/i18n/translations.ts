@@ -13,6 +13,7 @@ export interface TranslationKeys {
   locations: string;
   categories: string;
   documents: string;
+  admin_panel: string;
   add_thing: string;
   browse_things: string;
   add_location: string;
@@ -91,6 +92,7 @@ export const translations: Record<Language, TranslationKeys> = {
     locations: 'Helyszínek',
     categories: 'Kategóriák',
     documents: 'Dokumentumok',
+    admin_panel: 'Adminisztráció',
     add_thing: '+ Tárgy hozzáadása',
     browse_things: 'Tárgyak böngészése',
     add_location: 'Helyszín hozzáadása',
@@ -162,6 +164,7 @@ export const translations: Record<Language, TranslationKeys> = {
     locations: 'Locations',
     categories: 'Categories',
     documents: 'Documents',
+    admin_panel: 'Admin Panel',
     add_thing: '+ Add Thing',
     browse_things: 'Browse things',
     add_location: 'Add location',

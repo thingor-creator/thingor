@@ -7,6 +7,7 @@ import { ItemsView } from './components/ItemsView';
 import { LocationsView } from './components/LocationsView';
 import { CategoriesView } from './components/CategoriesView';
 import { DocumentsView } from './components/DocumentsView';
+import { AdminView } from './components/AdminView';
 import { ItemDetailModal } from './components/ItemDetailModal';
 import { ItemFormModal } from './components/ItemFormModal';
 import { AuthModal } from './components/AuthModal';
@@ -30,6 +31,7 @@ const AppContent: React.FC = () => {
           {currentView === 'locations' && <LocationsView />}
           {currentView === 'categories' && <CategoriesView />}
           {currentView === 'documents' && <DocumentsView />}
+          {currentView === 'admin' && <AdminView />}
         </main>
       )}
 
