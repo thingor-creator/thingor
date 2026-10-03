@@ -55,19 +55,16 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-8">
           <button
             onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
-            className="flex items-center gap-2.5 text-left focus:outline-none group"
+            className="flex items-center gap-3 text-left focus:outline-none group"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-slate-950 shadow-md shadow-emerald-900/20 group-hover:scale-105 transition-all">
-              <Package className="h-5 w-5 font-bold stroke-[2.5]" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-                THINGOR
-              </span>
-              <span className="text-[10px] font-medium tracking-wider text-slate-400 -mt-1 hidden sm:inline">
-                {t('tagline')}
-              </span>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Thingor Logo"
+              className="h-10 w-auto object-contain group-hover:scale-105 transition-all"
+            />
+            <span className="text-[10px] font-medium tracking-wider text-slate-400 hidden lg:inline">
+              {t('tagline')}
+            </span>
           </button>
 
           {/* Desktop Nav Links (Authenticated) */}

@@ -59,10 +59,14 @@ export const LandingPage: React.FC = () => {
           <span>{language === 'hu' ? 'SZEMÉLYES TÁRGYNYILVÁNTARTÓ ÉS RENDSZEREZŐ PLATFORM' : 'PERSONAL INVENTORY & ORGANIZER PLATFORM'}</span>
         </div>
 
-        {/* Title & Tagline */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.1]">
-          Thingor
-        </h1>
+        {/* Title & Tagline Logo */}
+        <div className="flex justify-center mb-4">
+          <img
+            src="/logo.png"
+            alt="Thingor Logo"
+            className="h-16 sm:h-24 w-auto object-contain drop-shadow-2xl"
+          />
+        </div>
         <p className="text-2xl sm:text-3xl font-semibold text-emerald-400 mt-2 tracking-tight">
           {t('tagline')}
         </p>
@@ -390,11 +394,8 @@ export const LandingPage: React.FC = () => {
       <footer className="py-16 bg-slate-950 border-t border-slate-800 text-slate-400 text-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-slate-950">
-              <span className="font-bold stroke-[2.5] text-xs">T</span>
-            </div>
+            <img src="/logo.png" alt="Thingor Logo" className="h-9 w-auto object-contain" />
             <div>
-              <span className="font-bold text-white tracking-tight text-base">THINGOR</span>
               <span className="block text-xs text-slate-400">{t('tagline')}</span>
             </div>
           </div>
