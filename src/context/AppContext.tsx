@@ -338,7 +338,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   // UI state
-  const [currentView, setCurrentView] = useState<ViewMode>('landing');
+  const [currentView, setCurrentView] = useState<ViewMode>(() => {
+    const savedUser = localStorage.getItem('thingor_user');
+    const savedView = localStorage.getItem('thingor_current_view') as ViewMode;
+    if (savedUser) {
+      return (savedView && savedView !== 'landing') ? savedView : 'dashboard';
+    }
+    return 'landing';
+  });
+
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isAddEditItemModalOpen, setIsAddEditItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -351,6 +359,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
 
   // Sync to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('thingor_current_view', currentView);
+  }, [currentView]);
+
   useEffect(() => {
     localStorage.setItem('thingor_items', JSON.stringify(items));
   }, [items]);
@@ -381,11 +393,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        const cleanEmail = session.user.email?.toLowerCase() || '';
         setUser({
           id: session.user.id,
           user_id: session.user.id,
-          display_name: session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User',
-          email: session.user.email || ''
+          display_name: session.user.user_metadata?.display_name || cleanEmail.split('@')[0] || 'User',
+          email: cleanEmail,
+          is_admin: cleanEmail === 'mythingor@gmail.com',
         });
       }
     });
@@ -399,14 +413,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       if (session?.user) {
+        const cleanEmail = session.user.email?.toLowerCase() || '';
         setUser({
           id: session.user.id,
           user_id: session.user.id,
-          display_name: session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User',
-          email: session.user.email || ''
+          display_name: session.user.user_metadata?.display_name || cleanEmail.split('@')[0] || 'User',
+          email: cleanEmail,
+          is_admin: cleanEmail === 'mythingor@gmail.com',
         });
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setCurrentView('landing');
       }
     });
 
@@ -629,6 +646,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       supabase.auth.signOut().catch(console.error);
     }
     setUser(null);
+    localStorage.removeItem('thingor_user');
+    localStorage.removeItem('thingor_current_view');
     setIsAuthModalOpen(false);
     setCurrentView('landing');
   };
