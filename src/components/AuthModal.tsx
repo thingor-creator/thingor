@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { isSupabaseConfigured } from '../lib/supabase';
-import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, Database, CheckCircle2 } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -115,16 +114,6 @@ export const AuthModal: React.FC = () => {
           </p>
         </div>
 
-        {/* Connection Mode Indicator */}
-        <div className="p-2.5 rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-between text-[11px]">
-          <span className="text-slate-400 flex items-center gap-1.5 font-medium">
-            <Database className="h-3.5 w-3.5 text-emerald-400" />
-            Backend Mode:
-          </span>
-          <span className="font-mono text-emerald-400 font-semibold">
-            {isSupabaseConfigured ? 'Live Supabase Auth (Resend Email)' : 'Local Demo Auth'}
-          </span>
-        </div>
 
         {errorMsg && (
           <div className="p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs text-center font-medium">
