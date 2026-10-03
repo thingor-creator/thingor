@@ -63,14 +63,11 @@ export const Navbar: React.FC = () => {
               alt="Thingor Logo"
               className="h-14 sm:h-16 md:h-20 lg:h-22 max-w-[220px] sm:max-w-[280px] md:max-w-[340px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
             />
-            <span className="text-xs font-medium tracking-wider text-slate-400 hidden 2xl:inline whitespace-nowrap">
-              {t('tagline')}
-            </span>
           </button>
 
           {/* Desktop Nav Links (Authenticated) */}
           {isAuthenticated && (
-            <nav className="hidden xl:flex items-center gap-2 2xl:gap-3 shrink-0">
+            <nav className="hidden lg:flex items-center gap-1.5 xl:gap-3 shrink-0">
               <button
                 onClick={() => handleNav('dashboard')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
@@ -130,20 +127,6 @@ export const Navbar: React.FC = () => {
                 <FileText className="h-4 w-4 shrink-0 text-slate-400" />
                 <span>{t('documents')}</span>
               </button>
-
-              {isAdmin && (
-                <button
-                  onClick={() => handleNav('admin')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
-                    currentView === 'admin'
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60 shadow-sm'
-                      : 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
-                  <span>{t('admin_panel')}</span>
-                </button>
-              )}
             </nav>
           )}
         </div>
@@ -191,15 +174,6 @@ export const Navbar: React.FC = () => {
 
           {isAuthenticated ? (
             <>
-              {/* Primary + Add Thing CTA */}
-              <button
-                onClick={handleOpenAddModal}
-                className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0 whitespace-nowrap"
-              >
-                <Plus className="h-4 w-4 stroke-[2.5] shrink-0" />
-                <span className="hidden sm:inline">{t('add_thing')}</span>
-              </button>
-
               {/* User Dropdown */}
               <div className="relative shrink-0">
                 <button
@@ -284,7 +258,7 @@ export const Navbar: React.FC = () => {
           {/* Mobile hamburger menu toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="xl:hidden p-2 rounded-xl text-slate-300 hover:bg-slate-800 focus:outline-none shrink-0 border border-slate-800/80 bg-slate-900/60"
+            className="lg:hidden p-2 rounded-xl text-slate-300 hover:bg-slate-800 focus:outline-none shrink-0 border border-slate-800/80 bg-slate-900/60"
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -293,7 +267,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="xl:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150">
+        <div className="lg:hidden border-b border-slate-800 bg-slate-950 px-4 pt-2 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150">
           {isAuthenticated ? (
             <>
               <button
