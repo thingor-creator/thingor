@@ -64,11 +64,11 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* Logo Image */}
-            <div className="mb-3 sm:mb-4">
+            <div className="mb-4 sm:mb-5">
               <img
                 src="/logo.png"
                 alt="Thingor Logo"
-                className="h-16 sm:h-22 md:h-26 w-auto object-contain mx-auto lg:mx-0 drop-shadow-[0_12px_24px_rgba(16,185,129,0.2)]"
+                className="h-22 sm:h-28 md:h-36 lg:h-40 w-auto object-contain mx-auto lg:mx-0 drop-shadow-[0_18px_36px_rgba(16,185,129,0.28)] filter brightness-105 transition-all"
               />
             </div>
 
