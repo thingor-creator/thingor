@@ -15,6 +15,7 @@ export const AuthModal: React.FC = () => {
     updatePassword,
     setCurrentView,
     language,
+    isRegistrationSuspended,
   } = useApp();
 
   const [email, setEmail] = useState('');
@@ -177,6 +178,14 @@ export const AuthModal: React.FC = () => {
             {authModalMode === 'update_password' && (language === 'hu' ? 'Add meg az új jelszavadat a fiókod frissítéséhez.' : 'Enter your new password below.')}
           </p>
         </div>
+
+        {authModalMode === 'signup' && isRegistrationSuspended && (
+          <div className="p-3.5 rounded-xl border border-amber-800/60 bg-amber-950/40 text-amber-300 text-xs text-center font-medium animate-in fade-in">
+            {language === 'hu'
+              ? '⚠️ Az új regisztrációk jelenleg fel vannak függesztve az adminisztrátor által.'
+              : '⚠️ New user registrations are currently suspended by the administrator.'}
+          </div>
+        )}
 
         {errorMsg && (
           <div className="p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs text-center font-medium animate-in fade-in">

@@ -198,6 +198,8 @@ interface AppContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isRegistrationSuspended: boolean;
+  setIsRegistrationSuspended: (suspended: boolean) => void;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, pass: string, name: string) => Promise<{ success: boolean; error?: string; emailConfirmationRequired?: boolean }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -278,6 +280,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('thingor_lang', lang);
+  };
+
+  const [isRegistrationSuspended, setIsRegistrationSuspendedState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('thingor_registration_suspended');
+    return saved === 'true';
+  });
+
+  const setIsRegistrationSuspended = (suspended: boolean) => {
+    setIsRegistrationSuspendedState(suspended);
+    localStorage.setItem('thingor_registration_suspended', String(suspended));
   };
 
   const t = (key: keyof TranslationKeys): string => {
@@ -517,6 +529,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const signup = async (email: string, pass: string, name: string) => {
     const cleanEmail = email.trim().toLowerCase();
+
+    // Check if new registration is suspended by Admin (except if logged in as Admin creating users)
+    const currentIsAdmin = !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin);
+    if (isRegistrationSuspended && !currentIsAdmin) {
+      return {
+        success: false,
+        error: language === 'hu'
+          ? 'Az új regisztrációk jelenleg fel vannak függesztve az adminisztrátor által.'
+          : 'New user registrations are currently suspended by the administrator.'
+      };
+    }
 
     if (isSupabaseConfigured && supabase) {
       const redirectUrl = window.location.origin;
@@ -758,6 +781,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         user,
         isAuthenticated: !!user,
         isAdmin: !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin),
+        isRegistrationSuspended,
+        setIsRegistrationSuspended,
         login,
         signup,
         resetPassword,

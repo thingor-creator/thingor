@@ -17,7 +17,9 @@ import {
   Lock,
   Mail,
   User as UserIcon,
-  X
+  X,
+  UserX,
+  UserCheck
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
@@ -25,6 +27,8 @@ export const AdminView: React.FC = () => {
   const {
     user,
     isAdmin,
+    isRegistrationSuspended,
+    setIsRegistrationSuspended,
     setCurrentView,
     items,
     categories,
@@ -395,6 +399,63 @@ export const AdminView: React.FC = () => {
       {activeTab === 'system' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
+          {/* Card: Registration Suspension Control */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <UserX className="h-5 w-5 text-emerald-400" />
+                <span>{language === 'hu' ? 'Új Regisztrációk Felfüggesztése' : 'Suspend New User Registrations'}</span>
+              </h3>
+              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                isRegistrationSuspended
+                  ? 'bg-rose-950/80 text-rose-400 border-rose-800/80'
+                  : 'bg-emerald-950/80 text-emerald-400 border-emerald-800/80'
+              }`}>
+                {isRegistrationSuspended
+                  ? (language === 'hu' ? '🔴 Felfüggesztve' : '🔴 Suspended')
+                  : (language === 'hu' ? '🟢 Engedélyezve' : '🟢 Open')}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              {language === 'hu'
+                ? 'Ha a regisztráció fel van függesztve, új felhasználók nem tudnak fiókot regisztrálni a belépési panelen. A már meglévő fiókok bejelentkezése továbbra is zavartalanul működik.'
+                : 'When suspended, new users cannot register accounts from the login modal. Existing accounts can sign in normally.'}
+            </p>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  const nextState = !isRegistrationSuspended;
+                  setIsRegistrationSuspended(nextState);
+                  setActionMsg({
+                    type: nextState ? 'error' : 'success',
+                    text: nextState
+                      ? (language === 'hu' ? 'Az új regisztrációk sikeresen fel lettek függesztve!' : 'New user registrations have been suspended!')
+                      : (language === 'hu' ? 'Az új regisztrációk újra engedélyezve lettek!' : 'New user registrations have been re-enabled!')
+                  });
+                }}
+                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs shadow-md transition-all ${
+                  isRegistrationSuspended
+                    ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                    : 'bg-rose-950 hover:bg-rose-900 text-rose-200 border border-rose-800/80'
+                }`}
+              >
+                {isRegistrationSuspended ? (
+                  <>
+                    <UserCheck className="h-4 w-4 stroke-[2.5]" />
+                    <span>{language === 'hu' ? 'Regisztrációk Újraengedélyezése' : 'Re-enable User Registrations'}</span>
+                  </>
+                ) : (
+                  <>
+                    <UserX className="h-4 w-4 stroke-[2.5]" />
+                    <span>{language === 'hu' ? 'Regisztrációk Felfüggesztése Most' : 'Suspend User Registrations Now'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Database className="h-5 w-5 text-emerald-400" />
