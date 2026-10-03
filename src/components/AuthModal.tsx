@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -24,6 +24,7 @@ export const AuthModal: React.FC = () => {
   const [resetSent, setResetSent] = useState(false);
   const [signupConfirmationSent, setSignupConfirmationSent] = useState(false);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (!isAuthModalOpen) return null;
 
@@ -32,6 +33,7 @@ export const AuthModal: React.FC = () => {
     setResetSent(false);
     setSignupConfirmationSent(false);
     setPasswordUpdated(false);
+    setShowPassword(false);
     setErrorMsg('');
   };
 
@@ -247,14 +249,22 @@ export const AuthModal: React.FC = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 rounded-md transition-colors"
+                    title={showPassword ? (language === 'hu' ? 'Jelszó elrejtése' : 'Hide password') : (language === 'hu' ? 'Jelszó megjelenítése' : 'Show password')}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
             )}
