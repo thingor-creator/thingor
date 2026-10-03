@@ -397,45 +397,82 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => subscription.unsubscribe();
   }, []);
 
+  const formatAuthError = (msg: string): string => {
+    const lower = msg.toLowerCase();
+    if (lower.includes('invalid login credentials')) {
+      return language === 'hu'
+        ? 'Hibás e-mail cím vagy jelszó. Csak regisztrált és visszaigazolt fiókkal lehet belépni.'
+        : 'Invalid login credentials. Only registered accounts can log in.';
+    }
+    if (lower.includes('email not confirmed')) {
+      return language === 'hu'
+        ? 'Az e-mail cím még nincs visszaigazolva! Kérjük, ellenőrizd az e-mail fiókodat a visszaigazoló linkért.'
+        : 'Email address not confirmed! Please check your inbox to activate your account.';
+    }
+    if (lower.includes('user not found')) {
+      return language === 'hu'
+        ? 'Nincs ilyen regisztrált e-mail cím a rendszerben.'
+        : 'No account found with this email address.';
+    }
+    return msg;
+  };
+
   const login = async (email: string, pass: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) return { success: false, error: error.message };
+      const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
+      if (error) return { success: false, error: formatAuthError(error.message) };
       if (data.user) {
         setUser({
           id: data.user.id,
           user_id: data.user.id,
-          display_name: data.user.user_metadata?.display_name || email.split('@')[0],
-          email: email
+          display_name: data.user.user_metadata?.display_name || cleanEmail.split('@')[0],
+          email: cleanEmail
         });
       }
       setIsAuthModalOpen(false);
       return { success: true };
     }
 
-    // Fallback/Demo Login
+    // Local Storage Offline Fallback Auth
+    const savedRegs = localStorage.getItem('thingor_registered_users');
+    const registeredUsers: Array<{ email: string; pass: string; name: string; id: string }> = savedRegs ? JSON.parse(savedRegs) : [];
+    const matched = registeredUsers.find(u => u.email.toLowerCase() === cleanEmail && u.pass === pass);
+
+    if (!matched) {
+      return {
+        success: false,
+        error: language === 'hu'
+          ? 'Hibás e-mail cím vagy jelszó. Csak regisztrált fiókkal lehet belépni.'
+          : 'Invalid credentials. Only registered users can log in.'
+      };
+    }
+
     setUser({
-      id: 'user-' + Date.now(),
-      user_id: 'user-' + Date.now(),
-      display_name: email.split('@')[0],
-      email: email
+      id: matched.id,
+      user_id: matched.id,
+      display_name: matched.name,
+      email: matched.email
     });
     setIsAuthModalOpen(false);
     return { success: true };
   };
 
   const signup = async (email: string, pass: string, name: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+
     if (isSupabaseConfigured && supabase) {
       const redirectUrl = window.location.origin;
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password: pass,
         options: {
           data: { display_name: name },
           emailRedirectTo: redirectUrl
         }
       });
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: formatAuthError(error.message) };
 
       if (data.user && !data.session) {
         // Email confirmation is required by Supabase auth policy
@@ -446,20 +483,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setUser({
           id: data.user.id,
           user_id: data.user.id,
-          display_name: name || data.user.user_metadata?.display_name || email.split('@')[0],
-          email: email
+          display_name: name || data.user.user_metadata?.display_name || cleanEmail.split('@')[0],
+          email: cleanEmail
         });
         setIsAuthModalOpen(false);
       }
       return { success: true, emailConfirmationRequired: false };
     }
 
-    // Fallback Signup
-    setUser({
+    // Local Storage Offline Fallback Signup
+    const savedRegs = localStorage.getItem('thingor_registered_users');
+    const registeredUsers: Array<{ email: string; pass: string; name: string; id: string }> = savedRegs ? JSON.parse(savedRegs) : [];
+    
+    if (registeredUsers.some(u => u.email.toLowerCase() === cleanEmail)) {
+      return {
+        success: false,
+        error: language === 'hu' ? 'Ez az e-mail cím már regisztrálva van!' : 'This email is already registered!'
+      };
+    }
+
+    const newUser = {
       id: 'user-' + Date.now(),
-      user_id: 'user-' + Date.now(),
-      display_name: name || email.split('@')[0],
-      email: email
+      email: cleanEmail,
+      pass: pass,
+      name: name || cleanEmail.split('@')[0]
+    };
+    registeredUsers.push(newUser);
+    localStorage.setItem('thingor_registered_users', JSON.stringify(registeredUsers));
+
+    setUser({
+      id: newUser.id,
+      user_id: newUser.id,
+      display_name: newUser.name,
+      email: newUser.email
     });
     setIsAuthModalOpen(false);
     return { success: true, emailConfirmationRequired: false };
