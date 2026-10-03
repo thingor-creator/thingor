@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import type { AuthModalMode } from '../context/AppContext';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -18,6 +19,7 @@ export const AuthModal: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,20 +28,78 @@ export const AuthModal: React.FC = () => {
   const [passwordUpdated, setPasswordUpdated] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  if (!isAuthModalOpen) return null;
-
-  const handleClose = () => {
-    setIsAuthModalOpen(false);
+  // Clear errors and resets whenever modal opens/closes or mode changes
+  useEffect(() => {
+    setErrorMsg('');
     setResetSent(false);
     setSignupConfirmationSent(false);
     setPasswordUpdated(false);
     setShowPassword(false);
+    setConfirmPassword('');
+  }, [authModalMode, isAuthModalOpen]);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isAuthModalOpen) {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthModalOpen]);
+
+  if (!isAuthModalOpen) return null;
+
+  const handleClose = () => {
+    setIsAuthModalOpen(false);
     setErrorMsg('');
+    setResetSent(false);
+    setSignupConfirmationSent(false);
+    setPasswordUpdated(false);
+    setShowPassword(false);
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  const switchMode = (newMode: AuthModalMode) => {
+    setErrorMsg('');
+    setResetSent(false);
+    setSignupConfirmationSent(false);
+    setPasswordUpdated(false);
+    setPassword('');
+    setConfirmPassword('');
+    setAuthModalMode(newMode);
+  };
+
+  const validateEmail = (val: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    // Pre-flight Client Validations
+    if (authModalMode !== 'update_password' && !validateEmail(email)) {
+      setErrorMsg(language === 'hu' ? 'Kérjük, érvényes e-mail címet adj meg!' : 'Please enter a valid email address!');
+      return;
+    }
+
+    if (authModalMode === 'login' || authModalMode === 'signup' || authModalMode === 'update_password') {
+      if (password.length < 6) {
+        setErrorMsg(language === 'hu' ? 'A jelszónak legalább 6 karakter hosszúnak kell lennie.' : 'Password must be at least 6 characters long.');
+        return;
+      }
+    }
+
+    if (authModalMode === 'signup' || authModalMode === 'update_password') {
+      if (password !== confirmPassword) {
+        setErrorMsg(language === 'hu' ? 'A megadott jelszavak nem egyeznek!' : 'Passwords do not match!');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -90,7 +150,9 @@ export const AuthModal: React.FC = () => {
         {/* Close button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+          disabled={loading}
+          className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
+          title={language === 'hu' ? 'Bezárás' : 'Close'}
         >
           <X className="h-5 w-5" />
         </button>
@@ -116,9 +178,8 @@ export const AuthModal: React.FC = () => {
           </p>
         </div>
 
-
         {errorMsg && (
-          <div className="p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs text-center font-medium">
+          <div className="p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs text-center font-medium animate-in fade-in">
             {errorMsg}
           </div>
         )}
@@ -135,10 +196,7 @@ export const AuthModal: React.FC = () => {
                 : `We dispatched a verification link to ${email}. Please check your inbox and click the link to activate your account.`}
             </p>
             <button
-              onClick={() => {
-                setSignupConfirmationSent(false);
-                setAuthModalMode('login');
-              }}
+              onClick={() => switchMode('login')}
               className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors"
             >
               {language === 'hu' ? 'Vissza a bejelentkezéshez' : 'Back to Sign In'}
@@ -156,10 +214,7 @@ export const AuthModal: React.FC = () => {
                 : `Password reset link has been dispatched to ${email}. Please check your email inbox!`}
             </p>
             <button
-              onClick={() => {
-                setResetSent(false);
-                setAuthModalMode('login');
-              }}
+              onClick={() => switchMode('login')}
               className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors"
             >
               {language === 'hu' ? 'Vissza a bejelentkezéshez' : 'Back to Sign In'}
@@ -203,7 +258,9 @@ export const AuthModal: React.FC = () => {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    disabled={loading}
+                    autoFocus
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -222,7 +279,9 @@ export const AuthModal: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    disabled={loading}
+                    autoFocus={authModalMode !== 'signup'}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -239,7 +298,7 @@ export const AuthModal: React.FC = () => {
                   {authModalMode === 'login' && (
                     <button
                       type="button"
-                      onClick={() => setAuthModalMode('reset')}
+                      onClick={() => switchMode('reset')}
                       className="text-[11px] text-emerald-400 hover:underline"
                     >
                       {language === 'hu' ? 'Elfelejtetted a jelszavad?' : 'Forgot password?'}
@@ -255,7 +314,9 @@ export const AuthModal: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    disabled={loading}
+                    autoFocus={authModalMode === 'update_password'}
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
                   />
                   <button
                     type="button"
@@ -269,13 +330,37 @@ export const AuthModal: React.FC = () => {
               </div>
             )}
 
+            {(authModalMode === 'signup' || authModalMode === 'update_password') && (
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">
+                  {language === 'hu' ? 'Jelszó megerősítése' : 'Confirm Password'}
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    disabled={loading}
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                  />
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all flex items-center justify-center gap-2"
+              className="w-full mt-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {loading ? (
-                language === 'hu' ? 'Feldolgozás...' : 'Processing...'
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{language === 'hu' ? 'Feldolgozás...' : 'Processing...'}</span>
+                </>
               ) : (
                 <>
                   {authModalMode === 'login' && (language === 'hu' ? 'Bejelentkezés' : 'Sign in')}
@@ -296,7 +381,7 @@ export const AuthModal: React.FC = () => {
               <p>
                 {language === 'hu' ? 'Még nincs fiókod? ' : "Don't have an account? "}
                 <button
-                  onClick={() => setAuthModalMode('signup')}
+                  onClick={() => switchMode('signup')}
                   className="font-bold text-emerald-400 hover:underline"
                 >
                   {language === 'hu' ? 'Regisztráció' : 'Sign up'}
@@ -306,7 +391,7 @@ export const AuthModal: React.FC = () => {
               <p>
                 {language === 'hu' ? 'Már van fiókod? ' : 'Already have an account? '}
                 <button
-                  onClick={() => setAuthModalMode('login')}
+                  onClick={() => switchMode('login')}
                   className="font-bold text-emerald-400 hover:underline"
                 >
                   {language === 'hu' ? 'Bejelentkezés' : 'Sign in'}

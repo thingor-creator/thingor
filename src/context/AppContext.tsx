@@ -381,7 +381,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (event === 'PASSWORD_RECOVERY') {
         setAuthModalMode('update_password');
         setIsAuthModalOpen(true);
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        setIsAuthModalOpen(false);
       }
+
       if (session?.user) {
         setUser({
           id: session.user.id,
@@ -413,6 +416,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return language === 'hu'
         ? 'Nincs ilyen regisztrált e-mail cím a rendszerben.'
         : 'No account found with this email address.';
+    }
+    if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('user_already_exists')) {
+      return language === 'hu'
+        ? 'Ez az e-mail cím már regisztrálva van a rendszerben.'
+        : 'This email address is already registered.';
+    }
+    if (lower.includes('at least 6 characters') || lower.includes('too short') || lower.includes('password_too_short')) {
+      return language === 'hu'
+        ? 'A jelszónak legalább 6 karakter hosszúnak kell lennie.'
+        : 'Password must be at least 6 characters long.';
+    }
+    if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('over email send rate limit')) {
+      return language === 'hu'
+        ? 'Túl sok próbálkozás történt! Kérjük, várj egy keveset, mielőtt újra próbálkozol.'
+        : 'Too many attempts! Please wait a moment before trying again.';
+    }
+    if (lower.includes('invalid email') || lower.includes('unable to validate email')) {
+      return language === 'hu'
+        ? 'Kérjük, érvényes e-mail címet adj meg.'
+        : 'Please enter a valid email address.';
     }
     return msg;
   };
@@ -522,12 +545,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const resetPassword = async (email: string) => {
+    const cleanEmail = email.trim().toLowerCase();
     if (isSupabaseConfigured && supabase) {
       const redirectUrl = window.location.origin;
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: redirectUrl
       });
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: formatAuthError(error.message) };
       return { success: true };
     }
     return { success: true };
@@ -536,7 +560,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updatePassword = async (newPassword: string) => {
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: formatAuthError(error.message) };
       setIsAuthModalOpen(false);
       return { success: true };
     }
@@ -546,9 +570,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const logout = () => {
     if (isSupabaseConfigured && supabase) {
-      supabase.auth.signOut();
+      supabase.auth.signOut().catch(console.error);
     }
     setUser(null);
+    setIsAuthModalOpen(false);
     setCurrentView('landing');
   };
 

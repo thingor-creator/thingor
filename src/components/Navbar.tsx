@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { ViewMode } from '../types';
 import {
-  Package,
   LayoutDashboard,
   Boxes,
   MapPin,
