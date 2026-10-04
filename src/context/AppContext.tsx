@@ -623,6 +623,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { success: true };
   };
 
+  const getAuthRedirectUrl = (): string => {
+    const customSiteUrl = import.meta.env.VITE_SITE_URL || import.meta.env.VITE_AUTH_REDIRECT_URL;
+    if (customSiteUrl) return customSiteUrl.replace(/\/$/, '');
+    return window.location.origin;
+  };
+
   const signup = async (email: string, pass: string, name: string) => {
     const cleanEmail = email.trim().toLowerCase();
 
@@ -637,7 +643,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     if (isSupabaseConfigured && supabase) {
-      const redirectUrl = window.location.origin;
+      const redirectUrl = getAuthRedirectUrl();
       const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
         password: pass,
@@ -696,7 +702,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const resetPassword = async (email: string) => {
     const cleanEmail = email.trim().toLowerCase();
     if (isSupabaseConfigured && supabase) {
-      const redirectUrl = window.location.origin;
+      const redirectUrl = getAuthRedirectUrl();
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: redirectUrl
       });
