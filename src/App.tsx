@@ -14,6 +14,7 @@ import { ItemFormModal } from './components/ItemFormModal';
 import { AuthModal } from './components/AuthModal';
 import { SupabaseSetupModal } from './components/SupabaseSetupModal';
 import { LegalViewModal } from './components/LegalViewModal';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Wrench, ShieldCheck } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -137,7 +138,7 @@ const AppContent: React.FC = () => {
         </main>
       )}
 
-      {/* Modals */}
+      {/* Modals & Overlays */}
       <ItemDetailModal />
       <ItemFormModal />
       <AuthModal />
@@ -147,6 +148,9 @@ const AppContent: React.FC = () => {
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
       />
+
+      {/* PWA Install Banner */}
+      <PWAInstallPrompt />
     </div>
   );
 };
