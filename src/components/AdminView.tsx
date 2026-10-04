@@ -15,37 +15,21 @@ import {
   Sliders,
   Activity,
   AlertTriangle,
-  Upload,
-  Loader2,
   Plus,
   Trash2,
-  CheckCircle2,
   Eye,
-  FileCheck,
   Palette,
-  Globe,
-  Mail,
-  Lock,
-  Calendar,
   Layers,
   HelpCircle,
   FolderTree,
   BookOpen,
   ArrowLeft,
   LogOut,
-  ChevronRight,
-  ShieldCheck,
-  Check,
-  Wrench,
-  Key,
-  Users2,
   Shield,
-  Megaphone,
 } from 'lucide-react';
-import type { UserStatus, LegalSlug, LegalDocumentVersion, LandingBlock, FAQItem, UserDetailStats } from '../types';
+import type { UserStatus, LegalSlug, UserDetailStats } from '../types';
 import { isAdmin as checkIsAdmin } from '../lib/permissions';
-import { isR2Configured, r2BucketName } from '../lib/r2';
-import { uploadFileToStorage } from '../lib/storage';
+import { isR2Configured } from '../lib/r2';
 
 export const AdminView: React.FC = () => {
   const {
@@ -54,7 +38,6 @@ export const AdminView: React.FC = () => {
     setCurrentView,
     items,
     itemShares,
-    documents,
     language,
     siteSettings,
     updateSiteSettings,
@@ -86,8 +69,6 @@ export const AdminView: React.FC = () => {
 
   // User details modal state
   const [selectedUserStats, setSelectedUserStats] = useState<UserDetailStats | null>(null);
-  const [isLoadingUserStats, setIsLoadingUserStats] = useState(false);
-  const [suspendReason, setSuspendReason] = useState('');
   const [showSuspendConfirmModal, setShowSuspendConfirmModal] = useState(false);
   const [targetUserToSuspend, setTargetUserToSuspend] = useState<{ id: string; name: string; currentStatus: UserStatus } | null>(null);
   const [showDeleteUserConfirmModal, setShowDeleteUserConfirmModal] = useState(false);
@@ -105,7 +86,6 @@ export const AdminView: React.FC = () => {
   const [primaryColor, setPrimaryColor] = useState(siteSettings.primary_color || '#10b981');
   const [logoUrl, setLogoUrl] = useState(siteSettings.logo_url || '/logo.png');
   const [faviconUrl, setFaviconUrl] = useState(siteSettings.favicon_url || '/logo.png');
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Registration paused form state
   const [regPausedTitle, setRegPausedTitle] = useState(siteSettings.registration_paused_title || 'A regisztráció jelenleg szünetel');
@@ -114,7 +94,6 @@ export const AdminView: React.FC = () => {
   // Legal document editing state
   const [legalDocTitle, setLegalDocTitle] = useState('');
   const [legalDocContent, setLegalDocContent] = useState('');
-  const [previewLegalDoc, setPreviewLegalDoc] = useState<LegalDocumentVersion | null>(null);
 
   // FAQ editing state
   const [showAddFaqModal, setShowAddFaqModal] = useState(false);
@@ -1115,8 +1094,8 @@ export const AdminView: React.FC = () => {
                     adminAuditLogs.map(log => (
                       <div key={log.id} className="p-4 flex items-center justify-between text-xs">
                         <div className="space-y-0.5">
-                          <span className="font-bold text-white uppercase tracking-wider text-[11px] text-cyan-400">{log.action_type}</span>
-                          <p className="text-slate-300">{log.details}</p>
+                          <span className="font-bold text-white uppercase tracking-wider text-[11px] text-cyan-400">{log.action}</span>
+                          <p className="text-slate-300">{log.target || (log.details ? JSON.stringify(log.details) : 'Nincs részlet')}</p>
                         </div>
                         <span className="text-[10px] text-slate-500 font-mono">
                           {new Date(log.created_at).toLocaleString()}
