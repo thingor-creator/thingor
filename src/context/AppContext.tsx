@@ -35,165 +35,9 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat-11', name: 'Egyéb tárgyak', is_custom: false },
 ];
 
-export const DEFAULT_LOCATIONS: LocationItem[] = [
-  { id: 'loc-1', name: 'Otthon', parent_id: null },
-  { id: 'loc-2', name: 'Garázs', parent_id: 'loc-1' },
-  { id: 'loc-3', name: 'Műhely', parent_id: 'loc-2' },
-  { id: 'loc-4', name: 'Szerszámos szekrény', parent_id: 'loc-3' },
-  { id: 'loc-5', name: 'Konyha', parent_id: 'loc-1' },
-  { id: 'loc-6', name: '3. fiók', parent_id: 'loc-5' },
-  { id: 'loc-7', name: 'Dolgozó szoba', parent_id: 'loc-1' },
-  { id: 'loc-8', name: 'Íróasztal', parent_id: 'loc-7' },
-  { id: 'loc-9', name: 'Hálószoba', parent_id: 'loc-1' },
-  { id: 'loc-10', name: 'Éjjeliszekrény', parent_id: 'loc-9' },
-];
-
-export const DEFAULT_ITEMS: Item[] = [
-  {
-    id: 'item-1',
-    name: 'Makita DHP486',
-    description: '18V LXT Akkus ütvefúró-csavarbehajtó kefe nélküli motorral.',
-    category_id: 'cat-2',
-    location_id: 'loc-4',
-    photo_url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80',
-    additional_photos: [
-      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'
-    ],
-    purchase_date: '2024-03-15',
-    purchase_price: 180,
-    current_value: 180,
-    store_seller: 'Makita Hivatalos Műszaki Áruház',
-    condition: 'Good',
-    warranty_start: '2024-03-15',
-    warranty_end: '2028-03-12',
-    notes: 'Tartalmaz 2x 5.0Ah akkumulátort és DC18RC gyorstöltőt Mbox kofferben.',
-    created_at: '2024-03-15T10:00:00Z',
-  },
-  {
-    id: 'item-2',
-    name: 'Apple MacBook Pro 16" M3 Max',
-    description: 'Asztrofekete, 36GB Egyesített memória, 1TB SSD. Elsődleges munkaállomás.',
-    category_id: 'cat-1',
-    location_id: 'loc-8',
-    photo_url: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80',
-    purchase_date: '2024-01-10',
-    purchase_price: 3499,
-    current_value: 3200,
-    store_seller: 'Apple Store Central',
-    condition: 'Excellent',
-    warranty_start: '2024-01-10',
-    warranty_end: '2026-11-15',
-    notes: 'AppleCare+ aktív 2027 januárig. Sorozatszám: C02FX089Q05N',
-    created_at: '2024-01-10T14:30:00Z',
-  },
-  {
-    id: 'item-3',
-    name: 'Trek FX 3 Disc Fitness Kerékpár',
-    description: 'Matte Dnister Black könnyű alumínium váz hidraulikus tárcsafékekkel.',
-    category_id: 'cat-6',
-    location_id: 'loc-2',
-    photo_url: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80',
-    purchase_date: '2023-06-20',
-    purchase_price: 980,
-    current_value: 750,
-    store_seller: 'Trek Kerékpár Szaküzlet',
-    condition: 'Good',
-    warranty_start: '2023-06-20',
-    warranty_end: '2026-10-25',
-    notes: 'Szervizelve 2024 áprilisában. Új lánc és hátsó fogaskoszorú.',
-    created_at: '2023-06-20T09:15:00Z',
-  },
-  {
-    id: 'item-4',
-    name: 'Sony WH-1000XM5 Vezeték Nélküli Fejhallgató',
-    description: 'Zajszűrős fejhallgató 8 mikrofonnal és Auto NC Optimizer funkcióval.',
-    category_id: 'cat-1',
-    location_id: 'loc-10',
-    photo_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
-    purchase_date: '2023-11-25',
-    purchase_price: 380,
-    current_value: 290,
-    store_seller: 'Elektronikai Műszaki Áruház',
-    condition: 'Good',
-    warranty_start: '2023-11-25',
-    warranty_end: '2025-11-25',
-    notes: 'Fekete kiadás. Audio kábellel és kemény védőtokkal.',
-    created_at: '2023-11-25T16:45:00Z',
-  },
-  {
-    id: 'item-5',
-    name: 'DeWalt DWE7492 Asztali Körfűrész 250mm',
-    description: 'Professzionális asztali fűrész fogaskerekes párhuzamvezetővel, 2000W motor.',
-    category_id: 'cat-2',
-    location_id: 'loc-3',
-    photo_url: 'https://images.unsplash.com/photo-1572981779307-38b8cabb2407?auto=format&fit=crop&w=800&q=80',
-    purchase_date: '2022-09-05',
-    purchase_price: 720,
-    current_value: 580,
-    store_seller: 'Szerszám és Barkács Szaküzlet',
-    condition: 'Fair',
-    warranty_start: '2022-09-05',
-    warranty_end: '2025-09-05',
-    notes: 'Fűrészlap cserélve 2024 januárban Freud 60T finomvágó lapra.',
-    created_at: '2022-09-05T11:20:00Z',
-  },
-  {
-    id: 'item-6',
-    name: 'Kärcher K5 Premium Smart Control',
-    description: '145 bar magasnyomású mosó Bluetooth kapcsolattal és tömlődobbal.',
-    category_id: 'cat-4',
-    location_id: 'loc-2',
-    photo_url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
-    purchase_date: '2024-04-10',
-    purchase_price: 420,
-    current_value: 390,
-    store_seller: 'Kert és Otthon Áruház',
-    condition: 'New',
-    warranty_start: '2024-04-10',
-    warranty_end: '2029-04-10',
-    notes: '5 év gyári kiterjesztött garancia online regisztrálva.',
-    created_at: '2024-04-10T08:30:00Z',
-  }
-];
-
-export const DEFAULT_DOCUMENTS: ItemDocument[] = [
-  {
-    id: 'doc-1',
-    item_id: 'item-1',
-    file_name: 'Szamla_Makita_DHP486.pdf',
-    file_url: '#',
-    document_type: 'Invoice',
-    created_at: '2024-03-15T10:00:00Z',
-    size_bytes: 420000,
-  },
-  {
-    id: 'doc-2',
-    item_id: 'item-1',
-    file_name: 'Garanciajegy_Makita.pdf',
-    file_url: '#',
-    document_type: 'Warranty',
-    created_at: '2024-03-15T10:05:00Z',
-    size_bytes: 180000,
-  },
-  {
-    id: 'doc-3',
-    item_id: 'item-1',
-    file_name: 'Hasznalati_Utmutato_DHP486.pdf',
-    file_url: '#',
-    document_type: 'Manual',
-    created_at: '2024-03-15T10:06:00Z',
-    size_bytes: 2500000,
-  },
-  {
-    id: 'doc-4',
-    item_id: 'item-2',
-    file_name: 'Apple_Szamla_MacBook.pdf',
-    file_url: '#',
-    document_type: 'Invoice',
-    created_at: '2024-01-10T14:30:00Z',
-    size_bytes: 310000,
-  }
-];
+export const DEFAULT_LOCATIONS: LocationItem[] = [];
+export const DEFAULT_ITEMS: Item[] = [];
+export const DEFAULT_DOCUMENTS: ItemDocument[] = [];
 
 export type AuthModalMode = 'login' | 'signup' | 'reset' | 'update_password';
 
@@ -338,18 +182,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [items, setItems] = useState<Item[]>(() => {
     const saved = localStorage.getItem('thingor_items');
-    return saved ? JSON.parse(saved) : DEFAULT_ITEMS;
+    if (saved) {
+      try {
+        const parsed: Item[] = JSON.parse(saved);
+        return parsed.filter(i => !i.id.startsWith('item-1') && !i.id.startsWith('item-2') && !i.id.startsWith('item-3') && !i.id.startsWith('item-4') && !i.id.startsWith('item-5') && !i.id.startsWith('item-6'));
+      } catch (e) {}
+    }
+    return [];
   });
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('thingor_categories');
-    // If saved categories are older English defaults, force DEFAULT_CATEGORIES in Hungarian
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.some((c: Category) => c.name === 'Electronics' || c.name === 'Tools')) {
-        return DEFAULT_CATEGORIES;
-      }
-      return parsed;
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.some((c: Category) => c.name === 'Electronics' || c.name === 'Tools')) {
+          return DEFAULT_CATEGORIES;
+        }
+        return parsed;
+      } catch (e) {}
     }
     return DEFAULT_CATEGORIES;
   });
@@ -357,18 +208,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [locations, setLocations] = useState<LocationItem[]>(() => {
     const saved = localStorage.getItem('thingor_locations');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.some((l: LocationItem) => l.name.includes('Home') || l.name.includes('Garage'))) {
-        return DEFAULT_LOCATIONS;
-      }
-      return parsed;
+      try {
+        const parsed: LocationItem[] = JSON.parse(saved);
+        return parsed.filter(l => !l.id.startsWith('loc-'));
+      } catch (e) {}
     }
-    return DEFAULT_LOCATIONS;
+    return [];
   });
 
   const [documents, setDocuments] = useState<ItemDocument[]>(() => {
     const saved = localStorage.getItem('thingor_documents');
-    return saved ? JSON.parse(saved) : DEFAULT_DOCUMENTS;
+    if (saved) {
+      try {
+        const parsed: ItemDocument[] = JSON.parse(saved);
+        return parsed.filter(d => !d.id.startsWith('doc-'));
+      } catch (e) {}
+    }
+    return [];
   });
 
   // UI state
@@ -583,7 +439,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setUser(profile);
       } else if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
+        setItems([]);
+        setDocuments([]);
+        setLocations([]);
         localStorage.removeItem('thingor_user');
+        localStorage.removeItem('thingor_items');
+        localStorage.removeItem('thingor_documents');
+        localStorage.removeItem('thingor_locations');
         localStorage.removeItem('thingor_current_view');
         setCurrentView('landing');
       }
@@ -610,7 +472,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (savedItems) {
           const parsed: Item[] = JSON.parse(savedItems);
           const itemsToInsert = parsed
-            .filter(i => !i.id.startsWith('item-1') && !i.id.startsWith('item-2'))
+            .filter(i => !i.id.startsWith('item-'))
             .map(i => ({
               name: i.name,
               description: i.description,
@@ -897,7 +759,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       supabase.auth.signOut().catch(console.error);
     }
     setUser(null);
+    setItems([]);
+    setDocuments([]);
+    setLocations([]);
     localStorage.removeItem('thingor_user');
+    localStorage.removeItem('thingor_items');
+    localStorage.removeItem('thingor_documents');
+    localStorage.removeItem('thingor_locations');
     localStorage.removeItem('thingor_current_view');
     setIsAuthModalOpen(false);
     setCurrentView('landing');
