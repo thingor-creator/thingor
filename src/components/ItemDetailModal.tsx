@@ -16,8 +16,11 @@ import {
   AlertTriangle,
   ExternalLink,
   FileCode,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Upload,
+  Loader2
 } from 'lucide-react';
+import { uploadFileToStorage } from '../lib/storage';
 
 export const ItemDetailModal: React.FC = () => {
   const {
@@ -31,7 +34,8 @@ export const ItemDetailModal: React.FC = () => {
     getLocationPath,
     getCategoryName,
     addDocument,
-    deleteDocument
+    deleteDocument,
+    user
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'photos' | 'notes'>('overview');
@@ -42,6 +46,8 @@ export const ItemDetailModal: React.FC = () => {
   const [newDocName, setNewDocName] = useState('');
   const [newDocType, setNewDocType] = useState<ItemDocument['document_type']>('Invoice');
   const [newDocUrl, setNewDocUrl] = useState('');
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [docUploadError, setDocUploadError] = useState<string | null>(null);
 
   if (!selectedItemId) return null;
 
@@ -376,6 +382,44 @@ export const ItemDetailModal: React.FC = () => {
               {isAddDocOpen && (
                 <form onSubmit={handleAddDocSubmit} className="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-3">
                   <h4 className="text-xs font-bold text-white">Add New Document Record</h4>
+
+                  {/* File Upload Area */}
+                  <div className="p-3 rounded-lg border border-dashed border-slate-800 bg-slate-900/60 flex flex-col items-center justify-center gap-1.5">
+                    <label className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer transition-colors ${
+                      isUploadingDoc ? 'opacity-50 pointer-events-none' : ''
+                    }`}>
+                      {isUploadingDoc ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
+                      ) : (
+                        <Upload className="h-4 w-4 text-slate-950" />
+                      )}
+                      <span>{isUploadingDoc ? 'Uploading...' : 'Upload File to Storage'}</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !user?.id) return;
+                          setIsUploadingDoc(true);
+                          setDocUploadError(null);
+                          if (!newDocName) setNewDocName(file.name);
+                          const res = await uploadFileToStorage(file, 'documents', user.id);
+                          setIsUploadingDoc(false);
+                          if (res.error) {
+                            setDocUploadError(res.error);
+                          } else if (res.signedUrl || res.path) {
+                            setNewDocUrl(res.signedUrl || res.path || '');
+                          }
+                        }}
+                      />
+                    </label>
+                    <p className="text-[10px] text-slate-400">PDF, PNG, JPG or DOC up to 15MB</p>
+                    {docUploadError && (
+                      <p className="text-[11px] text-rose-400 font-medium">{docUploadError}</p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
                       <label className="block text-slate-400 mb-1">Document Name *</label>

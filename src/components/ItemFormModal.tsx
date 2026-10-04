@@ -4,8 +4,11 @@ import type { ItemCondition } from '../types';
 import {
   X,
   Package,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Upload,
+  Loader2
 } from 'lucide-react';
+import { uploadFileToStorage } from '../lib/storage';
 
 export const ItemFormModal: React.FC = () => {
   const {
@@ -18,7 +21,11 @@ export const ItemFormModal: React.FC = () => {
     locations,
     addLocation,
     getLocationPath,
+    user
   } = useApp();
+
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
 
   // Form states
   const [name, setName] = useState('');
@@ -239,12 +246,12 @@ export const ItemFormModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Photo URL / Preset picker */}
+            {/* Photo URL & Storage File Upload */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Photo URL
+                Photo (URL or File Upload)
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
                   <input
@@ -255,7 +262,40 @@ export const ItemFormModal: React.FC = () => {
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
+
+                <label className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 cursor-pointer transition-colors ${
+                  isUploadingPhoto ? 'opacity-50 pointer-events-none' : ''
+                }`}>
+                  {isUploadingPhoto ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                  ) : (
+                    <Upload className="h-4 w-4 text-emerald-400" />
+                  )}
+                  <span>{isUploadingPhoto ? 'Uploading...' : 'Upload File'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !user?.id) return;
+                      setIsUploadingPhoto(true);
+                      setPhotoUploadError(null);
+                      const res = await uploadFileToStorage(file, 'photos', user.id);
+                      setIsUploadingPhoto(false);
+                      if (res.error) {
+                        setPhotoUploadError(res.error);
+                      } else if (res.signedUrl || res.path) {
+                        setPhotoUrl(res.signedUrl || res.path || '');
+                      }
+                    }}
+                  />
+                </label>
               </div>
+
+              {photoUploadError && (
+                <p className="text-[11px] text-rose-400 mt-1 font-medium">{photoUploadError}</p>
+              )}
 
               {/* Sample Photo Presets for convenience */}
               <div className="mt-2 flex items-center gap-2 flex-wrap">
