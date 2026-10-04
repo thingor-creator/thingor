@@ -100,7 +100,7 @@ export const ItemDetailModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl overflow-hidden">
-        
+
         {/* Close Button */}
         <button
           onClick={() => setSelectedItemId(null)}
@@ -112,7 +112,7 @@ export const ItemDetailModal: React.FC = () => {
         {/* Modal Header with Hero Banner */}
         <div className="relative border-b border-slate-800 bg-slate-950">
           <div className="flex flex-col md:flex-row gap-6 p-6">
-            
+
             {/* Main Photo */}
             <div className="h-40 w-full md:w-48 rounded-xl bg-slate-900 overflow-hidden flex-shrink-0 border border-slate-800 relative">
               {item.photo_url ? (
@@ -197,41 +197,37 @@ export const ItemDetailModal: React.FC = () => {
           <div className="flex border-t border-slate-800 px-6 gap-2 text-xs font-semibold overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`py-3 px-3 border-b-2 transition-colors ${
-                activeTab === 'overview'
+              className={`py-3 px-3 border-b-2 transition-colors ${activeTab === 'overview'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               Overview
             </button>
             <button
               onClick={() => setActiveTab('documents')}
-              className={`py-3 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
-                activeTab === 'documents'
+              className={`py-3 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'documents'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               Documents ({itemDocs.length})
             </button>
             <button
               onClick={() => setActiveTab('photos')}
-              className={`py-3 px-3 border-b-2 transition-colors ${
-                activeTab === 'photos'
+              className={`py-3 px-3 border-b-2 transition-colors ${activeTab === 'photos'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               Photos ({(item.additional_photos?.length || 0) + (item.photo_url ? 1 : 0)})
             </button>
             <button
               onClick={() => setActiveTab('notes')}
-              className={`py-3 px-3 border-b-2 transition-colors ${
-                activeTab === 'notes'
+              className={`py-3 px-3 border-b-2 transition-colors ${activeTab === 'notes'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               Notes
             </button>
@@ -240,11 +236,11 @@ export const ItemDetailModal: React.FC = () => {
 
         {/* Modal Body Tab Content */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          
+
           {/* TAB 1: OVERVIEW & WARRANTY (Section 11) */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              
+
               {/* Description */}
               {item.description && (
                 <div>

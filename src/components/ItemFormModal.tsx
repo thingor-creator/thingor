@@ -126,7 +126,7 @@ export const ItemFormModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl overflow-hidden">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 p-5 bg-slate-950">
           <div className="flex items-center gap-2.5">
@@ -153,7 +153,7 @@ export const ItemFormModal: React.FC = () => {
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
-          
+
           {/* SECTION 1: ESSENTIAL DETAILS (Section 10) */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">

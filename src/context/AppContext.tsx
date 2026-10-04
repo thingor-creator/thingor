@@ -204,27 +204,28 @@ interface AppContextType {
   signup: (email: string, pass: string, name: string) => Promise<{ success: boolean; error?: string; emailConfirmationRequired?: boolean }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  
+
   // Navigation & Modals
   currentView: ViewMode;
   setCurrentView: (view: ViewMode) => void;
   selectedItemId: string | null;
   setSelectedItemId: (id: string | null) => void;
-  
+
   isAddEditItemModalOpen: boolean;
   setIsAddEditItemModalOpen: (open: boolean) => void;
   editingItem: Item | null;
   setEditingItem: (item: Item | null) => void;
-  
+
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   authModalMode: AuthModalMode;
   setAuthModalMode: (mode: AuthModalMode) => void;
-  
+
   isLocationModalOpen: boolean;
   setIsLocationModalOpen: (open: boolean) => void;
-  
+
   isCategoryModalOpen: boolean;
   setIsCategoryModalOpen: (open: boolean) => void;
 
@@ -246,11 +247,11 @@ interface AppContextType {
   addItem: (item: Omit<Item, 'id' | 'created_at'>) => Promise<Item>;
   updateItem: (id: string, updates: Partial<Item>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
-  
+
   addCategory: (name: string) => Promise<Category>;
   addLocation: (name: string, parentId?: string | null) => Promise<LocationItem>;
   deleteLocation: (id: string) => Promise<void>;
-  
+
   addDocument: (itemId: string, fileName: string, fileUrl: string, docType: ItemDocument['document_type']) => Promise<ItemDocument>;
   deleteDocument: (docId: string) => Promise<void>;
 
@@ -387,6 +388,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [user]);
 
+  const isUUID = (str?: string | null): boolean =>
+    Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+
   // Handle Supabase Auth state if configured
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -399,8 +403,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           user_id: session.user.id,
           display_name: session.user.user_metadata?.display_name || cleanEmail.split('@')[0] || 'User',
           email: cleanEmail,
-          is_admin: cleanEmail === 'mythingor@gmail.com',
+          is_admin: Boolean(session.user.user_metadata?.is_admin) || cleanEmail === 'mythingor@gmail.com',
         });
+      } else {
+        setUser(null);
+        localStorage.removeItem('thingor_user');
       }
     });
 
@@ -419,16 +426,117 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           user_id: session.user.id,
           display_name: session.user.user_metadata?.display_name || cleanEmail.split('@')[0] || 'User',
           email: cleanEmail,
-          is_admin: cleanEmail === 'mythingor@gmail.com',
+          is_admin: Boolean(session.user.user_metadata?.is_admin) || cleanEmail === 'mythingor@gmail.com',
         });
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
+        localStorage.removeItem('thingor_user');
+        localStorage.removeItem('thingor_current_view');
         setCurrentView('landing');
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Sync Categories, Locations, Items & Documents from Supabase when user is authenticated (M6-M9, M14-M16)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !user?.id) return;
+
+    let isMounted = true;
+
+    // Controlled LocalStorage One-Time Migration to Supabase Cloud (M16)
+    const migrationKey = `thingor_migrated_${user.id}`;
+    const hasMigrated = localStorage.getItem(migrationKey) === 'true';
+
+    async function runControlledMigration() {
+      if (hasMigrated || !supabase || !user?.id) return;
+
+      try {
+        const savedItems = localStorage.getItem('thingor_items');
+        if (savedItems) {
+          const parsed: Item[] = JSON.parse(savedItems);
+          const itemsToInsert = parsed
+            .filter(i => !i.id.startsWith('item-1') && !i.id.startsWith('item-2'))
+            .map(i => ({
+              name: i.name,
+              description: i.description,
+              photo_url: i.photo_url,
+              purchase_date: i.purchase_date,
+              purchase_price: i.purchase_price,
+              current_value: i.current_value,
+              store_seller: i.store_seller,
+              condition: i.condition,
+              warranty_start: i.warranty_start,
+              warranty_end: i.warranty_end,
+              notes: i.notes,
+              user_id: user.id,
+              category_id: isUUID(i.category_id) ? i.category_id : null,
+              location_id: isUUID(i.location_id) ? i.location_id : null,
+            }));
+
+          if (itemsToInsert.length > 0) {
+            await supabase.from('items').insert(itemsToInsert);
+          }
+        }
+      } catch (e) {
+        console.error('Migration error:', e);
+      } finally {
+        localStorage.setItem(migrationKey, 'true');
+      }
+    }
+
+    runControlledMigration();
+
+    // Load categories
+    supabase
+      .from('categories')
+      .select('*')
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0 && isMounted) {
+          setCategories(data as Category[]);
+        }
+      });
+
+    // Load user locations
+    supabase
+      .from('locations')
+      .select('*')
+      .eq('user_id', user.id)
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setLocations(data as LocationItem[]);
+        }
+      });
+
+    // Load user items (M8)
+    supabase
+      .from('items')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setItems(data as Item[]);
+        }
+      });
+
+    // Load user item documents (M9)
+    supabase
+      .from('item_documents')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setDocuments(data as ItemDocument[]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   const formatAuthError = (msg: string): string => {
     const lower = msg.toLowerCase();
@@ -473,24 +581,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check if logging in as Admin via provided credentials
-    const isAdminAccount = cleanEmail === 'mythingor@gmail.com' && pass === 'PocoPoco83';
-
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
-      
-      // If admin credentials supplied locally but Supabase auth fails (e.g. unconfirmed or not in Supabase yet), fall back to local admin session
-      if (error && isAdminAccount) {
-        setUser({
-          id: 'admin-1',
-          user_id: 'admin-1',
-          display_name: 'Admin (Thingor)',
-          email: 'mythingor@gmail.com',
-          is_admin: true,
-        });
-        setIsAuthModalOpen(false);
-        return { success: true };
-      }
 
       if (error) return { success: false, error: formatAuthError(error.message) };
 
@@ -500,22 +592,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           user_id: data.user.id,
           display_name: data.user.user_metadata?.display_name || (cleanEmail === 'mythingor@gmail.com' ? 'Admin (Thingor)' : cleanEmail.split('@')[0]),
           email: cleanEmail,
-          is_admin: cleanEmail === 'mythingor@gmail.com',
+          is_admin: Boolean(data.user.user_metadata?.is_admin) || cleanEmail === 'mythingor@gmail.com',
         });
       }
-      setIsAuthModalOpen(false);
-      return { success: true };
-    }
-
-    // Local Storage Offline Fallback Auth
-    if (isAdminAccount) {
-      setUser({
-        id: 'admin-1',
-        user_id: 'admin-1',
-        display_name: 'Admin (Thingor)',
-        email: 'mythingor@gmail.com',
-        is_admin: true,
-      });
       setIsAuthModalOpen(false);
       return { success: true };
     }
@@ -547,7 +626,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const signup = async (email: string, pass: string, name: string) => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check if new registration is suspended by Admin (except if logged in as Admin creating users)
     const currentIsAdmin = !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin);
     if (isRegistrationSuspended && !currentIsAdmin) {
       return {
@@ -571,7 +649,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (error) return { success: false, error: formatAuthError(error.message) };
 
       if (data.user && !data.session) {
-        // Email confirmation is required by Supabase auth policy
         return { success: true, emailConfirmationRequired: true };
       }
 
@@ -587,10 +664,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return { success: true, emailConfirmationRequired: false };
     }
 
-    // Local Storage Offline Fallback Signup
     const savedRegs = localStorage.getItem('thingor_registered_users');
     const registeredUsers: Array<{ email: string; pass: string; name: string; id: string }> = savedRegs ? JSON.parse(savedRegs) : [];
-    
+
     if (registeredUsers.some(u => u.email.toLowerCase() === cleanEmail)) {
       return {
         success: false,
@@ -641,6 +717,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { success: true };
   };
 
+  const deleteAccount = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!user?.id) return { success: false, error: 'No user session' };
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('item_documents').delete().eq('user_id', user.id);
+      await supabase.from('items').delete().eq('user_id', user.id);
+      await supabase.from('locations').delete().eq('user_id', user.id);
+      await supabase.from('categories').delete().eq('user_id', user.id).eq('is_custom', true);
+      await supabase.from('profiles').delete().eq('user_id', user.id);
+      await supabase.auth.signOut();
+    }
+
+    logout();
+    return { success: true };
+  };
+
   const logout = () => {
     if (isSupabaseConfigured && supabase) {
       supabase.auth.signOut().catch(console.error);
@@ -658,9 +750,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const getLocationPath = (locationId: string): string => {
     const locMap = new Map(locations.map(l => [l.id, l]));
     const parts: string[] = [];
+    const visited = new Set<string>();
     let currentId: string | null | undefined = locationId;
 
-    while (currentId && locMap.has(currentId)) {
+    while (currentId && locMap.has(currentId) && !visited.has(currentId)) {
+      visited.add(currentId);
       const locObj: LocationItem = locMap.get(currentId)!;
       parts.unshift(locObj.name);
       currentId = locObj.parent_id;
@@ -672,8 +766,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const getCategoryName = (categoryId: string): string => {
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return language === 'hu' ? 'Kategorizálatlan' : 'Uncategorized';
-    
-    // Map default category names dynamically based on language
+
     if (language === 'en' && !cat.is_custom) {
       const enMap: Record<string, string> = {
         'Elektronika': 'Electronics',
@@ -709,8 +802,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return cat.name;
   };
 
-  // CRUD Items
+  // CRUD Items (M8 Cloud Integration)
   const addItem = async (itemData: Omit<Item, 'id' | 'created_at'>): Promise<Item> => {
+    const safeCategoryId = isUUID(itemData.category_id) ? itemData.category_id : null;
+    const safeLocationId = isUUID(itemData.location_id) ? itemData.location_id : null;
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const payload = {
+        ...itemData,
+        user_id: user.id,
+        category_id: safeCategoryId,
+        location_id: safeLocationId,
+      };
+
+      const { data, error } = await supabase
+        .from('items')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (!error && data) {
+        setItems(prev => [data as Item, ...prev]);
+        return data as Item;
+      }
+    }
+
     const newItem: Item = {
       ...itemData,
       id: 'item-' + Date.now(),
@@ -724,6 +840,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateItem = async (id: string, updates: Partial<Item>): Promise<void> => {
+    if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
+      const cleanUpdates: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
+      if ('category_id' in cleanUpdates && !isUUID(cleanUpdates.category_id)) {
+        cleanUpdates.category_id = null;
+      }
+      if ('location_id' in cleanUpdates && !isUUID(cleanUpdates.location_id)) {
+        cleanUpdates.location_id = null;
+      }
+      delete cleanUpdates.id;
+      delete cleanUpdates.created_at;
+
+      await supabase
+        .from('items')
+        .update(cleanUpdates)
+        .eq('id', id)
+        .eq('user_id', user.id);
+    }
+
     setItems(prev => prev.map(item => item.id === id ? {
       ...item,
       ...updates,
@@ -732,29 +866,63 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteItem = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
+      await supabase.from('items').delete().eq('id', id).eq('user_id', user.id);
+    }
+
     setItems(prev => prev.filter(item => item.id !== id));
     setDocuments(prev => prev.filter(doc => doc.item_id !== id));
     if (selectedItemId === id) setSelectedItemId(null);
   };
 
-  // CRUD Categories
+  // CRUD Categories (M6 Cloud Integration)
   const addCategory = async (name: string): Promise<Category> => {
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{ name, is_custom: true, user_id: user.id }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        setCategories(prev => [...prev, data as Category]);
+        return data as Category;
+      }
+    }
+
     const newCat: Category = {
       id: 'cat-' + Date.now(),
       name,
       is_custom: true,
+      user_id: user?.id,
       created_at: new Date().toISOString(),
     };
     setCategories(prev => [...prev, newCat]);
     return newCat;
   };
 
-  // CRUD Locations
+  // CRUD Locations (M7 Cloud Integration)
   const addLocation = async (name: string, parentId?: string | null): Promise<LocationItem> => {
+    const safeParentId = parentId && parentId !== '' ? parentId : null;
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase
+        .from('locations')
+        .insert([{ name, parent_id: safeParentId, user_id: user.id }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        setLocations(prev => [...prev, data as LocationItem]);
+        return data as LocationItem;
+      }
+    }
+
     const newLoc: LocationItem = {
       id: 'loc-' + Date.now(),
       name,
-      parent_id: parentId || null,
+      parent_id: safeParentId,
+      user_id: user?.id,
       created_at: new Date().toISOString(),
     };
     setLocations(prev => [...prev, newLoc]);
@@ -762,16 +930,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteLocation = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured && supabase && user?.id) {
+      await supabase.from('locations').delete().eq('id', id).eq('user_id', user.id);
+    }
     setLocations(prev => prev.filter(l => l.id !== id && l.parent_id !== id));
   };
 
-  // CRUD Documents
+  // CRUD Documents (M9 Cloud Integration)
   const addDocument = async (
     itemId: string,
     fileName: string,
     fileUrl: string,
     docType: ItemDocument['document_type']
   ): Promise<ItemDocument> => {
+    if (isSupabaseConfigured && supabase && user?.id && isUUID(itemId)) {
+      const { data, error } = await supabase
+        .from('item_documents')
+        .insert([{
+          item_id: itemId,
+          user_id: user.id,
+          file_name: fileName,
+          file_url: fileUrl,
+          document_type: docType,
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        setDocuments(prev => [data as ItemDocument, ...prev]);
+        return data as ItemDocument;
+      }
+    }
+
     const newDoc: ItemDocument = {
       id: 'doc-' + Date.now(),
       item_id: itemId,
@@ -787,6 +977,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteDocument = async (docId: string): Promise<void> => {
+    if (isSupabaseConfigured && supabase && user?.id && isUUID(docId)) {
+      await supabase.from('item_documents').delete().eq('id', docId).eq('user_id', user.id);
+    }
     setDocuments(prev => prev.filter(d => d.id !== docId));
   };
 
@@ -806,6 +999,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         signup,
         resetPassword,
         updatePassword,
+        deleteAccount,
         logout,
 
         currentView,
