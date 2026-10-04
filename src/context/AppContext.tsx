@@ -1352,6 +1352,231 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return { success: true };
   };
 
+  // Toggle Registration
+  const toggleRegistration = async (enabled: boolean) => {
+    setIsRegistrationSuspended(!enabled);
+    const updated = { ...siteSettings, registration_enabled: enabled };
+    setSiteSettings(updated);
+    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('site_settings').upsert({
+        id: 'default',
+        registration_enabled: enabled,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id
+      });
+    }
+    await logAdminAction('toggle_registration', `registration_enabled=${enabled}`);
+  };
+
+  // Toggle Maintenance Mode
+  const toggleMaintenance = async (enabled: boolean) => {
+    const updated = { ...siteSettings, maintenance_mode: enabled };
+    setSiteSettings(updated);
+    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('site_settings').upsert({
+        id: 'default',
+        maintenance_mode: enabled,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id
+      });
+    }
+    await logAdminAction('toggle_maintenance', `maintenance_mode=${enabled}`);
+  };
+
+  // Update Site Settings
+  const updateSiteSettings = async (updates: Partial<SiteSettings>): Promise<{ success: boolean; error?: string }> => {
+    const updated = { ...siteSettings, ...updates };
+    setSiteSettings(updated);
+    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('site_settings').upsert({
+        id: 'default',
+        ...updates,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id
+      });
+      if (error) return { success: false, error: error.message };
+    }
+    await logAdminAction('update_site_settings', undefined, updates);
+    return { success: true };
+  };
+
+  // Create Item Share Link
+  const createItemShare = async (
+    itemId: string,
+    purpose: SharePurpose,
+    expirationDays: number | null,
+    permissions: SharePermissions
+  ): Promise<ItemShare | null> => {
+    if (!user?.id) return null;
+
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    let expiresAt: string | null = null;
+    if (expirationDays && expirationDays > 0) {
+      const exp = new Date();
+      exp.setDate(exp.getDate() + expirationDays);
+      expiresAt = exp.toISOString();
+    }
+
+    const newShare: ItemShare = {
+      id: 'share-' + Date.now(),
+      item_id: itemId,
+      created_by: user.id,
+      token,
+      purpose,
+      expires_at: expiresAt,
+      revoked_at: null,
+      permissions,
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
+      const { data, error } = await supabase
+        .from('item_shares')
+        .insert([{
+          item_id: itemId,
+          created_by: user.id,
+          token,
+          purpose,
+          expires_at: expiresAt,
+          permissions,
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        const created = data as ItemShare;
+        setItemShares(prev => [created, ...prev]);
+        return created;
+      }
+    }
+
+    setItemShares(prev => [newShare, ...prev]);
+    return newShare;
+  };
+
+  // Revoke Item Share Link
+  const revokeItemShare = async (shareId: string): Promise<boolean> => {
+    const revokedAt = new Date().toISOString();
+    if (isSupabaseConfigured && supabase && isUUID(shareId)) {
+      await supabase
+        .from('item_shares')
+        .update({ revoked_at: revokedAt })
+        .eq('id', shareId)
+        .eq('created_by', user?.id);
+    }
+
+    setItemShares(prev => prev.map(s => s.id === shareId ? { ...s, revoked_at: revokedAt } : s));
+    return true;
+  };
+
+  // Get Active Item Shares
+  const getItemShares = async (itemId: string): Promise<ItemShare[]> => {
+    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
+      const { data } = await supabase
+        .from('item_shares')
+        .select('*')
+        .eq('item_id', itemId)
+        .is('revoked_at', null)
+        .order('created_at', { ascending: false });
+      if (data) return data as ItemShare[];
+    }
+    return itemShares.filter(s => s.item_id === itemId && !s.revoked_at);
+  };
+
+  // Get Shared Item by Cryptographic Token for Guest View
+  const getSharedItemByToken = async (token: string): Promise<{ success: boolean; data?: SharedItemViewData; error?: string }> => {
+    if (!token) return { success: false, error: 'Hiányzó megosztási token' };
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase.rpc('get_shared_item', { share_token: token });
+        if (!error && data) {
+          return { success: true, data: data as SharedItemViewData };
+        }
+      } catch (e) {
+        console.warn('RPC get_shared_item fallback:', e);
+      }
+
+      // Manual fallback query
+      const { data: shareData } = await supabase
+        .from('item_shares')
+        .select('*, items(*)')
+        .eq('token', token)
+        .is('revoked_at', null)
+        .maybeSingle();
+
+      if (shareData && shareData.items) {
+        const item = shareData.items;
+        const perms: SharePermissions = shareData.permissions || {};
+        if (shareData.expires_at && new Date(shareData.expires_at).getTime() < Date.now()) {
+          return { success: false, error: 'Ez a megosztási link lejárt.' };
+        }
+
+        const sharedPayload: SharedItemViewData = {
+          share_id: shareData.id,
+          purpose: shareData.purpose,
+          expires_at: shareData.expires_at,
+          permissions: perms,
+          created_at: shareData.created_at,
+          item_id: item.id,
+          name: item.name,
+          description: item.description,
+          condition: item.condition,
+          photo_url: item.photo_url,
+          additional_photos: perms.include_additional_images ? item.additional_photos : undefined,
+          purchase_date: perms.include_purchase_date ? item.purchase_date : undefined,
+          warranty_start: perms.include_warranty ? item.warranty_start : undefined,
+          warranty_end: perms.include_warranty ? item.warranty_end : undefined,
+          current_value: perms.include_value ? item.current_value : undefined,
+          purchase_price: perms.include_purchase_price ? item.purchase_price : undefined,
+        };
+        return { success: true, data: sharedPayload };
+      }
+    }
+
+    // Local state fallback
+    const localShare = itemShares.find(s => s.token === token && !s.revoked_at);
+    if (localShare) {
+      if (localShare.expires_at && new Date(localShare.expires_at).getTime() < Date.now()) {
+        return { success: false, error: 'Ez a megosztási link lejárt.' };
+      }
+      const targetItem = items.find(i => i.id === localShare.item_id);
+      if (targetItem) {
+        const perms = localShare.permissions || {};
+        const payload: SharedItemViewData = {
+          share_id: localShare.id,
+          purpose: localShare.purpose,
+          expires_at: localShare.expires_at,
+          permissions: perms,
+          created_at: localShare.created_at,
+          item_id: targetItem.id,
+          name: targetItem.name,
+          description: targetItem.description,
+          condition: targetItem.condition,
+          photo_url: targetItem.photo_url,
+          additional_photos: perms.include_additional_images ? targetItem.additional_photos : undefined,
+          purchase_date: perms.include_purchase_date ? targetItem.purchase_date : undefined,
+          warranty_start: perms.include_warranty ? targetItem.warranty_start : undefined,
+          warranty_end: perms.include_warranty ? targetItem.warranty_end : undefined,
+          current_value: perms.include_value ? targetItem.current_value : undefined,
+          purchase_price: perms.include_purchase_price ? targetItem.purchase_price : undefined,
+        };
+        return { success: true, data: payload };
+      }
+    }
+
+    return { success: false, error: 'Ez a megosztási link már nem érhető el.' };
+  };
+
   // Fetch Users List for Admin
   const fetchUsersList = async (): Promise<UserProfile[]> => {
     if (!user || !isAdmin(user)) return [];
