@@ -151,10 +151,8 @@ export const AdminView: React.FC = () => {
   }
 
   const handleOpenUserDetail = async (userId: string) => {
-    setIsLoadingUserStats(true);
     const stats = await fetchUserDetailStats(userId);
     setSelectedUserStats(stats);
-    setIsLoadingUserStats(false);
   };
 
   const handleConfirmSuspend = async () => {
@@ -173,7 +171,6 @@ export const AdminView: React.FC = () => {
     }
     setShowSuspendConfirmModal(false);
     setTargetUserToSuspend(null);
-    setSuspendReason('');
   };
 
   const handleConfirmDeleteUser = async () => {
