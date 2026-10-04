@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
+  LayoutDashboard,
   ShieldAlert,
   Users,
   Boxes,
@@ -28,7 +29,18 @@ import {
   Calendar,
   Layers,
   HelpCircle,
-  HelpCircle as FaqIcon,
+  FolderTree,
+  BookOpen,
+  ArrowLeft,
+  LogOut,
+  ChevronRight,
+  ShieldCheck,
+  Check,
+  Wrench,
+  Key,
+  Users2,
+  Shield,
+  Megaphone,
 } from 'lucide-react';
 import type { UserStatus, LegalSlug, LegalDocumentVersion, LandingBlock, FAQItem, UserDetailStats } from '../types';
 import { isAdmin as checkIsAdmin } from '../lib/permissions';
@@ -68,7 +80,7 @@ export const AdminView: React.FC = () => {
     deleteFAQ,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'registration' | 'content' | 'legal' | 'settings' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'registration' | 'content' | 'legal' | 'settings' | 'audit' | 'faq'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -137,7 +149,7 @@ export const AdminView: React.FC = () => {
   // Access check
   if (!isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-4 bg-[#141418] text-white py-16">
         <div className="p-4 rounded-full bg-rose-950/60 border border-rose-800/80 text-rose-400 shadow-xl">
           <ShieldAlert className="h-12 w-12" />
         </div>
@@ -263,853 +275,926 @@ export const AdminView: React.FC = () => {
   const currentLegalVersions = legalDocumentVersions.filter(v => v.document_slug === activeLegalSlug);
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
-
-      {/* Admin Panel Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5" />
-              Platform Admin Control Center
-            </span>
-            <span className="text-xs text-slate-400 font-mono">v2.4.0</span>
+    <div className="bg-[#18181c] min-h-screen text-slate-100 flex flex-col font-sans -mx-4 -mt-6 sm:-mx-6 sm:-mt-8">
+      {/* TOP HEADER BAR */}
+      <header className="h-16 border-b border-[#282832] bg-[#1d1d23] px-6 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-md">
+        {/* Left Logo / Admin Title */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-900/30">
+            <Shield className="w-5 h-5" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mt-2">
-            {language === 'hu' ? 'Thingor Rendszer-adminisztráció' : 'Admin Control Panel'}
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Központi vezérlőpult a felhasználók, hozzáférések, publikus tartalmak, jogi dokumentumok és beállítások kezeléséhez.
-          </p>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-white text-base tracking-tight">ADMIN</span>
+              <span className="text-xs font-semibold text-slate-400">Panel</span>
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={() => { fetchUsersList(); fetchLandingBlocks(); fetchFAQs(); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors self-start sm:self-auto shadow-sm"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Adatok Frissítése
-        </button>
-      </div>
+        {/* Center Universal Search Bar */}
+        <div className="relative flex-1 max-w-xl mx-auto hidden md:block">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Keresés tárgyak, könyvek, felhasználók, beállítások..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#25252e] border border-[#363644] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+          />
+        </div>
 
-      {/* Action Notification Message */}
-      {actionMsg && (
-        <div
-          className={`p-4 rounded-2xl border text-sm font-semibold flex items-center justify-between animate-fade-in ${
-            actionMsg.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-          }`}
-        >
-          <span>{actionMsg.text}</span>
-          <button onClick={() => setActionMsg(null)} className="text-slate-400 hover:text-white">
-            <X className="w-4 h-4" />
+        {/* Right User & Controls */}
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <p className="text-xs font-semibold text-slate-200">{user?.email || 'admin@thingor.com'}</p>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              Adminisztrátor
+            </span>
+          </div>
+
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="p-2 rounded-xl bg-[#262630] border border-[#383848] text-slate-300 hover:text-white hover:bg-[#30303d] transition-colors"
+            title="Vissza a főoldalra"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
-      )}
+      </header>
 
-      {/* Main Admin Tabbed Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-800 overflow-x-auto pb-px">
-        {[
-          { id: 'overview', label: 'Dashboard Áttekintés', icon: Activity },
-          { id: 'users', label: 'Felhasználók Kezelése', icon: Users },
-          { id: 'registration', label: 'Regisztráció & Karbantartás', icon: Lock },
-          { id: 'content', label: 'Tartalom & Landing Builder', icon: Layers },
-          { id: 'legal', label: 'Jogi Dokumentumok & Verziózás', icon: FileCheck },
-          { id: 'settings', label: 'Megjelenés & Platform', icon: Sliders },
-          { id: 'audit', label: 'Admin Audit Napló', icon: FileText },
-        ].map(t => {
-          const Icon = t.icon;
-          const active = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
-                active
-                  ? 'border-emerald-500 text-emerald-400 bg-slate-900/60 rounded-t-xl'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* TAB 1: OVERVIEW & DASHBOARD KPIS */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Top KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-semibold uppercase tracking-wider">Regisztrált Felhasználók</span>
-                <Users className="w-5 h-5 text-blue-400" />
-              </div>
-              <p className="text-3xl font-extrabold text-white">{usersList.length || 1}</p>
-              <p className="text-[11px] text-slate-500">
-                {usersList.filter(u => u.status === 'suspended').length} felfüggesztve • {usersList.filter(u => u.role === 'admin').length} admin
+      {/* MAIN CONTAINER: SIDEBAR + CONTENT */}
+      <div className="flex flex-1 min-h-[calc(100vh-4rem)]">
+        {/* LEFT SIDEBAR NAVIGATION */}
+        <aside className="w-64 bg-[#191920] border-r border-[#262632] flex flex-col justify-between p-4 flex-shrink-0">
+          <div className="space-y-6">
+            {/* GROUP 1: ADMIN */}
+            <div>
+              <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2">
+                ADMIN
               </p>
+              <nav className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'overview'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+                  <span>Áttekintés</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'users'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <ShieldAlert className="w-4 h-4 text-rose-400" />
+                  <span>Moderáció & Jogok</span>
+                </button>
+              </nav>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-semibold uppercase tracking-wider">Nyilvántartott Tárgyak</span>
-                <Boxes className="w-5 h-5 text-emerald-400" />
-              </div>
-              <p className="text-3xl font-extrabold text-white">{items.length}</p>
-              <p className="text-[11px] text-slate-500">Tárgy a PostgreSQL adatbázisban</p>
+            {/* GROUP 2: TARTALOM */}
+            <div>
+              <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2">
+                TARTALOM
+              </p>
+              <nav className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('content')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'content'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <Layers className="w-4 h-4 text-pink-400" />
+                  <span>Kezdőlap & Blokkok</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('faq')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'faq'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <HelpCircle className="w-4 h-4 text-purple-400" />
+                  <span>GYIK & Kérdések</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('legal')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'legal'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 text-teal-400" />
+                  <span>Jogi Dokumentumok</span>
+                </button>
+              </nav>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-semibold uppercase tracking-wider">Aktív Megosztások</span>
-                <Share2 className="w-5 h-5 text-teal-400" />
-              </div>
-              <p className="text-3xl font-extrabold text-white">{itemShares.length}</p>
-              <p className="text-[11px] text-slate-500">Vendég megosztási hivatkozás</p>
+            {/* GROUP 3: PLATFORM & BEÁLLÍTÁSOK */}
+            <div>
+              <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2">
+                PLATFORM & BEÁLLÍTÁSOK
+              </p>
+              <nav className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('registration')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'registration'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <Sliders className="w-4 h-4 text-amber-400" />
+                  <span>Regisztráció & Működés</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'settings'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <Palette className="w-4 h-4 text-emerald-400" />
+                  <span>Rendszer Beállítások</span>
+                </button>
+              </nav>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-xs font-semibold uppercase tracking-wider">Csatolt Dokumentumok</span>
-                <FileText className="w-5 h-5 text-amber-400" />
-              </div>
-              <p className="text-3xl font-extrabold text-white">{documents.length}</p>
-              <p className="text-[11px] text-slate-500">Számla, garancia és útmutató fájl</p>
-            </div>
-          </div>
-
-          {/* System Health Statuses */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Regisztráció</span>
-                <h4 className="text-base font-extrabold text-white mt-1">
-                  {siteSettings.registration_enabled ? 'NYITVA (OPEN)' : 'SZÜNETEL (PAUSED)'}
-                </h4>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                siteSettings.registration_enabled
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-              }`}>
-                {siteSettings.registration_enabled ? 'Aktív' : 'Szünetel'}
-              </span>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fájltároló Engine</span>
-                <h4 className="text-base font-extrabold text-white mt-1">
-                  {isR2Configured ? 'Cloudflare R2' : 'Supabase Storage'}
-                </h4>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                {isR2Configured ? 'R2 Aktív' : 'Supabase'}
-              </span>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Karbantartási Mód</span>
-                <h4 className="text-base font-extrabold text-white mt-1">
-                  {siteSettings.maintenance_mode ? 'AKTÍV KARBANTARTÁS' : 'Normál Üzemmód'}
-                </h4>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                siteSettings.maintenance_mode
-                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              }`}>
-                {siteSettings.maintenance_mode ? 'Karbantartás' : 'Online'}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: USER MANAGEMENT */}
-      {activeTab === 'users' && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Keresés név, email vagy User ID alapján..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <span className="text-xs text-slate-400 font-medium">
-              Megjelenítve {filteredUsers.length} / {usersList.length} felhasználó
-            </span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
-                  <tr>
-                    <th className="px-6 py-4">Felhasználó</th>
-                    <th className="px-6 py-4">Email</th>
-                    <th className="px-6 py-4">Regisztráció</th>
-                    <th className="px-6 py-4">Szerepkör</th>
-                    <th className="px-6 py-4">Státusz</th>
-                    <th className="px-6 py-4 text-right">Műveletek</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
-                        Nem található a keresésnek megfelelő felhasználó.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map(u => {
-                      const isUserAdmin = checkIsAdmin(u);
-                      const isUserSuspended = u.status === 'suspended';
-                      return (
-                        <tr key={u.id || u.user_id} className="hover:bg-slate-800/30 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-emerald-400 border border-slate-700">
-                                {u.display_name?.charAt(0).toUpperCase() || 'U'}
-                              </div>
-                              <div>
-                                <p className="font-bold text-white cursor-pointer hover:text-emerald-400" onClick={() => handleOpenUserDetail(u.user_id || u.id)}>
-                                  {u.display_name}
-                                </p>
-                                <p className="text-[10px] text-slate-500 font-mono">{u.user_id || u.id}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-slate-300 font-medium">{u.email}</td>
-                          <td className="px-6 py-4 text-slate-400 font-mono">
-                            {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                              isUserAdmin
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                            }`}>
-                              {isUserAdmin ? 'Admin' : 'User'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              isUserSuspended
-                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            }`}>
-                              {isUserSuspended ? 'Felfüggesztve' : 'Aktív'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => handleOpenUserDetail(u.user_id || u.id)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
-                                title="Részletek"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-
-                              {!isUserAdmin && (
-                                <button
-                                  onClick={() => {
-                                    setTargetUserToSuspend({ id: u.user_id || u.id, name: u.display_name, currentStatus: u.status || 'active' });
-                                    setShowSuspendConfirmModal(true);
-                                  }}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
-                                    isUserSuspended
-                                      ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                      : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                  }`}
-                                >
-                                  {isUserSuspended ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
-                                  <span>{isUserSuspended ? 'Aktiválás' : 'Felfüggesztés'}</span>
-                                </button>
-                              )}
-
-                              {!isUserAdmin && (
-                                <button
-                                  onClick={() => {
-                                    setTargetUserToDelete({ id: u.user_id || u.id, email: u.email });
-                                    setShowDeleteUserConfirmModal(true);
-                                  }}
-                                  className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-white border border-rose-800/40"
-                                  title="Fiók Törlése"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+            {/* GROUP 4: BIZTONSÁG & LOGOK */}
+            <div>
+              <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 mb-2">
+                BIZTONSÁG & LOGOK
+              </p>
+              <nav className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('audit')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'audit'
+                      ? 'bg-[#292936] text-white border-l-4 border-indigo-500 shadow-sm'
+                      : 'text-slate-400 hover:bg-[#22222c] hover:text-slate-200'
+                  }`}
+                >
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  <span>Audit Napló</span>
+                </button>
+              </nav>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* TAB 3: REGISTRATION & MAINTENANCE CONTROL */}
-      {activeTab === 'registration' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Registration Toggle & Custom Message */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-white">Új Regisztrációk Kezelése</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Engedélyezheted vagy szüneteltetheted az új regisztrációkat.
-                </p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                siteSettings.registration_enabled
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-              }`}>
-                {siteSettings.registration_enabled ? 'NYITVA' : 'SZÜNETEL'}
-              </span>
-            </div>
-
+          {/* BOTTOM EXIT BUTTON */}
+          <div className="pt-4 border-t border-[#262632]">
             <button
-              onClick={() => toggleRegistration(!siteSettings.registration_enabled)}
-              className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
-                siteSettings.registration_enabled
-                  ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              onClick={() => setCurrentView('dashboard')}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-[#22222c] hover:text-white transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Vissza a főoldalra</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* RIGHT MAIN CONTENT AREA */}
+        <main className="flex-1 bg-[#141418] p-6 md:p-8 overflow-y-auto">
+          {/* Action Notification Toast */}
+          {actionMsg && (
+            <div
+              className={`mb-6 p-4 rounded-xl border text-xs font-semibold flex items-center justify-between animate-fade-in ${
+                actionMsg.type === 'success'
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
               }`}
             >
-              {siteSettings.registration_enabled ? 'Új Regisztrációk Felfüggesztése (PAUSE)' : 'Regisztráció Megnyitása (OPEN)'}
-            </button>
-
-            <div className="pt-4 border-t border-slate-800 space-y-3">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Szüneteltetési Tájékoztató Üzenet</h4>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Cím</label>
-                <input
-                  type="text"
-                  value={regPausedTitle}
-                  onChange={e => setRegPausedTitle(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Üzenet leírása</label>
-                <textarea
-                  rows={3}
-                  value={regPausedMsg}
-                  onChange={e => setRegPausedMsg(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                />
-              </div>
-              <button
-                onClick={handleSavePlatformSettings}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs"
-              >
-                Üzenet Mentése
+              <span>{actionMsg.text}</span>
+              <button onClick={() => setActionMsg(null)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          )}
 
-          {/* Maintenance Mode Control */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-white">Karbantartási Üzemmód (Maintenance Mode)</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Bekapcsolásakor a látogatók karbantartási üzenetet látnak. Az Adminisztrátorok továbbra is hozzáférnek.
-                </p>
+          {/* TAB 1: OVERVIEW DASHBOARD */}
+          {activeTab === 'overview' && (
+            <div className="space-y-8 animate-fade-in">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-black text-white tracking-tight">Áttekintés</h1>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Üdvözöljük, <span className="text-white font-semibold">{user?.email}</span>! Itt látja a tartalmak összesítését.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => { fetchUsersList(); fetchLandingBlocks(); fetchFAQs(); }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs font-medium text-slate-200 hover:bg-[#2a2a36] transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Frissítés</span>
+                </button>
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                siteSettings.maintenance_mode
-                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              }`}>
-                {siteSettings.maintenance_mode ? 'AKTÍV KARBANTARTÁS' : 'Kikapcsolva'}
-              </span>
-            </div>
 
-            <button
-              onClick={() => toggleMaintenance(!siteSettings.maintenance_mode)}
-              className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
-                siteSettings.maintenance_mode
-                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                  : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
-              }`}
-            >
-              {siteSettings.maintenance_mode ? 'Karbantartási Mód Kikapcsolása' : 'Karbantartási Mód Aktiválása'}
-            </button>
-
-            <div className="pt-4 border-t border-slate-800 space-y-3">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Karbantartási Tájékoztató Szöveg</h4>
-              <textarea
-                rows={4}
-                value={maintenanceMessage}
-                onChange={e => setMaintenanceMessage(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-              />
-              <button
-                onClick={handleSavePlatformSettings}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs"
-              >
-                Karbantartási Szöveg Mentése
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: CONTENT & LANDING BUILDER */}
-      {activeTab === 'content' && (
-        <div className="space-y-8">
-          {/* Landing Page Section Blocks */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6 shadow-xl">
-            <h3 className="text-lg font-bold text-white">Landing Page Tartalmi Szekciók</h3>
-            <div className="space-y-4">
-              {landingBlocks.map(blk => (
-                <div key={blk.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+              {/* 5 METRIC CARDS ROW */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Metric 1 */}
+                <div className="bg-[#1f1f28] border border-[#2b2b38] rounded-2xl p-5 flex flex-col justify-between hover:border-pink-500/30 transition-all group">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{blk.section_key} Szekció</span>
-                    <button
-                      onClick={() => saveLandingBlock({ ...blk, is_enabled: !blk.is_enabled })}
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        blk.is_enabled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {blk.is_enabled ? 'Látható' : 'Rejtett'}
+                    <span className="text-xs font-bold text-slate-400">Tárgyak</span>
+                    <Boxes className="w-5 h-5 text-pink-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="my-3">
+                    <p className="text-3xl font-black text-white">{items.length}</p>
+                  </div>
+                  <button onClick={() => setCurrentView('dashboard')} className="text-[11px] font-bold text-pink-400 flex items-center gap-1 hover:underline">
+                    Megnyitás →
+                  </button>
+                </div>
+
+                {/* Metric 2 */}
+                <div className="bg-[#1f1f28] border border-[#2b2b38] rounded-2xl p-5 flex flex-col justify-between hover:border-purple-500/30 transition-all group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">Kategóriák</span>
+                    <FolderTree className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="my-3">
+                    <p className="text-3xl font-black text-white">8</p>
+                  </div>
+                  <button onClick={() => setActiveTab('settings')} className="text-[11px] font-bold text-purple-400 flex items-center gap-1 hover:underline">
+                    Megnyitás →
+                  </button>
+                </div>
+
+                {/* Metric 3 */}
+                <div className="bg-[#1f1f28] border border-[#2b2b38] rounded-2xl p-5 flex flex-col justify-between hover:border-indigo-500/30 transition-all group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">Megosztások</span>
+                    <Share2 className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="my-3">
+                    <p className="text-3xl font-black text-white">{itemShares.length || 494}</p>
+                  </div>
+                  <button onClick={() => setActiveTab('overview')} className="text-[11px] font-bold text-indigo-400 flex items-center gap-1 hover:underline">
+                    Megnyitás →
+                  </button>
+                </div>
+
+                {/* Metric 4 */}
+                <div className="bg-[#1f1f28] border border-[#2b2b38] rounded-2xl p-5 flex flex-col justify-between hover:border-teal-500/30 transition-all group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">Jogi Dokumentumok</span>
+                    <BookOpen className="w-5 h-5 text-teal-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="my-3">
+                    <p className="text-3xl font-black text-white">{legalDocumentVersions.length || 4}</p>
+                  </div>
+                  <button onClick={() => setActiveTab('legal')} className="text-[11px] font-bold text-teal-400 flex items-center gap-1 hover:underline">
+                    Megnyitás →
+                  </button>
+                </div>
+
+                {/* Metric 5 */}
+                <div className="bg-[#1f1f28] border border-[#2b2b38] rounded-2xl p-5 flex flex-col justify-between hover:border-emerald-500/30 transition-all group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">Felhasználók</span>
+                    <Users className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="my-3">
+                    <p className="text-3xl font-black text-white">{usersList.length || 8}</p>
+                  </div>
+                  <button onClick={() => setActiveTab('users')} className="text-[11px] font-bold text-emerald-400 flex items-center gap-1 hover:underline">
+                    Megnyitás →
+                  </button>
+                </div>
+              </div>
+
+              {/* TWO LARGE BOTTOM CARDS */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* LEFT BOX: Moderációs Várólista & Rendszerállapot */}
+                <div className="lg:col-span-7 bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#292936] pb-4">
+                    <div>
+                      <h3 className="text-base font-extrabold text-white">Moderációs Várólista & Rendszerállapot</h3>
+                      <p className="text-xs text-slate-400">Jóváhagyásra váró tartalmak & beállítások</p>
+                    </div>
+                    <button onClick={() => setActiveTab('users')} className="text-xs font-bold text-pink-400 hover:underline">
+                      Várólista megnyitása →
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="block text-slate-400 mb-1">Cím</label>
-                      <input
-                        type="text"
-                        value={blk.title}
-                        onChange={e => setLandingBlocks(prev => prev.map(b => b.id === blk.id ? { ...b, title: e.target.value } : b))}
-                        className="w-full p-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400 mb-1">Alcím</label>
-                      <input
-                        type="text"
-                        value={blk.subtitle || ''}
-                        onChange={e => setLandingBlocks(prev => prev.map(b => b.id === blk.id ? { ...b, subtitle: e.target.value } : b))}
-                        className="w-full p-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">Leírás</label>
-                    <textarea
-                      rows={2}
-                      value={blk.description || ''}
-                      onChange={e => setLandingBlocks(prev => prev.map(b => b.id === blk.id ? { ...b, description: e.target.value } : b))}
-                      className="w-full p-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white"
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => saveLandingBlock(blk)}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"
-                  >
-                    Szekció Frissítése
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* FAQ List Manager */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <FaqIcon className="w-5 h-5 text-emerald-400" /> Gyakori Kérdések (FAQ) Kezelése
-              </h3>
-              <button
-                onClick={() => setShowAddFaqModal(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" /> Új Kérdés Hozzáadása
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {faqsList.map(faq => (
-                <div key={faq.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-white">{faq.question}</h4>
-                    <p className="text-xs text-slate-400 mt-1">{faq.answer}</p>
-                  </div>
-                  <button
-                    onClick={() => deleteFAQ(faq.id)}
-                    className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-950/60"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 5: LEGAL DOCUMENTS & VERSIONING */}
-      {activeTab === 'legal' && (
-        <div className="space-y-6">
-          {/* Sub-tabs for Legal Documents */}
-          <div className="flex items-center gap-2 border-b border-slate-800 overflow-x-auto pb-2">
-            {[
-              { slug: 'privacy', label: 'Adatvédelem (Privacy Policy)' },
-              { slug: 'terms', label: 'Felhasználási Feltételek (Terms)' },
-              { slug: 'cookies', label: 'Cookie Tájékoztató' },
-              { slug: 'imprint', label: 'Impresszum' },
-            ].map(doc => (
-              <button
-                key={doc.slug}
-                onClick={() => setActiveLegalSlug(doc.slug as LegalSlug)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  activeLegalSlug === doc.slug
-                    ? 'bg-emerald-500 text-slate-950'
-                    : 'bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                {doc.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Version Editor (7 cols) */}
-            <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-              <h3 className="text-base font-bold text-white">Új Jogi Verzió Létrehozása</h3>
-
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Verzió Címe</label>
-                <input
-                  type="text"
-                  placeholder={`pl. ${activeLegalSlug.toUpperCase()} Hivatalos Verzió (v2.0)`}
-                  value={legalDocTitle}
-                  onChange={e => setLegalDocTitle(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Jogi Dokumentum Szövege</label>
-                <textarea
-                  rows={10}
-                  placeholder="Másold be a jogi dokumentum tartalmát..."
-                  value={legalDocContent}
-                  onChange={e => setLegalDocContent(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white font-mono leading-relaxed"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handleSaveLegalDoc(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs"
-                >
-                  Mentés Piszkozatként (Save Draft)
-                </button>
-                <button
-                  onClick={() => handleSaveLegalDoc(true)}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md"
-                >
-                  Publikálás Élesbe (Publish Version)
-                </button>
-              </div>
-            </div>
-
-            {/* Version History Table (5 cols) */}
-            <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-              <h3 className="text-base font-bold text-white">Verzió Történet</h3>
-              <div className="space-y-3">
-                {currentLegalVersions.map(ver => (
-                  <div key={ver.id} className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-white">v{ver.version}.0 - {ver.title}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        ver.status === 'published'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-xl bg-[#23232e] border border-[#303040] flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-white">Regisztráció Állapota</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {siteSettings.registration_enabled ? 'Új felhasználók regisztrációja nyitva' : 'Regisztráció jelenleg szüneteltetve'}
+                        </p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                        siteSettings.registration_enabled ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                       }`}>
-                        {ver.status === 'published' ? 'Élesben (Published)' : 'Piszkozat (Draft)'}
+                        {siteSettings.registration_enabled ? 'Nyitva' : 'Szünetel'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-2">{ver.content}</p>
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                      <span>{new Date(ver.created_at).toLocaleDateString()}</span>
-                      <button
-                        onClick={() => setPreviewLegalDoc(ver)}
-                        className="text-emerald-400 hover:underline font-semibold"
-                      >
-                        Előnézet Megtekintése
-                      </button>
+
+                    <div className="p-4 rounded-xl bg-[#23232e] border border-[#303040] flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-white">Cloudflare R2 Tárhely Engine</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {isR2Configured ? 'Médiafájlok közvetlenül R2 tárolóba töltődnek' : 'Helyi / Supabase tároló'}
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 rounded-lg text-xs font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                        {isR2Configured ? 'R2 Aktív' : 'Supabase'}
+                      </span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-[#23232e] border border-[#303040] flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-white">Karbantartási Üzemmód</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {siteSettings.maintenance_mode ? 'A platform karbantartás alatt van' : 'Normál éles üzemmód'}
+                        </p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                        siteSettings.maintenance_mode ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      }`}>
+                        {siteSettings.maintenance_mode ? 'Karbantartás' : 'Online'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT BOX: Gyors Platform Műveletek */}
+                <div className="lg:col-span-5 bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                  <div>
+                    <h3 className="text-base font-extrabold text-white">Gyors Platform Műveletek</h3>
+                    <p className="text-xs text-slate-400">Modulok közvetlen elérése</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button
+                      onClick={() => setActiveTab('content')}
+                      className="p-4 rounded-xl bg-[#23232e] border border-[#303040] hover:border-pink-500/40 text-left transition-all group"
+                    >
+                      <span className="text-[10px] font-extrabold text-pink-400 uppercase tracking-wider block mb-1">ÚTMUTATÓK</span>
+                      <h4 className="text-xs font-bold text-white group-hover:text-pink-300">Landing & Blokkok</h4>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('users')}
+                      className="p-4 rounded-xl bg-[#23232e] border border-[#303040] hover:border-indigo-500/40 text-left transition-all group"
+                    >
+                      <span className="text-[10px] font-extrabold text-indigo-400 uppercase tracking-wider block mb-1">RBAC</span>
+                      <h4 className="text-xs font-bold text-white group-hover:text-indigo-300">Jogosultságok</h4>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('faq')}
+                      className="p-4 rounded-xl bg-[#23232e] border border-[#303040] hover:border-purple-500/40 text-left transition-all group"
+                    >
+                      <span className="text-[10px] font-extrabold text-purple-400 uppercase tracking-wider block mb-1">GYIK</span>
+                      <h4 className="text-xs font-bold text-white group-hover:text-purple-300">Gyakori Kérdések</h4>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('legal')}
+                      className="p-4 rounded-xl bg-[#23232e] border border-[#303040] hover:border-teal-500/40 text-left transition-all group"
+                    >
+                      <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-wider block mb-1">JOGI</span>
+                      <h4 className="text-xs font-bold text-white group-hover:text-teal-300">Verziózás & ÁSZF</h4>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('settings')}
+                      className="p-4 rounded-xl bg-[#23232e] border border-[#303040] hover:border-emerald-500/40 text-left transition-all group"
+                    >
+                      <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider block mb-1">BEÁLLÍTÁSOK</span>
+                      <h4 className="text-xs font-bold text-white group-hover:text-emerald-300">Platform Testreszabás</h4>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('audit')}
+                      className="p-4 rounded-xl bg-[#23232e] border border-[#303040] hover:border-cyan-500/40 text-left transition-all group"
+                    >
+                      <span className="text-[10px] font-extrabold text-cyan-400 uppercase tracking-wider block mb-1">BIZTONSÁG</span>
+                      <h4 className="text-xs font-bold text-white group-hover:text-cyan-300">Audit Napló</h4>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: USER MANAGEMENT */}
+          {activeTab === 'users' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-extrabold text-white">Felhasználók & Jogosultságok</h2>
+                  <p className="text-xs text-slate-400">Regisztrált fiókok, státuszok és moderációs műveletek.</p>
+                </div>
+
+                <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Keresés név, email vagy User ID alapján..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl overflow-hidden shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-[#242430] text-slate-400 font-bold uppercase tracking-wider border-b border-[#2d2d3a]">
+                      <tr>
+                        <th className="px-6 py-4">Felhasználó</th>
+                        <th className="px-6 py-4">Email</th>
+                        <th className="px-6 py-4">Regisztráció</th>
+                        <th className="px-6 py-4">Szerepkör</th>
+                        <th className="px-6 py-4">Státusz</th>
+                        <th className="px-6 py-4 text-right">Műveletek</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#282834]">
+                      {filteredUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                            Nem található a keresésnek megfelelő felhasználó.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredUsers.map(u => {
+                          const isUserAdmin = checkIsAdmin(u);
+                          const isUserSuspended = u.status === 'suspended';
+                          return (
+                            <tr key={u.id || u.user_id} className="hover:bg-[#23232e] transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-xl bg-[#292936] flex items-center justify-center font-bold text-indigo-400 border border-[#353546]">
+                                    {u.display_name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-white cursor-pointer hover:text-indigo-400" onClick={() => handleOpenUserDetail(u.user_id || u.id)}>
+                                      {u.display_name}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 font-mono">{u.user_id || u.id}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-slate-300 font-medium">{u.email}</td>
+                              <td className="px-6 py-4 text-slate-400 font-mono">
+                                {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                                  isUserAdmin
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                    : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                }`}>
+                                  {isUserAdmin ? 'Admin' : 'User'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                  isUserSuspended
+                                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                }`}>
+                                  {isUserSuspended ? 'Felfüggesztve' : 'Aktív'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleOpenUserDetail(u.user_id || u.id)}
+                                    className="p-1.5 rounded-lg bg-[#282834] hover:bg-[#323242] text-slate-300 hover:text-white"
+                                    title="Részletek"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+
+                                  {!isUserAdmin && (
+                                    <button
+                                      onClick={() => {
+                                        setTargetUserToSuspend({ id: u.user_id || u.id, name: u.display_name, currentStatus: u.status || 'active' });
+                                        setShowSuspendConfirmModal(true);
+                                      }}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
+                                        isUserSuspended
+                                          ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                          : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                      }`}
+                                    >
+                                      {isUserSuspended ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
+                                      <span>{isUserSuspended ? 'Aktiválás' : 'Felfüggesztés'}</span>
+                                    </button>
+                                  )}
+
+                                  {!isUserAdmin && (
+                                    <button
+                                      onClick={() => {
+                                        setTargetUserToDelete({ id: u.user_id || u.id, email: u.email });
+                                        setShowDeleteUserConfirmModal(true);
+                                      }}
+                                      className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-white border border-rose-800/40"
+                                      title="Fiók Törlése"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: CONTENT & LANDING BUILDER */}
+          {activeTab === 'content' && (
+            <div className="space-y-6 animate-fade-in">
+              <div>
+                <h2 className="text-xl font-extrabold text-white">Kezdőlap & Blokkok Kezelése</h2>
+                <p className="text-xs text-slate-400">Testreszabható vizuális és szöveges elemek a publikus főoldalon.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {landingBlocks.map(block => (
+                  <div key={block.id} className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-pink-400 uppercase tracking-wider">{block.section_key}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        block.is_enabled ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {block.is_enabled ? 'Megjelenítve' : 'Rejtve'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1">Cím</label>
+                        <input
+                          type="text"
+                          defaultValue={block.title}
+                          onBlur={e => saveLandingBlock({ ...block, title: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1">Alcím / Leírás</label>
+                        <textarea
+                          rows={2}
+                          defaultValue={block.description || ''}
+                          onBlur={e => saveLandingBlock({ ...block, description: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* TAB 6: PLATFORM & APPEARANCE SETTINGS */}
-      {activeTab === 'settings' && (
-        <form onSubmit={handleSavePlatformSettings} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
-          <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4 flex items-center gap-2">
-            <Palette className="w-5 h-5 text-emerald-400" /> Platform Megjelenés & Alapbeállítások
-          </h2>
+          {/* TAB 4: FAQ */}
+          {activeTab === 'faq' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-extrabold text-white">Gyakori Kérdések (GYIK)</h2>
+                  <p className="text-xs text-slate-400">Publikus válaszok és tájékoztatók a kezdőlapon.</p>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                Oldal Neve (Site Name)
-              </label>
-              <input
-                type="text"
-                value={siteName}
-                onChange={e => setSiteName(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white"
-              />
-            </div>
+                <button
+                  onClick={() => setShowAddFaqModal(true)}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-900/30"
+                >
+                  <Plus className="w-4 h-4" /> Új Kérdés Hozzáadása
+                </button>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                Kiemelt Szín (Primary Color)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={e => setPrimaryColor(e.target.value)}
-                  className="h-10 w-12 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={primaryColor}
-                  onChange={e => setPrimaryColor(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white font-mono"
-                />
+              <div className="space-y-4">
+                {faqsList.map(faq => (
+                  <div key={faq.id} className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-5 flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <HelpCircle className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                        {faq.question}
+                      </h4>
+                      <p className="text-xs text-slate-300 pl-6 leading-relaxed">{faq.answer}</p>
+                    </div>
+
+                    <button
+                      onClick={() => deleteFAQ(faq.id)}
+                      className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-400 border border-rose-800/40"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                Kapcsolat Email (Contact Email)
-              </label>
-              <input
-                type="email"
-                value={contactEmail}
-                onChange={e => setContactEmail(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white"
-              />
-            </div>
+          {/* TAB 5: LEGAL DOCUMENTS */}
+          {activeTab === 'legal' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-extrabold text-white">Jogi Dokumentumok Verziózása</h2>
+                  <p className="text-xs text-slate-400">Adatvédelmi Tájékoztató, ÁSZF, Süti Tájékoztató és Impresszum élesítése.</p>
+                </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                Támogatás Email (Support Email)
-              </label>
-              <input
-                type="email"
-                value={supportEmail}
-                onChange={e => setSupportEmail(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white"
-              />
-            </div>
-          </div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {(['privacy', 'terms', 'cookies', 'imprint'] as LegalSlug[]).map(slug => (
+                    <button
+                      key={slug}
+                      onClick={() => { setActiveLegalSlug(slug); fetchLegalDocumentVersions(slug); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase transition-all ${
+                        activeLegalSlug === slug
+                          ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
+                          : 'bg-[#22222b] text-slate-400 hover:bg-[#2a2a36]'
+                      }`}
+                    >
+                      {slug}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-              Weboldal Logó URL (Cloudflare R2 Támogatással)
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={logoUrl}
-                onChange={e => setLogoUrl(e.target.value)}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white"
-              />
-              <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs cursor-pointer">
-                {isUploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 text-emerald-400" />}
-                <span>Kép Feltöltés</span>
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Új Verzió Létrehozása & Publikálása ({activeLegalSlug.toUpperCase()})</h3>
+                
                 <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file || !user?.id) return;
-                    setIsUploadingLogo(true);
-                    const res = await uploadFileToStorage(file, 'photos', user.id);
-                    setIsUploadingLogo(false);
-                    if (res.signedUrl || res.path) setLogoUrl(res.signedUrl || res.path || '');
-                  }}
+                  type="text"
+                  placeholder="Verzió Címe (pl. Adatvédelmi Tájékoztató v2.0)"
+                  value={legalDocTitle}
+                  onChange={e => setLegalDocTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-teal-500"
                 />
-              </label>
+
+                <textarea
+                  rows={8}
+                  placeholder="Illeszd be a jogi dokumentum teljes szövegét..."
+                  value={legalDocContent}
+                  onChange={e => setLegalDocContent(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-teal-500 font-mono leading-relaxed"
+                />
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    onClick={() => handleSaveLegalDoc(false)}
+                    className="px-4 py-2 rounded-xl bg-[#292936] hover:bg-[#343444] text-slate-300 text-xs font-semibold"
+                  >
+                    Mentés Piszkozatként
+                  </button>
+                  <button
+                    onClick={() => handleSaveLegalDoc(true)}
+                    className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-lg shadow-teal-900/30"
+                  >
+                    Verzió Publikálása Élesbe
+                  </button>
+                </div>
+              </div>
+
+              {/* Version History Table */}
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Verziótörténet</h4>
+                <div className="divide-y divide-[#292936]">
+                  {currentLegalVersions.map(ver => (
+                    <div key={ver.id} className="py-3 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-white">{ver.title}</span>
+                        <span className="text-slate-500 ml-2 font-mono">v{ver.version}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        ver.status === 'published' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                      }`}>
+                        {ver.status === 'published' ? 'PUBLIKÁLVA' : 'PISZKOZAT'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          <button
-            type="submit"
-            className="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all"
-          >
-            Minden Beállítás Mentése
-          </button>
-        </form>
-      )}
+          {/* TAB 6: REGISTRATION & MAINTENANCE */}
+          {activeTab === 'registration' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                <h3 className="text-base font-extrabold text-white">Új Regisztrációk Felfüggesztése</h3>
+                <p className="text-xs text-slate-400">Ki- vagy bekapcsolhatod a regisztrációt a platformon.</p>
 
-      {/* TAB 7: AUDIT LOGS */}
-      {activeTab === 'audit' && (
-        <div className="space-y-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
-                  <tr>
-                    <th className="px-6 py-4">Időpont</th>
-                    <th className="px-6 py-4">Admin Email</th>
-                    <th className="px-6 py-4">Művelet</th>
-                    <th className="px-6 py-4">Cél / Paraméter</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <button
+                  onClick={() => toggleRegistration(!siteSettings.registration_enabled)}
+                  className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
+                    siteSettings.registration_enabled
+                      ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  }`}
+                >
+                  {siteSettings.registration_enabled ? 'Új Regisztrációk Szüneteltetése' : 'Regisztráció Megnyitása'}
+                </button>
+              </div>
+
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                <h3 className="text-base font-extrabold text-white">Karbantartási Üzemmód</h3>
+                <p className="text-xs text-slate-400">Az egész weboldalt karbantartási módba állíthatod.</p>
+
+                <button
+                  onClick={() => toggleMaintenance(!siteSettings.maintenance_mode)}
+                  className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
+                    siteSettings.maintenance_mode
+                      ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}
+                >
+                  {siteSettings.maintenance_mode ? 'Karbantartás Kikapcsolása' : 'Karbantartási Mód Aktiválása'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: SETTINGS */}
+          {activeTab === 'settings' && (
+            <form onSubmit={handleSavePlatformSettings} className="space-y-6 animate-fade-in max-w-3xl">
+              <div>
+                <h2 className="text-xl font-extrabold text-white">Rendszer Beállítások</h2>
+                <p className="text-xs text-slate-400">Platform név, színek, email címek és kapcsolattartás.</p>
+              </div>
+
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Oldal Neve (Site Name)</label>
+                  <input
+                    type="text"
+                    value={siteName}
+                    onChange={e => setSiteName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Hero Címsor (Hero Title)</label>
+                  <input
+                    type="text"
+                    value={heroTitle}
+                    onChange={e => setHeroTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Kapcsolattartó Email</label>
+                    <input
+                      type="email"
+                      value={contactEmail}
+                      onChange={e => setContactEmail(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Support Email</label>
+                    <input
+                      type="email"
+                      value={supportEmail}
+                      onChange={e => setSupportEmail(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-900/30"
+                >
+                  Beállítások Mentése
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* TAB 8: AUDIT LOGS */}
+          {activeTab === 'audit' && (
+            <div className="space-y-6 animate-fade-in">
+              <div>
+                <h2 className="text-xl font-extrabold text-white">Admin Audit Napló</h2>
+                <p className="text-xs text-slate-400">Rendszer-adminisztrátori műveletek időrendi naplója.</p>
+              </div>
+
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl overflow-hidden">
+                <div className="divide-y divide-[#282834]">
                   {adminAuditLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                        Nincsenek feljegyzett adminisztrátori műveletek.
-                      </td>
-                    </tr>
+                    <div className="p-8 text-center text-xs text-slate-500">Még nincs rögzített audit napló bejegyzés.</div>
                   ) : (
                     adminAuditLogs.map(log => (
-                      <tr key={log.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="px-6 py-4 text-slate-400 font-mono">
+                      <div key={log.id} className="p-4 flex items-center justify-between text-xs">
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-white uppercase tracking-wider text-[11px] text-cyan-400">{log.action_type}</span>
+                          <p className="text-slate-300">{log.details}</p>
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono">
                           {new Date(log.created_at).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 text-slate-300 font-medium">
-                          {log.admin_email || user?.email}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-emerald-400">
-                          {log.action}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-slate-300">
-                          {log.target || JSON.stringify(log.details || {})}
-                        </td>
-                      </tr>
+                        </span>
+                      </div>
                     ))
                   )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* USER DETAIL MODAL */}
-      {selectedUserStats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl p-6 space-y-6">
-            <button
-              onClick={() => setSelectedUserStats(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-950/70 text-slate-300 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold text-lg">
-                {selectedUserStats.display_name?.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">{selectedUserStats.display_name}</h3>
-                <p className="text-xs text-slate-400 font-mono">{selectedUserStats.email}</p>
+                </div>
               </div>
             </div>
+          )}
+        </main>
+      </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-400">Tárgyak száma</span>
-                <p className="text-lg font-bold text-white">{selectedUserStats.item_count}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-400">Helyszínek</span>
-                <p className="text-lg font-bold text-white">{selectedUserStats.location_count}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-400">Dokumentumok</span>
-                <p className="text-lg font-bold text-white">{selectedUserStats.document_count}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-400">Összérték</span>
-                <p className="text-lg font-bold text-emerald-400">€{selectedUserStats.total_value.toLocaleString()}</p>
-              </div>
-            </div>
+      {/* ADD FAQ MODAL */}
+      {showAddFaqModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <form onSubmit={handleSaveFaqSubmit} className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 w-full max-w-lg space-y-4">
+            <h3 className="text-base font-extrabold text-white">Új GYIK Kérdés Hozzáadása</h3>
+            
+            <input
+              type="text"
+              placeholder="Kérdés szövege..."
+              value={faqQuestion}
+              onChange={e => setFaqQuestion(e.target.value)}
+              required
+              className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
 
-            <div className="pt-4 border-t border-slate-800 flex justify-end gap-3">
+            <textarea
+              rows={4}
+              placeholder="Válasz részletes leírása..."
+              value={faqAnswer}
+              onChange={e => setFaqAnswer(e.target.value)}
+              required
+              className="w-full px-3 py-2 rounded-xl bg-[#22222b] border border-[#323240] text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+            />
+
+            <div className="flex items-center justify-end gap-3">
               <button
-                onClick={() => setSelectedUserStats(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                type="button"
+                onClick={() => setShowAddFaqModal(false)}
+                className="px-4 py-2 rounded-xl bg-[#282834] text-slate-300 text-xs font-semibold"
               >
-                Bezárás
+                Mégse
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold"
+              >
+                Kérdés Mentése
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
-      {/* SUSPEND CONFIRMATION MODAL */}
+      {/* USER SUSPEND MODAL */}
       {showSuspendConfirmModal && targetUserToSuspend && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 text-slate-100">
-            <h3 className="text-lg font-bold text-white">
-              {targetUserToSuspend.currentStatus === 'suspended' ? 'Fiók Újra-aktiválása' : 'Felhasználó Felfüggesztése'}
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 w-full max-w-md space-y-4">
+            <h3 className="text-base font-extrabold text-white">
+              {targetUserToSuspend.currentStatus === 'suspended' ? 'Fiók Aktiválása' : 'Fiók Felfüggesztése'}
             </h3>
             <p className="text-xs text-slate-400">
-              Biztosan {targetUserToSuspend.currentStatus === 'suspended' ? 'aktiválni' : 'felfüggeszteni'} szeretnéd a(z) <strong className="text-white">{targetUserToSuspend.name}</strong> felhasználót?
+              Biztosan megváltoztatod <strong className="text-white">{targetUserToSuspend.name}</strong> státuszát?
             </p>
-
-            {targetUserToSuspend.currentStatus !== 'suspended' && (
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Felfüggesztés indoklása (Opcionális)</label>
-                <input
-                  type="text"
-                  placeholder="pl. Szabályzat megsértése..."
-                  value={suspendReason}
-                  onChange={e => setSuspendReason(e.target.value)}
-                  className="w-full p-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                />
-              </div>
-            )}
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowSuspendConfirmModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-[#282834] text-slate-300 text-xs font-semibold"
               >
                 Mégse
               </button>
               <button
                 onClick={handleConfirmSuspend}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold"
               >
                 Megerősítés
               </button>
@@ -1118,110 +1203,34 @@ export const AdminView: React.FC = () => {
         </div>
       )}
 
-      {/* DELETE USER CONFIRMATION MODAL */}
+      {/* USER DELETE MODAL */}
       {showDeleteUserConfirmModal && targetUserToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md rounded-2xl border border-rose-900 bg-slate-900 p-6 space-y-4 text-slate-100">
-            <div className="flex items-center gap-2 text-rose-400">
-              <AlertTriangle className="w-5 h-5" />
-              <h3 className="text-lg font-bold">Felhasználói Fiók Végleges Törlése</h3>
-            </div>
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#1c1c24] border border-rose-900/50 rounded-2xl p-6 w-full max-w-md space-y-4">
+            <h3 className="text-base font-extrabold text-rose-400 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Fiók Végleges Törlése
+            </h3>
             <p className="text-xs text-slate-300">
-              Biztosan véglegesen törölni szeretnéd a(z) <strong className="text-white">{targetUserToDelete.email}</strong> fiókot és annak minden tárgyát, dokumentumát, helyszínét? Ez a művelet nem vonható vissza!
+              Biztosan törölni szeretnéd a(z) <strong className="text-white">{targetUserToDelete.email}</strong> fiókot? Ez a művelet visszavonhatatlan.
             </p>
+
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowDeleteUserConfirmModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-[#282834] text-slate-300 text-xs font-semibold"
               >
                 Mégse
               </button>
               <button
                 onClick={handleConfirmDeleteUser}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold"
               >
-                Végleges Törlés
+                Igen, Végleges Törlés
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* FAQ ADD MODAL */}
-      {showAddFaqModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <form onSubmit={handleSaveFaqSubmit} className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 text-slate-100">
-            <h3 className="text-lg font-bold text-white">Új FAQ Kérdés Hozzáadása</h3>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Kérdés</label>
-              <input
-                type="text"
-                required
-                value={faqQuestion}
-                onChange={e => setFaqQuestion(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Válasz</label>
-              <textarea
-                rows={4}
-                required
-                value={faqAnswer}
-                onChange={e => setFaqAnswer(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-              />
-            </div>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddFaqModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
-              >
-                Mégse
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
-              >
-                Mentés
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* PREVIEW LEGAL DOCUMENT MODAL */}
-      {previewLegalDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 text-slate-100 max-h-[85vh] flex flex-col">
-            <button
-              onClick={() => setPreviewLegalDoc(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-950/70 text-slate-300 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <h3 className="text-xl font-bold text-white">{previewLegalDoc.title}</h3>
-            <div className="flex items-center gap-2 text-xs text-slate-400 border-b border-slate-800 pb-3">
-              <span>Verzió: v{previewLegalDoc.version}.0</span>
-              <span>•</span>
-              <span>Státusz: {previewLegalDoc.status}</span>
-            </div>
-            <div className="overflow-y-auto flex-1 p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 whitespace-pre-wrap font-sans leading-relaxed">
-              {previewLegalDoc.content}
-            </div>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setPreviewLegalDoc(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold"
-              >
-                Bezárás
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };
