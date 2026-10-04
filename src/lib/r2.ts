@@ -4,7 +4,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 const accountId = (import.meta.env.VITE_R2_ACCOUNT_ID || '').trim();
 const accessKeyId = (import.meta.env.VITE_R2_ACCESS_KEY_ID || '').trim();
 const secretAccessKey = (import.meta.env.VITE_R2_SECRET_ACCESS_KEY || '').trim();
-export const r2BucketName = (import.meta.env.VITE_R2_BUCKET_NAME || 'thingor-assets').trim();
+export const r2BucketName = (import.meta.env.VITE_R2_BUCKET_NAME || 'thingor').trim();
 export const r2PublicDomain = (import.meta.env.VITE_R2_PUBLIC_DOMAIN || '').trim().replace(/\/$/, '');
 
 export const isR2Configured = Boolean(accountId && accessKeyId && secretAccessKey && r2BucketName);
