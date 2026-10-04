@@ -596,6 +596,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
 
+    // Clear any previous user state before logging in
+    setItems([]);
+    setDocuments([]);
+    setLocations([]);
+    localStorage.removeItem('thingor_items');
+    localStorage.removeItem('thingor_documents');
+    localStorage.removeItem('thingor_locations');
+
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
 
@@ -646,6 +654,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const signup = async (email: string, pass: string, name: string) => {
     const cleanEmail = email.trim().toLowerCase();
+
+    // Clear any previous user state before signing up
+    setItems([]);
+    setDocuments([]);
+    setLocations([]);
+    localStorage.removeItem('thingor_items');
+    localStorage.removeItem('thingor_documents');
+    localStorage.removeItem('thingor_locations');
 
     const currentIsAdmin = !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin);
     if (isRegistrationSuspended && !currentIsAdmin) {
