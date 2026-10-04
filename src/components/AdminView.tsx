@@ -4,35 +4,25 @@ import {
   ShieldAlert,
   Users,
   Boxes,
-  Database,
-  ShieldCheck,
   RefreshCw,
   FileText,
   Search,
-  Lock,
-  Mail,
-  User as UserIcon,
   X,
   UserX,
   UserCheck,
   Share2,
   Sliders,
-  AlertTriangle,
   Activity,
-  Calendar
 } from 'lucide-react';
-import type { UserProfile, UserStatus } from '../types';
+import type { UserStatus } from '../types';
 import { isAdmin as checkIsAdmin } from '../lib/permissions';
 
 export const AdminView: React.FC = () => {
   const {
-    user,
     isAdmin,
     setCurrentView,
     items,
     itemShares,
-    categories,
-    locations,
     documents,
     language,
     siteSettings,

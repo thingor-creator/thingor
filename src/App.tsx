@@ -13,12 +13,11 @@ import { ItemDetailModal } from './components/ItemDetailModal';
 import { ItemFormModal } from './components/ItemFormModal';
 import { AuthModal } from './components/AuthModal';
 import { SupabaseSetupModal } from './components/SupabaseSetupModal';
-import { Wrench, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Wrench, ShieldCheck } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const {
     currentView,
-    setCurrentView,
     siteSettings,
     isAdmin,
     setIsAuthModalOpen,

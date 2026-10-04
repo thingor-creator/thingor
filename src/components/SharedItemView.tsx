@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { SharedItemViewData } from '../types';
-import { ShieldCheck, Tag, Calendar, DollarSign, Image as ImageIcon, AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Tag, Calendar, DollarSign, AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 interface SharedItemViewProps {
   token: string;

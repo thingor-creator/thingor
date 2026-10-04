@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Item, SharePurpose, SharePermissions, ItemShare } from '../types';
-import { Share2, Copy, Check, Trash2, Calendar, Tag, ShieldCheck, X, Clock } from 'lucide-react';
+import { Share2, Copy, Check, Trash2, Tag, ShieldCheck, X, Clock } from 'lucide-react';
 
 interface ShareModalProps {
   item: Item;
