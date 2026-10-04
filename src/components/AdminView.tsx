@@ -9,7 +9,6 @@ import {
   Trash2,
   UserPlus,
   ShieldCheck,
-  CheckCircle2,
   RefreshCw,
   HardDrive,
   FileText,
@@ -25,7 +24,6 @@ import type { UserProfile } from '../types';
 
 export const AdminView: React.FC = () => {
   const {
-    user,
     isAdmin,
     isRegistrationSuspended,
     setIsRegistrationSuspended,
