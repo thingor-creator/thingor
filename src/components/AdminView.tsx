@@ -85,7 +85,7 @@ export const AdminView: React.FC = () => {
   const [supportEmail, setSupportEmail] = useState(siteSettings.support_email || 'support@thingor.com');
   const [primaryColor, setPrimaryColor] = useState(siteSettings.primary_color || '#10b981');
   const [logoUrl, setLogoUrl] = useState(siteSettings.logo_url || '/logo.png');
-  const [faviconUrl, setFaviconUrl] = useState(siteSettings.favicon_url || '/logo.png');
+  const [faviconUrl, setFaviconUrl] = useState(siteSettings.favicon_url || '/favicon.png');
 
   // Registration paused form state
   const [regPausedTitle, setRegPausedTitle] = useState(siteSettings.registration_paused_title || 'A regisztráció jelenleg szünetel');
@@ -120,7 +120,7 @@ export const AdminView: React.FC = () => {
     setSupportEmail(siteSettings.support_email || 'support@thingor.com');
     setPrimaryColor(siteSettings.primary_color || '#10b981');
     setLogoUrl(siteSettings.logo_url || '/logo.png');
-    setFaviconUrl(siteSettings.favicon_url || '/logo.png');
+    setFaviconUrl(siteSettings.favicon_url || '/favicon.png');
     setRegPausedTitle(siteSettings.registration_paused_title || 'A regisztráció jelenleg szünetel');
     setRegPausedMsg(siteSettings.registration_paused_message || 'A regisztráció átmenetileg fel van függesztve.');
   }, [siteSettings]);

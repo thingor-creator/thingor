@@ -39,7 +39,7 @@ ALTER TABLE public.site_settings
   ADD COLUMN IF NOT EXISTS support_email TEXT DEFAULT 'support@thingor.com',
   ADD COLUMN IF NOT EXISTS primary_color TEXT DEFAULT '#10b981',
   ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT '/logo.png',
-  ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '/logo.png',
+  ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '/favicon.png',
   ADD COLUMN IF NOT EXISTS meta_description TEXT DEFAULT 'Thingor - Tartsd nyilván a tulajdonodban lévő tárgyakat, hol vannak, mennyit érnek és mi tartozik hozzájuk.';
 
 -- 2. LANDING BLOCKS / SITE CONTENTS TABLE
