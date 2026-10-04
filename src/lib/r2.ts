@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const accountId = (import.meta.env.VITE_R2_ACCOUNT_ID || '').trim();
@@ -84,5 +84,22 @@ export async function getR2FileSignedUrl(pathOrUrl: string): Promise<string> {
     return await getSignedUrl(r2Client, command, { expiresIn: 3600 });
   } catch (e) {
     return pathOrUrl;
+  }
+}
+
+export async function deleteFileFromR2(filePath: string): Promise<{ success: boolean; error?: string }> {
+  if (!isR2Configured || !r2Client || !filePath) {
+    return { success: false, error: 'Cloudflare R2 is not configured or path is empty' };
+  }
+
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: r2BucketName,
+      Key: filePath,
+    });
+    await r2Client.send(command);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Cloudflare R2 delete failed' };
   }
 }

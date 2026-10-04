@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { isR2Configured, uploadFileToR2, getR2FileSignedUrl } from './r2';
+import { isR2Configured, uploadFileToR2, getR2FileSignedUrl, deleteFileFromR2 } from './r2';
 
 export interface StorageUploadResult {
   path?: string;
@@ -8,8 +8,8 @@ export interface StorageUploadResult {
 }
 
 /**
- * Uploads a file to Cloudflare R2 (if configured) or private Supabase Storage 'thingor-assets' bucket
- * under {user_id}/{folder}/{filename} and returns a signed URL for secure viewing.
+ * Uploads a file to Cloudflare R2 Object Storage under {user_id}/{folder}/{filename}
+ * and returns a signed or public URL for secure viewing.
  */
 export async function uploadFileToStorage(
   file: File,
@@ -21,14 +21,14 @@ export async function uploadFileToStorage(
     return { error: 'File size exceeds 15MB limit' };
   }
 
-  // 1. Prefer Cloudflare R2 Object Storage if configured
+  // 1. Primary: Cloudflare R2 Object Storage
   if (isR2Configured) {
     return await uploadFileToR2(file, folder, userId);
   }
 
-  // 2. Supabase Storage fallback
+  // 2. Supabase Storage fallback (only if R2 is not configured)
   if (!isSupabaseConfigured || !supabase) {
-    return { error: 'Neither Cloudflare R2 nor Supabase storage is configured' };
+    return { error: 'Cloudflare R2 storage is not configured' };
   }
 
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -78,3 +78,27 @@ export async function getFileSignedUrl(pathOrUrl: string): Promise<string> {
 
   return data?.signedUrl || pathOrUrl;
 }
+
+/**
+ * Deletes a file from Cloudflare R2 storage (or Supabase fallback).
+ */
+export async function deleteFileFromStorage(filePath: string): Promise<{ success: boolean; error?: string }> {
+  if (!filePath) return { success: true };
+
+  if (isR2Configured) {
+    return await deleteFileFromR2(filePath);
+  }
+
+  if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Storage not configured' };
+
+  const { error } = await supabase.storage
+    .from('thingor-assets')
+    .remove([filePath]);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
