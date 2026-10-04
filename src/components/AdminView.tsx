@@ -546,6 +546,11 @@ export const AdminView: React.FC = () => {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="email"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    placeholder="email@example.com"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     required
