@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
-  const { setCurrentView, setIsAuthModalOpen, setAuthModalMode, isAuthenticated, t, language } = useApp();
+  const { setCurrentView, setIsAuthModalOpen, setAuthModalMode, isAuthenticated, t, language, setActiveLegalSlug } = useApp();
 
   useEffect(() => {
     document.title = language === 'hu' ? 'Thingor – Rendszerezd az összes tárgyadat' : 'Thingor – Organize Everything You Own';
@@ -417,6 +417,36 @@ export const LandingPage: React.FC = () => {
             <div>
               <span className="block text-xs text-slate-400">{t('tagline')}</span>
             </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs">
+            <button
+              onClick={() => { setActiveLegalSlug('privacy'); setCurrentView('legal'); }}
+              className="text-slate-400 hover:text-emerald-400 font-medium transition-colors"
+            >
+              Adatvédelem
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => { setActiveLegalSlug('terms'); setCurrentView('legal'); }}
+              className="text-slate-400 hover:text-emerald-400 font-medium transition-colors"
+            >
+              Felhasználási Feltételek
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => { setActiveLegalSlug('cookies'); setCurrentView('legal'); }}
+              className="text-slate-400 hover:text-emerald-400 font-medium transition-colors"
+            >
+              Cookie Tájékoztató
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => { setActiveLegalSlug('imprint'); setCurrentView('legal'); }}
+              className="text-slate-400 hover:text-emerald-400 font-medium transition-colors"
+            >
+              Impresszum
+            </button>
           </div>
 
           <p className="text-xs text-slate-400 text-center md:text-right">

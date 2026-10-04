@@ -107,26 +107,87 @@ export interface SharedItemViewData {
 export interface SiteSettings {
   id: string;
   site_name: string;
+  site_description?: string;
   hero_title: string;
   hero_subtitle?: string;
   announcement?: string | null;
   registration_enabled: boolean;
+  registration_paused_title?: string;
+  registration_paused_message?: string;
   maintenance_mode: boolean;
   maintenance_message?: string | null;
+  contact_email?: string;
+  support_email?: string;
+  primary_color?: string;
+  logo_url?: string;
+  favicon_url?: string;
+  meta_description?: string;
   updated_at?: string;
   updated_by?: string;
+}
+
+export interface LandingBlock {
+  id: string;
+  section_key: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  button_text?: string;
+  button_url?: string;
+  image_url?: string;
+  is_enabled: boolean;
+  display_order: number;
+}
+
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  display_order: number;
+  is_published: boolean;
+  created_at?: string;
+}
+
+export type LegalSlug = 'privacy' | 'terms' | 'cookies' | 'imprint';
+
+export interface LegalDocumentVersion {
+  id: string;
+  document_slug: LegalSlug;
+  version: number;
+  title: string;
+  content: string;
+  status: 'draft' | 'published';
+  created_by?: string;
+  created_at: string;
+  published_at?: string | null;
+}
+
+export interface UserDetailStats {
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at?: string;
+  item_count: number;
+  location_count: number;
+  category_count: number;
+  document_count: number;
+  total_value: number;
+  storage_files_count: number;
 }
 
 export interface AdminAuditLog {
   id: string;
   admin_id: string;
+  admin_email?: string;
   action: string;
   target?: string;
   details?: Record<string, any>;
   created_at: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'admin' | 'guest_share';
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'admin' | 'guest_share' | 'legal';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';
@@ -139,3 +200,4 @@ export interface FilterState {
   sortBy: SortField;
   sortOrder: SortOrder;
 }
+

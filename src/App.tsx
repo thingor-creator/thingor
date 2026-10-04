@@ -13,6 +13,7 @@ import { ItemDetailModal } from './components/ItemDetailModal';
 import { ItemFormModal } from './components/ItemFormModal';
 import { AuthModal } from './components/AuthModal';
 import { SupabaseSetupModal } from './components/SupabaseSetupModal';
+import { LegalViewModal } from './components/LegalViewModal';
 import { Wrench, ShieldCheck } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -22,9 +23,17 @@ const AppContent: React.FC = () => {
     isAdmin,
     setIsAuthModalOpen,
     setAuthModalMode,
+    activeLegalSlug,
   } = useApp();
 
   const [shareToken, setShareToken] = useState<string | null>(null);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentView === 'legal') {
+      setIsLegalModalOpen(true);
+    }
+  }, [currentView]);
 
   useEffect(() => {
     const parseShareToken = () => {
@@ -133,6 +142,11 @@ const AppContent: React.FC = () => {
       <ItemFormModal />
       <AuthModal />
       <SupabaseSetupModal />
+      <LegalViewModal
+        slug={activeLegalSlug}
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+      />
     </div>
   );
 };

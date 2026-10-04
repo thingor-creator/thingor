@@ -15,6 +15,11 @@ import type {
   SharedItemViewData,
   SiteSettings,
   AdminAuditLog,
+  LegalSlug,
+  LegalDocumentVersion,
+  LandingBlock,
+  FAQItem,
+  UserDetailStats,
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
@@ -118,6 +123,23 @@ interface AppContextType {
   toggleRegistration: (enabled: boolean) => Promise<void>;
   toggleMaintenance: (enabled: boolean) => Promise<void>;
 
+  // Legal Documents Versioning & Public View
+  activeLegalSlug: LegalSlug;
+  setActiveLegalSlug: (slug: LegalSlug) => void;
+  legalDocumentVersions: LegalDocumentVersion[];
+  fetchLegalDocumentVersions: (slug: LegalSlug) => Promise<LegalDocumentVersion[]>;
+  saveLegalDocumentVersion: (slug: LegalSlug, title: string, content: string, publish: boolean) => Promise<{ success: boolean; error?: string }>;
+  getPublishedLegalDoc: (slug: LegalSlug) => Promise<LegalDocumentVersion | null>;
+
+  // Content & Landing Page Management
+  landingBlocks: LandingBlock[];
+  fetchLandingBlocks: () => Promise<LandingBlock[]>;
+  saveLandingBlock: (block: LandingBlock) => Promise<{ success: boolean; error?: string }>;
+  faqsList: FAQItem[];
+  fetchFAQs: () => Promise<FAQItem[]>;
+  saveFAQ: (faq: Partial<FAQItem>) => Promise<{ success: boolean; error?: string }>;
+  deleteFAQ: (faqId: string) => Promise<boolean>;
+
   // Sharing System
   itemShares: ItemShare[];
   createItemShare: (itemId: string, purpose: SharePurpose, expirationDays: number | null, permissions: SharePermissions) => Promise<ItemShare | null>;
@@ -132,7 +154,9 @@ interface AppContextType {
   // User Management & Admin Audit Logs
   usersList: UserProfile[];
   fetchUsersList: () => Promise<UserProfile[]>;
+  fetchUserDetailStats: (targetUserId: string) => Promise<UserDetailStats | null>;
   toggleUserSuspension: (userId: string, targetStatus: UserStatus) => Promise<boolean>;
+  deleteUserAccountByAdmin: (targetUserId: string) => Promise<{ success: boolean; error?: string }>;
   adminAuditLogs: AdminAuditLog[];
   logAdminAction: (action: string, target?: string, details?: any) => Promise<void>;
 }
@@ -1032,6 +1056,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const newLog: AdminAuditLog = {
       id: 'log-' + Date.now(),
       admin_id: user.id,
+      admin_email: user.email,
       action,
       target,
       details,
@@ -1049,229 +1074,282 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Toggle Registration
-  const toggleRegistration = async (enabled: boolean) => {
-    setIsRegistrationSuspended(!enabled);
-    const updated = { ...siteSettings, registration_enabled: enabled };
-    setSiteSettings(updated);
-    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
-
-    if (isSupabaseConfigured && supabase) {
-      await supabase.from('site_settings').upsert({
-        id: 'default',
-        registration_enabled: enabled,
-        updated_at: new Date().toISOString(),
-        updated_by: user?.id
-      });
+  // Legal Documents Versioning State & Methods
+  const [activeLegalSlug, setActiveLegalSlug] = useState<LegalSlug>('privacy');
+  const [legalDocumentVersions, setLegalDocumentVersions] = useState<LegalDocumentVersion[]>([
+    {
+      id: 'leg-1',
+      document_slug: 'privacy',
+      version: 1,
+      title: 'Adatvédelmi Tájékoztató (v1.0)',
+      content: 'A Thingor elkötelezett a felhasználók személyes adatainak védelme mellett. Az Ön által megadott adatokat bizalmasan kezeljük, és harmadik félnek nem adjuk át.',
+      status: 'published',
+      created_at: new Date().toISOString(),
+      published_at: new Date().toISOString(),
+    },
+    {
+      id: 'leg-2',
+      document_slug: 'terms',
+      version: 1,
+      title: 'Felhasználási Feltételek (v1.0)',
+      content: 'A Thingor szolgáltatás használatával Ön elfogadja a jelen felhasználási feltételeket. A platform személyes tárgyak nyomon követésére szolgál.',
+      status: 'published',
+      created_at: new Date().toISOString(),
+      published_at: new Date().toISOString(),
+    },
+    {
+      id: 'leg-3',
+      document_slug: 'cookies',
+      version: 1,
+      title: 'Cookie Tájékoztató (v1.0)',
+      content: 'A Thingor kizárólag a működéshez elengedhetetlen munkamenet sütiket (session cookies) használja.',
+      status: 'published',
+      created_at: new Date().toISOString(),
+      published_at: new Date().toISOString(),
+    },
+    {
+      id: 'leg-4',
+      document_slug: 'imprint',
+      version: 1,
+      title: 'Impresszum (v1.0)',
+      content: 'Thingor Personal Inventory Platform. Elérhetőség: info@thingor.com',
+      status: 'published',
+      created_at: new Date().toISOString(),
+      published_at: new Date().toISOString(),
     }
-    await logAdminAction('toggle_registration', `registration_enabled=${enabled}`);
+  ]);
+
+  const fetchLegalDocumentVersions = async (slug: LegalSlug): Promise<LegalDocumentVersion[]> => {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase
+        .from('legal_document_versions')
+        .select('*')
+        .eq('document_slug', slug)
+        .order('version', { ascending: false });
+      if (data && data.length > 0) {
+        setLegalDocumentVersions(prev => {
+          const filtered = prev.filter(v => v.document_slug !== slug);
+          return [...data as LegalDocumentVersion[], ...filtered];
+        });
+        return data as LegalDocumentVersion[];
+      }
+    }
+    return legalDocumentVersions.filter(v => v.document_slug === slug);
   };
 
-  // Toggle Maintenance Mode
-  const toggleMaintenance = async (enabled: boolean) => {
-    const updated = { ...siteSettings, maintenance_mode: enabled };
-    setSiteSettings(updated);
-    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
-
-    if (isSupabaseConfigured && supabase) {
-      await supabase.from('site_settings').upsert({
-        id: 'default',
-        maintenance_mode: enabled,
-        updated_at: new Date().toISOString(),
-        updated_by: user?.id
-      });
+  const saveLegalDocumentVersion = async (
+    slug: LegalSlug,
+    title: string,
+    content: string,
+    publish: boolean
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !isAdmin(user)) {
+      return { success: false, error: 'Access Denied: Only administrators can modify legal documents' };
     }
-    await logAdminAction('toggle_maintenance', `maintenance_mode=${enabled}`);
-  };
 
-  // Update Site Settings
-  const updateSiteSettings = async (updates: Partial<SiteSettings>): Promise<{ success: boolean; error?: string }> => {
-    const updated = { ...siteSettings, ...updates };
-    setSiteSettings(updated);
-    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
+    const currentVersions = legalDocumentVersions.filter(v => v.document_slug === slug);
+    const maxVer = currentVersions.reduce((max, v) => Math.max(max, v.version), 0);
+    const newVersionNum = maxVer + 1;
+    const now = new Date().toISOString();
+
+    const newDocVer: LegalDocumentVersion = {
+      id: 'ver-' + Date.now(),
+      document_slug: slug,
+      version: newVersionNum,
+      title: title || `${slug.toUpperCase()} (v${newVersionNum}.0)`,
+      content,
+      status: publish ? 'published' : 'draft',
+      created_by: user.id,
+      created_at: now,
+      published_at: publish ? now : null,
+    };
 
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.from('site_settings').upsert({
-        id: 'default',
-        ...updates,
-        updated_at: new Date().toISOString(),
-        updated_by: user?.id
-      });
+      const { error } = await supabase
+        .from('legal_document_versions')
+        .insert([{
+          document_slug: slug,
+          version: newVersionNum,
+          title: newDocVer.title,
+          content,
+          status: newDocVer.status,
+          created_by: user.id,
+          published_at: newDocVer.published_at,
+        }]);
+
       if (error) return { success: false, error: error.message };
     }
-    await logAdminAction('update_site_settings', undefined, updates);
+
+    setLegalDocumentVersions(prev => [newDocVer, ...prev]);
+    await logAdminAction(publish ? 'LEGAL_DOCUMENT_PUBLISHED' : 'LEGAL_DOCUMENT_DRAFT_SAVED', `slug=${slug}, version=${newVersionNum}`);
     return { success: true };
   };
 
-  // Create Item Share Link
-  const createItemShare = async (
-    itemId: string,
-    purpose: SharePurpose,
-    expirationDays: number | null,
-    permissions: SharePermissions
-  ): Promise<ItemShare | null> => {
-    if (!user?.id) return null;
+  const getPublishedLegalDoc = async (slug: LegalSlug): Promise<LegalDocumentVersion | null> => {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase
+        .from('legal_document_versions')
+        .select('*')
+        .eq('document_slug', slug)
+        .eq('status', 'published')
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    const token = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    let expiresAt: string | null = null;
-    if (expirationDays && expirationDays > 0) {
-      const exp = new Date();
-      exp.setDate(exp.getDate() + expirationDays);
-      expiresAt = exp.toISOString();
+      if (data) return data as LegalDocumentVersion;
     }
-
-    const newShare: ItemShare = {
-      id: 'share-' + Date.now(),
-      item_id: itemId,
-      created_by: user.id,
-      token,
-      purpose,
-      expires_at: expiresAt,
-      revoked_at: null,
-      permissions,
-      created_at: new Date().toISOString(),
-    };
-
-    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
-      const { data, error } = await supabase
-        .from('item_shares')
-        .insert([{
-          item_id: itemId,
-          created_by: user.id,
-          token,
-          purpose,
-          expires_at: expiresAt,
-          permissions,
-        }])
-        .select()
-        .single();
-
-      if (!error && data) {
-        const created = data as ItemShare;
-        setItemShares(prev => [created, ...prev]);
-        return created;
-      }
-    }
-
-    setItemShares(prev => [newShare, ...prev]);
-    return newShare;
+    const match = legalDocumentVersions
+      .filter(v => v.document_slug === slug && v.status === 'published')
+      .sort((a, b) => b.version - a.version)[0];
+    return match || null;
   };
 
-  // Revoke Item Share Link
-  const revokeItemShare = async (shareId: string): Promise<boolean> => {
-    const revokedAt = new Date().toISOString();
-    if (isSupabaseConfigured && supabase && isUUID(shareId)) {
-      await supabase
-        .from('item_shares')
-        .update({ revoked_at: revokedAt })
-        .eq('id', shareId)
-        .eq('created_by', user?.id);
-    }
+  // Content & Landing Page Management State & Methods
+  const [landingBlocks, setLandingBlocks] = useState<LandingBlock[]>([
+    { id: 'blk-hero', section_key: 'hero', title: 'Személyes tárgynyilvántartó platform', subtitle: 'Rendszerezd az összes tárgyadat', description: 'Tartsd nyilván a tulajdonodban lévő tárgyakat, hol vannak, mennyit érnek és mi tartozik hozzájuk.', button_text: 'Kezdés most', button_url: '#', is_enabled: true, display_order: 1 },
+    { id: 'blk-categories', section_key: 'categories', title: 'Minden tárgyad egy helyen', subtitle: 'Sokoldalú leltár', description: 'Legyen szó a műhelyben lévő szerszámokról, az íróasztalon lévő elektronikáról vagy a raktárban tárolt berendezésekről.', button_text: '', button_url: '', is_enabled: true, display_order: 2 },
+    { id: 'blk-locations', section_key: 'locations', title: 'Tudd, hol van', subtitle: 'Helyszín fa struktúra', description: 'Soha többé ne pazarolj időt fiókok vagy dobozok keresgélésére.', button_text: '', button_url: '', is_enabled: true, display_order: 3 },
+  ]);
 
-    setItemShares(prev => prev.map(s => s.id === shareId ? { ...s, revoked_at: revokedAt } : s));
+  const [faqsList, setFaqsList] = useState<FAQItem[]>([
+    { id: 'faq-1', question: 'Mi az a Thingor?', answer: 'A Thingor egy személyes tárgynyilvántartó és leltározó platform, amellyel rendszerezheted, dokumentálhatod és nyomon követheted az értékeidet.', display_order: 1, is_published: true },
+    { id: 'faq-2', question: 'Biztonságban vannak az adataim?', answer: 'Igen! Minden adatod privát és titkosított, a csatolt dokumentumok és képek pedig védett Cloudflare R2 tárolóban helyezkednek el.', display_order: 2, is_published: true },
+    { id: 'faq-3', question: 'Hogyan működik a tárgymegosztás?', answer: 'Egyedi, biztonságos megosztási hivatkozást hozhatsz létre tárgyaidhoz, amin beállíthatod, hogy mennyi ideig érvényes és milyen részletek láthatók.', display_order: 3, is_published: true },
+  ]);
+
+  const fetchLandingBlocks = async (): Promise<LandingBlock[]> => {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('site_contents').select('*').order('display_order', { ascending: true });
+      if (data && data.length > 0) {
+        setLandingBlocks(data as LandingBlock[]);
+        return data as LandingBlock[];
+      }
+    }
+    return landingBlocks;
+  };
+
+  const saveLandingBlock = async (block: LandingBlock): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !isAdmin(user)) return { success: false, error: 'Access Denied' };
+    setLandingBlocks(prev => prev.map(b => b.id === block.id ? block : b));
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('site_contents').upsert(block);
+    }
+    await logAdminAction('CONTENT_UPDATED', `block_id=${block.id}`);
+    return { success: true };
+  };
+
+  const fetchFAQs = async (): Promise<FAQItem[]> => {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('faqs').select('*').order('display_order', { ascending: true });
+      if (data) {
+        setFaqsList(data as FAQItem[]);
+        return data as FAQItem[];
+      }
+    }
+    return faqsList;
+  };
+
+  const saveFAQ = async (faq: Partial<FAQItem>): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !isAdmin(user)) return { success: false, error: 'Access Denied' };
+    const id = faq.id || 'faq-' + Date.now();
+    const updatedFaq: FAQItem = {
+      id,
+      question: faq.question || '',
+      answer: faq.answer || '',
+      display_order: faq.display_order ?? faqsList.length + 1,
+      is_published: faq.is_published ?? true,
+    };
+    setFaqsList(prev => {
+      const exists = prev.some(f => f.id === id);
+      return exists ? prev.map(f => f.id === id ? updatedFaq : f) : [...prev, updatedFaq];
+    });
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('faqs').upsert([updatedFaq]);
+    }
+    await logAdminAction('FAQ_UPDATED', `faq_id=${id}`);
+    return { success: true };
+  };
+
+  const deleteFAQ = async (faqId: string): Promise<boolean> => {
+    if (!user || !isAdmin(user)) return false;
+    setFaqsList(prev => prev.filter(f => f.id !== faqId));
+    if (isSupabaseConfigured && supabase && isUUID(faqId)) {
+      await supabase.from('faqs').delete().eq('id', faqId);
+    }
+    await logAdminAction('FAQ_DELETED', `faq_id=${faqId}`);
     return true;
   };
 
-  // Get Active Item Shares
-  const getItemShares = async (itemId: string): Promise<ItemShare[]> => {
-    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
-      const { data } = await supabase
-        .from('item_shares')
-        .select('*')
-        .eq('item_id', itemId)
-        .is('revoked_at', null)
-        .order('created_at', { ascending: false });
-      if (data) return data as ItemShare[];
+  // Fetch User Detail Stats for Admin
+  const fetchUserDetailStats = async (targetUserId: string): Promise<UserDetailStats | null> => {
+    if (!user || !isAdmin(user)) return null;
+
+    const targetUser = usersList.find(u => u.user_id === targetUserId || u.id === targetUserId);
+    if (!targetUser) return null;
+
+    let itemCount = items.filter(i => i.user_id === targetUserId).length;
+    let locationCount = locations.filter(l => l.user_id === targetUserId).length;
+    let categoryCount = categories.filter(c => c.user_id === targetUserId).length;
+    let documentCount = documents.filter(d => d.user_id === targetUserId).length;
+    let totalValue = items.filter(i => i.user_id === targetUserId).reduce((sum, i) => sum + (i.current_value || i.purchase_price || 0), 0);
+    let storageFilesCount = itemCount + documentCount;
+
+    if (isSupabaseConfigured && supabase && isUUID(targetUserId)) {
+      try {
+        const [itemsRes, locsRes, docsRes] = await Promise.all([
+          supabase.from('items').select('current_value, purchase_price', { count: 'exact' }).eq('user_id', targetUserId),
+          supabase.from('locations').select('id', { count: 'exact' }).eq('user_id', targetUserId),
+          supabase.from('item_documents').select('id', { count: 'exact' }).eq('user_id', targetUserId),
+        ]);
+
+        itemCount = itemsRes.count || itemCount;
+        locationCount = locsRes.count || locationCount;
+        documentCount = docsRes.count || documentCount;
+
+        if (itemsRes.data) {
+          totalValue = itemsRes.data.reduce((acc, row) => acc + (Number(row.current_value) || Number(row.purchase_price) || 0), 0);
+        }
+        storageFilesCount = itemCount + documentCount;
+      } catch (e) {
+        console.warn('Failed to fetch user detail stats from Supabase:', e);
+      }
     }
-    return itemShares.filter(s => s.item_id === itemId && !s.revoked_at);
+
+    return {
+      user_id: targetUserId,
+      email: targetUser.email,
+      display_name: targetUser.display_name,
+      role: targetUser.role || 'user',
+      status: targetUser.status || 'active',
+      created_at: targetUser.created_at,
+      item_count: itemCount,
+      location_count: locationCount,
+      category_count: categoryCount,
+      document_count: documentCount,
+      total_value: totalValue,
+      storage_files_count: storageFilesCount,
+    };
   };
 
-  // Get Shared Item by Cryptographic Token for Guest View
-  const getSharedItemByToken = async (token: string): Promise<{ success: boolean; data?: SharedItemViewData; error?: string }> => {
-    if (!token) return { success: false, error: 'Hiányzó megosztási token' };
+  // Delete User Account by Admin (Full Cascade Cleanup)
+  const deleteUserAccountByAdmin = async (targetUserId: string): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !isAdmin(user)) return { success: false, error: 'Access Denied: Only admins can delete user accounts' };
 
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && isUUID(targetUserId)) {
       try {
-        const { data, error } = await supabase.rpc('get_shared_item', { share_token: token });
-        if (!error && data) {
-          return { success: true, data: data as SharedItemViewData };
-        }
-      } catch (e) {
-        console.warn('RPC get_shared_item fallback:', e);
-      }
-
-      // Manual fallback query
-      const { data: shareData } = await supabase
-        .from('item_shares')
-        .select('*, items(*)')
-        .eq('token', token)
-        .is('revoked_at', null)
-        .maybeSingle();
-
-      if (shareData && shareData.items) {
-        const item = shareData.items;
-        const perms: SharePermissions = shareData.permissions || {};
-        if (shareData.expires_at && new Date(shareData.expires_at).getTime() < Date.now()) {
-          return { success: false, error: 'Ez a megosztási link lejárt.' };
-        }
-
-        const sharedPayload: SharedItemViewData = {
-          share_id: shareData.id,
-          purpose: shareData.purpose,
-          expires_at: shareData.expires_at,
-          permissions: perms,
-          created_at: shareData.created_at,
-          item_id: item.id,
-          name: item.name,
-          description: item.description,
-          condition: item.condition,
-          photo_url: item.photo_url,
-          additional_photos: perms.include_additional_images ? item.additional_photos : undefined,
-          purchase_date: perms.include_purchase_date ? item.purchase_date : undefined,
-          warranty_start: perms.include_warranty ? item.warranty_start : undefined,
-          warranty_end: perms.include_warranty ? item.warranty_end : undefined,
-          current_value: perms.include_value ? item.current_value : undefined,
-          purchase_price: perms.include_purchase_price ? item.purchase_price : undefined,
-        };
-        return { success: true, data: sharedPayload };
+        await supabase.from('item_documents').delete().eq('user_id', targetUserId);
+        await supabase.from('items').delete().eq('user_id', targetUserId);
+        await supabase.from('locations').delete().eq('user_id', targetUserId);
+        await supabase.from('categories').delete().eq('user_id', targetUserId).eq('is_custom', true);
+        await supabase.from('profiles').update({ status: 'deleted' }).eq('user_id', targetUserId);
+      } catch (e: any) {
+        return { success: false, error: e.message || 'Failed to delete user account' };
       }
     }
 
-    // Local state fallback
-    const localShare = itemShares.find(s => s.token === token && !s.revoked_at);
-    if (localShare) {
-      if (localShare.expires_at && new Date(localShare.expires_at).getTime() < Date.now()) {
-        return { success: false, error: 'Ez a megosztási link lejárt.' };
-      }
-      const targetItem = items.find(i => i.id === localShare.item_id);
-      if (targetItem) {
-        const perms = localShare.permissions || {};
-        const payload: SharedItemViewData = {
-          share_id: localShare.id,
-          purpose: localShare.purpose,
-          expires_at: localShare.expires_at,
-          permissions: perms,
-          created_at: localShare.created_at,
-          item_id: targetItem.id,
-          name: targetItem.name,
-          description: targetItem.description,
-          condition: targetItem.condition,
-          photo_url: targetItem.photo_url,
-          additional_photos: perms.include_additional_images ? targetItem.additional_photos : undefined,
-          purchase_date: perms.include_purchase_date ? targetItem.purchase_date : undefined,
-          warranty_start: perms.include_warranty ? targetItem.warranty_start : undefined,
-          warranty_end: perms.include_warranty ? targetItem.warranty_end : undefined,
-          current_value: perms.include_value ? targetItem.current_value : undefined,
-          purchase_price: perms.include_purchase_price ? targetItem.purchase_price : undefined,
-        };
-        return { success: true, data: payload };
-      }
-    }
-
-    return { success: false, error: 'Ez a megosztási link már nem érhető el.' };
+    setUsersList(prev => prev.filter(u => u.user_id !== targetUserId && u.id !== targetUserId));
+    await logAdminAction('USER_DELETED_BY_ADMIN', `target_user_id=${targetUserId}`);
+    return { success: true };
   };
 
   // Fetch Users List for Admin
@@ -1308,7 +1386,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (error) return false;
     }
     setUsersList(prev => prev.map(u => (u.user_id === targetUserId || u.id === targetUserId) ? { ...u, status: targetStatus } : u));
-    await logAdminAction('toggle_user_status', `user_id=${targetUserId}, status=${targetStatus}`);
+    await logAdminAction(targetStatus === 'suspended' ? 'USER_SUSPENDED' : 'USER_REACTIVATED', `user_id=${targetUserId}`);
     return true;
   };
 
@@ -1381,6 +1459,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         toggleRegistration,
         toggleMaintenance,
 
+        activeLegalSlug,
+        setActiveLegalSlug,
+        legalDocumentVersions,
+        fetchLegalDocumentVersions,
+        saveLegalDocumentVersion,
+        getPublishedLegalDoc,
+
+        landingBlocks,
+        fetchLandingBlocks,
+        saveLandingBlock,
+        faqsList,
+        fetchFAQs,
+        saveFAQ,
+        deleteFAQ,
+
         itemShares,
         createItemShare,
         revokeItemShare,
@@ -1393,7 +1486,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         usersList,
         fetchUsersList,
+        fetchUserDetailStats,
         toggleUserSuspension,
+        deleteUserAccountByAdmin,
         adminAuditLogs,
         logAdminAction,
       }}
