@@ -28,8 +28,6 @@ import {
   Shield,
   Upload,
   Loader2,
-  Globe,
-  Smartphone,
   Image as ImageIcon,
 } from 'lucide-react';
 import type { UserStatus, LegalSlug, UserDetailStats } from '../types';
@@ -100,11 +98,16 @@ export const AdminView: React.FC = () => {
     if (!file) return;
     setIsUploadingLogo(true);
     try {
-      const res = await uploadFileToStorage(file, user?.id || 'admin');
-      if (res.url) {
-        setLogoUrl(res.url);
-        setActionMsg({ type: 'success', text: 'Új logó kép feltöltve és beállítva!' });
-        setTimeout(() => setActionMsg(null), 3000);
+      const res = await uploadFileToStorage(file, 'photos', user?.id || 'admin');
+      if (res.error) {
+        setActionMsg({ type: 'error', text: 'Hiba a logó feltöltésekor: ' + res.error });
+      } else {
+        const url = res.signedUrl || res.path || '';
+        if (url) {
+          setLogoUrl(url);
+          setActionMsg({ type: 'success', text: 'Új logó kép feltöltve és beállítva!' });
+          setTimeout(() => setActionMsg(null), 3000);
+        }
       }
     } catch (err: any) {
       setActionMsg({ type: 'error', text: 'Hiba a logó feltöltésekor: ' + (err.message || 'Ismeretlen hiba') });
@@ -118,11 +121,16 @@ export const AdminView: React.FC = () => {
     if (!file) return;
     setIsUploadingFavicon(true);
     try {
-      const res = await uploadFileToStorage(file, user?.id || 'admin');
-      if (res.url) {
-        setFaviconUrl(res.url);
-        setActionMsg({ type: 'success', text: 'Új favicon & PWA ikon feltöltve és beállítva!' });
-        setTimeout(() => setActionMsg(null), 3000);
+      const res = await uploadFileToStorage(file, 'photos', user?.id || 'admin');
+      if (res.error) {
+        setActionMsg({ type: 'error', text: 'Hiba a favicon feltöltésekor: ' + res.error });
+      } else {
+        const url = res.signedUrl || res.path || '';
+        if (url) {
+          setFaviconUrl(url);
+          setActionMsg({ type: 'success', text: 'Új favicon & PWA ikon feltöltve és beállítva!' });
+          setTimeout(() => setActionMsg(null), 3000);
+        }
       }
     } catch (err: any) {
       setActionMsg({ type: 'error', text: 'Hiba a favicon feltöltésekor: ' + (err.message || 'Ismeretlen hiba') });
