@@ -105,7 +105,8 @@ export const AdminView: React.FC = () => {
         const url = res.signedUrl || res.path || '';
         if (url) {
           setLogoUrl(url);
-          setActionMsg({ type: 'success', text: 'Új logó kép feltöltve és beállítva!' });
+          await updateSiteSettings({ logo_url: url });
+          setActionMsg({ type: 'success', text: 'Új logó kép feltöltve, beállítva és elmentve!' });
           setTimeout(() => setActionMsg(null), 3000);
         }
       }
@@ -128,7 +129,8 @@ export const AdminView: React.FC = () => {
         const url = res.signedUrl || res.path || '';
         if (url) {
           setFaviconUrl(url);
-          setActionMsg({ type: 'success', text: 'Új favicon & PWA ikon feltöltve és beállítva!' });
+          await updateSiteSettings({ favicon_url: url });
+          setActionMsg({ type: 'success', text: 'Új favicon & PWA ikon feltöltve, beállítva és elmentve!' });
           setTimeout(() => setActionMsg(null), 3000);
         }
       }

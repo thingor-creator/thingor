@@ -398,8 +398,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           hero_subtitle: data.hero_subtitle || 'Rendszerezd, dokumentáld és oszd meg értékeidet biztonságosan.',
           announcement: data.announcement || null,
           registration_enabled: data.registration_enabled ?? true,
+          registration_paused_title: data.registration_paused_title || 'A regisztráció jelenleg szünetel',
+          registration_paused_message: data.registration_paused_message || 'A regisztráció átmenetileg fel van függesztve az adminisztrátor által. Kérjük, látogass vissza később.',
           maintenance_mode: data.maintenance_mode ?? false,
           maintenance_message: data.maintenance_message || 'A rendszer jelenleg karbantartás alatt áll. Kérjük, látogass vissza később.',
+          contact_email: data.contact_email || 'info@thingor.com',
+          support_email: data.support_email || 'support@thingor.com',
+          primary_color: data.primary_color || '#10b981',
+          logo_url: data.logo_url || '/logo.png',
+          favicon_url: data.favicon_url || '/favicon.png',
+          meta_description: data.meta_description || '',
         };
         setSiteSettings(newSettings);
         localStorage.setItem('thingor_site_settings', JSON.stringify(newSettings));
@@ -413,6 +421,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     fetchSiteSettings();
   }, []);
+
+  // Update browser tab favicon dynamically when favicon_url changes
+  useEffect(() => {
+    if (siteSettings.favicon_url) {
+      const favicons = document.querySelectorAll("link[rel*='icon']");
+      favicons.forEach(el => {
+        (el as HTMLLinkElement).href = siteSettings.favicon_url!;
+      });
+    }
+  }, [siteSettings.favicon_url]);
 
   // Handle Supabase Auth state if configured
   useEffect(() => {
