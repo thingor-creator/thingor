@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
-  const { setCurrentView, setIsAuthModalOpen, setAuthModalMode, isAuthenticated, t, language, setActiveLegalSlug } = useApp();
+  const { setCurrentView, setIsAuthModalOpen, setAuthModalMode, isAuthenticated, t, language, setActiveLegalSlug, siteSettings } = useApp();
 
   useEffect(() => {
     document.title = language === 'hu' ? 'Thingor – Rendszerezd az összes tárgyadat' : 'Thingor – Organize Everything You Own';
@@ -413,7 +413,7 @@ export const LandingPage: React.FC = () => {
       <footer className="py-16 bg-slate-950 border-t border-slate-800 text-slate-400 text-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <img src="/logo.png" alt="Thingor Logo" className="h-12 sm:h-14 w-auto object-contain" />
+            <img src={siteSettings.logo_url || '/logo.png'} alt={siteSettings.site_name || 'Thingor Logo'} className="h-12 sm:h-14 w-auto object-contain" />
             <div>
               <span className="block text-xs text-slate-400">{t('tagline')}</span>
             </div>

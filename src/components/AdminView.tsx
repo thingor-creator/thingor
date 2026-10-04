@@ -26,10 +26,16 @@ import {
   ArrowLeft,
   LogOut,
   Shield,
+  Upload,
+  Loader2,
+  Globe,
+  Smartphone,
+  Image as ImageIcon,
 } from 'lucide-react';
 import type { UserStatus, LegalSlug, UserDetailStats } from '../types';
 import { isAdmin as checkIsAdmin } from '../lib/permissions';
 import { isR2Configured } from '../lib/r2';
+import { uploadFileToStorage } from '../lib/storage';
 
 export const AdminView: React.FC = () => {
   const {
@@ -86,6 +92,44 @@ export const AdminView: React.FC = () => {
   const [primaryColor, setPrimaryColor] = useState(siteSettings.primary_color || '#10b981');
   const [logoUrl, setLogoUrl] = useState(siteSettings.logo_url || '/logo.png');
   const [faviconUrl, setFaviconUrl] = useState(siteSettings.favicon_url || '/favicon.png');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingLogo(true);
+    try {
+      const res = await uploadFileToStorage(file, user?.id || 'admin');
+      if (res.url) {
+        setLogoUrl(res.url);
+        setActionMsg({ type: 'success', text: 'Új logó kép feltöltve és beállítva!' });
+        setTimeout(() => setActionMsg(null), 3000);
+      }
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: 'Hiba a logó feltöltésekor: ' + (err.message || 'Ismeretlen hiba') });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingFavicon(true);
+    try {
+      const res = await uploadFileToStorage(file, user?.id || 'admin');
+      if (res.url) {
+        setFaviconUrl(res.url);
+        setActionMsg({ type: 'success', text: 'Új favicon & PWA ikon feltöltve és beállítva!' });
+        setTimeout(() => setActionMsg(null), 3000);
+      }
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: 'Hiba a favicon feltöltésekor: ' + (err.message || 'Ismeretlen hiba') });
+    } finally {
+      setIsUploadingFavicon(false);
+    }
+  };
 
   // Registration paused form state
   const [regPausedTitle, setRegPausedTitle] = useState(siteSettings.registration_paused_title || 'A regisztráció jelenleg szünetel');
@@ -1064,12 +1108,107 @@ export const AdminView: React.FC = () => {
                     />
                   </div>
                 </div>
+              </div>
 
+              {/* BRAND ASSETS: LOGO & FAVICON VISUAL MANAGER */}
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-6">
+                <div className="border-b border-[#292936] pb-4">
+                  <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-emerald-400" /> Márka Vizuális Elemei & Ikonok (Logo & Favicon Manager)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Állítsd be és töltsd fel, hogy a Logó és a Favicon hol, milyen URL-lel és mekkora méretben jelenjen meg a felületen.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* LOGO MANAGEMENT */}
+                  <div className="space-y-4 bg-[#23232e] border border-[#303040] p-5 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">1. Fő Logó (Brand Logo)</span>
+                      <span className="text-[10px] text-slate-400">Navigáció & Lábjegyzet</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1">Logó Kép URL</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={logoUrl}
+                          onChange={e => setLogoUrl(e.target.value)}
+                          placeholder="/logo.png vagy R2 URL..."
+                          className="w-full px-3 py-2 rounded-xl bg-[#1c1c24] border border-[#323240] text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                        <label className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md">
+                          {isUploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Feltöltés</span>
+                          <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Live Header Logo Preview */}
+                    <div className="p-4 rounded-xl bg-[#18181c] border border-[#2b2b38] space-y-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Élő Előnézet – Fejléc (Header Bar)</span>
+                      <div className="h-16 bg-slate-950 rounded-lg border border-slate-800 p-2 flex items-center px-4">
+                        <img src={logoUrl || '/logo.png'} alt="Logo Preview" className="h-10 w-auto object-contain" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FAVICON & PWA ICON MANAGEMENT */}
+                  <div className="space-y-4 bg-[#23232e] border border-[#303040] p-5 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">2. Favicon & PWA App Ikon</span>
+                      <span className="text-[10px] text-slate-400">Böngésző fül & Mobil App</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1">Favicon / Ikon URL</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={faviconUrl}
+                          onChange={e => setFaviconUrl(e.target.value)}
+                          placeholder="/favicon.png vagy R2 URL..."
+                          className="w-full px-3 py-2 rounded-xl bg-[#1c1c24] border border-[#323240] text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                        <label className="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md">
+                          {isUploadingFavicon ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Feltöltés</span>
+                          <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Live Favicon & PWA Preview */}
+                    <div className="p-4 rounded-xl bg-[#18181c] border border-[#2b2b38] space-y-3">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Élő Előnézet – Böngésző fül & Mobil PWA</span>
+                      
+                      <div className="flex items-center gap-4">
+                        {/* Browser tab simulation */}
+                        <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center gap-2">
+                          <img src={faviconUrl || '/favicon.png'} alt="Favicon Preview" className="w-4 h-4 object-contain rounded" />
+                          <span className="text-[11px] font-semibold text-slate-300 truncate">Thingor – A tárgyaid...</span>
+                        </div>
+
+                        {/* Mobile App icon simulation */}
+                        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2">
+                          <img src={faviconUrl || '/favicon.png'} alt="PWA Icon Preview" className="w-8 h-8 object-cover rounded-xl shadow-md" />
+                          <span className="text-[10px] font-extrabold text-white">Thingor App</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
                 <button
                   type="submit"
                   className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-900/30"
                 >
-                  Beállítások Mentése
+                  Minden Beállítás Mentése
                 </button>
               </div>
             </form>

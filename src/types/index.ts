@@ -121,6 +121,7 @@ export interface SiteSettings {
   primary_color?: string;
   logo_url?: string;
   favicon_url?: string;
+  logo_height?: number;
   meta_description?: string;
   updated_at?: string;
   updated_by?: string;

@@ -31,6 +31,7 @@ export const Navbar: React.FC = () => {
     language,
     setLanguage,
     t,
+    siteSettings,
   } = useApp();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -52,15 +53,15 @@ export const Navbar: React.FC = () => {
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md">
       <div className="mx-auto flex h-20 sm:h-24 md:h-26 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         
-        {/* Logo & Brand (Much Bigger Logo) */}
+        {/* Logo & Brand */}
         <div className="flex items-center gap-4 xl:gap-8 shrink-0">
           <button
             onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
             className="flex items-center gap-3 text-left focus:outline-none group py-1.5 shrink-0"
           >
             <img
-              src="/logo.png"
-              alt="Thingor Logo"
+              src={siteSettings.logo_url || '/logo.png'}
+              alt={siteSettings.site_name || 'Thingor Logo'}
               className="h-14 sm:h-16 md:h-20 lg:h-22 max-w-[220px] sm:max-w-[280px] md:max-w-[340px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
             />
           </button>
