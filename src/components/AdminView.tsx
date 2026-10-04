@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { UserStatus } from '../types';
 import { isAdmin as checkIsAdmin } from '../lib/permissions';
+import { isR2Configured, r2BucketName } from '../lib/r2';
 
 export const AdminView: React.FC = () => {
   const {
@@ -228,6 +229,37 @@ export const AdminView: React.FC = () => {
               <p className="text-2xl font-extrabold text-white">{documents.length}</p>
               <p className="text-[11px] text-slate-500">Feltöltött privát dokumentum</p>
             </div>
+          </div>
+
+          {/* Storage Provider Status Banner */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs ${
+                isR2Configured
+                  ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              }`}>
+                {isR2Configured ? 'R2' : 'SUP'}
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  Fájltároló (Object Storage Provider): {isR2Configured ? 'Cloudflare R2 Storage' : 'Supabase Storage'}
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {isR2Configured
+                    ? `Aktív Cloudflare R2 bucket: "${r2BucketName}". Egress díjmentes tárolás.`
+                    : 'A Supabase Storage aktív. Cloudflare R2 beállításához add meg a VITE_R2_* környezeti változókat.'}
+                </p>
+              </div>
+            </div>
+
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              isR2Configured
+                ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+            }`}>
+              {isR2Configured ? 'Cloudflare R2 Aktív' : 'Supabase Storage Aktív'}
+            </span>
           </div>
 
           {/* Quick Platform Controls */}
