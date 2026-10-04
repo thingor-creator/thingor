@@ -127,6 +127,20 @@ export const Navbar: React.FC = () => {
                 <FileText className="h-4 w-4 shrink-0 text-slate-400" />
                 <span>{t('documents')}</span>
               </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => handleNav('admin')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                    currentView === 'admin'
+                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30 shadow-sm'
+                      : 'text-emerald-400 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <span>Admin</span>
+                </button>
+              )}
             </nav>
           )}
         </div>

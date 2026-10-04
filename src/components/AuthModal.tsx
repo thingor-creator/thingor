@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, ArrowRight, ShieldCheck, CheckCircle2, Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
 import type { AuthModalMode } from '../context/AppContext';
 
 export const AuthModal: React.FC = () => {
@@ -16,6 +16,7 @@ export const AuthModal: React.FC = () => {
     setCurrentView,
     language,
     isRegistrationSuspended,
+    siteSettings,
   } = useApp();
 
   const [email, setEmail] = useState('');
@@ -249,6 +250,24 @@ export const AuthModal: React.FC = () => {
               className="mt-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors"
             >
               {language === 'hu' ? 'Tovább a Vezérlőpultra' : 'Go to Dashboard'}
+            </button>
+          </div>
+        ) : authModalMode === 'signup' && (isRegistrationSuspended || !siteSettings.registration_enabled) ? (
+          <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-center space-y-3">
+            <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto" />
+            <h3 className="font-bold text-sm text-white">
+              {language === 'hu' ? 'A regisztráció jelenleg szünetel.' : 'Registration temporarily unavailable.'}
+            </h3>
+            <p className="text-slate-300 text-xs leading-relaxed">
+              {language === 'hu'
+                ? 'A regisztráció jelenleg szünetel. Kérjük, próbáld meg később.'
+                : 'Registration temporarily unavailable. Please try again later.'}
+            </p>
+            <button
+              onClick={() => switchMode('login')}
+              className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors"
+            >
+              {language === 'hu' ? 'Vissza a bejelentkezéshez' : 'Back to Sign In'}
             </button>
           </div>
         ) : (

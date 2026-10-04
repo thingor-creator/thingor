@@ -7,9 +7,18 @@ import type {
   UserProfile,
   ViewMode,
   FilterState,
+  UserRole,
+  UserStatus,
+  SharePurpose,
+  SharePermissions,
+  ItemShare,
+  SharedItemViewData,
+  SiteSettings,
+  AdminAuditLog,
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
+import { isAdmin, isSuspended } from '../lib/permissions';
 
 // Default categories in Hungarian
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -258,6 +267,30 @@ interface AppContextType {
   // Helper getters
   getLocationPath: (locationId: string) => string;
   getCategoryName: (categoryId: string) => string;
+
+  // Site Settings & Admin Platform Control
+  siteSettings: SiteSettings;
+  updateSiteSettings: (settings: Partial<SiteSettings>) => Promise<{ success: boolean; error?: string }>;
+  toggleRegistration: (enabled: boolean) => Promise<void>;
+  toggleMaintenance: (enabled: boolean) => Promise<void>;
+
+  // Sharing System
+  itemShares: ItemShare[];
+  createItemShare: (itemId: string, purpose: SharePurpose, expirationDays: number | null, permissions: SharePermissions) => Promise<ItemShare | null>;
+  revokeItemShare: (shareId: string) => Promise<boolean>;
+  getItemShares: (itemId: string) => Promise<ItemShare[]>;
+  getSharedItemByToken: (token: string) => Promise<{ success: boolean; data?: SharedItemViewData; error?: string }>;
+  activeShareToken: string | null;
+  setActiveShareToken: (token: string | null) => void;
+  sharedItemData: SharedItemViewData | null;
+  setSharedItemData: (data: SharedItemViewData | null) => void;
+
+  // User Management & Admin Audit Logs
+  usersList: UserProfile[];
+  fetchUsersList: () => Promise<UserProfile[]>;
+  toggleUserSuspension: (userId: string, targetStatus: UserStatus) => Promise<boolean>;
+  adminAuditLogs: AdminAuditLog[];
+  logAdminAction: (action: string, target?: string, details?: any) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -388,30 +421,145 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [user]);
 
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
+    const saved = localStorage.getItem('thingor_site_settings');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      id: 'default',
+      site_name: 'Thingor',
+      hero_title: 'Személyes leltár, tárgy- és dokumentumkezelő',
+      hero_subtitle: 'Rendszerezd, dokumentáld és oszd meg értékeidet biztonságosan.',
+      announcement: null,
+      registration_enabled: !isRegistrationSuspended,
+      maintenance_mode: false,
+      maintenance_message: 'A rendszer jelenleg karbantartás alatt áll. Kérjük, látogass vissza később.',
+    };
+  });
+
+  const [itemShares, setItemShares] = useState<ItemShare[]>(() => {
+    const saved = localStorage.getItem('thingor_item_shares');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [adminAuditLogs, setAdminAuditLogs] = useState<AdminAuditLog[]>([]);
+  const [activeShareToken, setActiveShareToken] = useState<string | null>(null);
+  const [sharedItemData, setSharedItemData] = useState<SharedItemViewData | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('thingor_item_shares', JSON.stringify(itemShares));
+  }, [itemShares]);
+
   const isUUID = (str?: string | null): boolean =>
     Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+
+  // Helper to fetch profile with role and status from Supabase
+  const fetchUserProfile = async (userId: string, email: string, metadataDisplayName?: string): Promise<UserProfile> => {
+    const cleanEmail = email.toLowerCase();
+    const fallbackDisplayName = metadataDisplayName || cleanEmail.split('@')[0] || 'User';
+
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        id: userId,
+        user_id: userId,
+        display_name: fallbackDisplayName,
+        email: cleanEmail,
+        role: 'user',
+        status: 'active',
+        is_admin: false,
+      };
+    }
+
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role, status, display_name')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const role: UserRole = profileData?.role === 'admin' ? 'admin' : 'user';
+      const status: UserStatus = (profileData?.status as UserStatus) || 'active';
+      const displayName = profileData?.display_name || fallbackDisplayName;
+
+      return {
+        id: userId,
+        user_id: userId,
+        display_name: displayName,
+        email: cleanEmail,
+        role,
+        status,
+        is_admin: role === 'admin',
+      };
+    } catch (e) {
+      return {
+        id: userId,
+        user_id: userId,
+        display_name: fallbackDisplayName,
+        email: cleanEmail,
+        role: 'user',
+        status: 'active',
+        is_admin: false,
+      };
+    }
+  };
+
+  // Fetch site settings from Supabase
+  const fetchSiteSettings = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data } = await supabase.from('site_settings').select('*').eq('id', 'default').maybeSingle();
+      if (data) {
+        const newSettings: SiteSettings = {
+          id: data.id || 'default',
+          site_name: data.site_name || 'Thingor',
+          hero_title: data.hero_title || 'Személyes leltár, tárgy- és dokumentumkezelő',
+          hero_subtitle: data.hero_subtitle || 'Rendszerezd, dokumentáld és oszd meg értékeidet biztonságosan.',
+          announcement: data.announcement || null,
+          registration_enabled: data.registration_enabled ?? true,
+          maintenance_mode: data.maintenance_mode ?? false,
+          maintenance_message: data.maintenance_message || 'A rendszer jelenleg karbantartás alatt áll. Kérjük, látogass vissza később.',
+        };
+        setSiteSettings(newSettings);
+        localStorage.setItem('thingor_site_settings', JSON.stringify(newSettings));
+        setIsRegistrationSuspendedState(!newSettings.registration_enabled);
+      }
+    } catch (e) {
+      console.error('Failed to fetch site settings:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchSiteSettings();
+  }, []);
 
   // Handle Supabase Auth state if configured
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const cleanEmail = session.user.email?.toLowerCase() || '';
-        setUser({
-          id: session.user.id,
-          user_id: session.user.id,
-          display_name: session.user.user_metadata?.display_name || cleanEmail.split('@')[0] || 'User',
-          email: cleanEmail,
-          is_admin: Boolean(session.user.user_metadata?.is_admin) || cleanEmail === 'mythingor@gmail.com',
-        });
+        const profile = await fetchUserProfile(
+          session.user.id,
+          session.user.email || '',
+          session.user.user_metadata?.display_name
+        );
+        if (isSuspended(profile)) {
+          await supabase.auth.signOut();
+          setUser(null);
+          localStorage.removeItem('thingor_user');
+          alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
+          return;
+        }
+        setUser(profile);
       } else {
         setUser(null);
         localStorage.removeItem('thingor_user');
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setAuthModalMode('update_password');
         setIsAuthModalOpen(true);
@@ -420,14 +568,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       if (session?.user) {
-        const cleanEmail = session.user.email?.toLowerCase() || '';
-        setUser({
-          id: session.user.id,
-          user_id: session.user.id,
-          display_name: session.user.user_metadata?.display_name || cleanEmail.split('@')[0] || 'User',
-          email: cleanEmail,
-          is_admin: Boolean(session.user.user_metadata?.is_admin) || cleanEmail === 'mythingor@gmail.com',
-        });
+        const profile = await fetchUserProfile(
+          session.user.id,
+          session.user.email || '',
+          session.user.user_metadata?.display_name
+        );
+        if (isSuspended(profile)) {
+          await supabase.auth.signOut();
+          setUser(null);
+          localStorage.removeItem('thingor_user');
+          alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
+          return;
+        }
+        setUser(profile);
       } else if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         localStorage.removeItem('thingor_user');
@@ -989,6 +1142,292 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setDocuments(prev => prev.filter(d => d.id !== docId));
   };
 
+  // Admin Audit Log logger
+  const logAdminAction = async (action: string, target?: string, details?: any) => {
+    if (!user || !isAdmin(user)) return;
+    const newLog: AdminAuditLog = {
+      id: 'log-' + Date.now(),
+      admin_id: user.id,
+      action,
+      target,
+      details,
+      created_at: new Date().toISOString(),
+    };
+    setAdminAuditLogs(prev => [newLog, ...prev]);
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('admin_audit_logs').insert([{
+        admin_id: user.id,
+        action,
+        target,
+        details,
+      }]);
+    }
+  };
+
+  // Toggle Registration
+  const toggleRegistration = async (enabled: boolean) => {
+    setIsRegistrationSuspended(!enabled);
+    const updated = { ...siteSettings, registration_enabled: enabled };
+    setSiteSettings(updated);
+    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('site_settings').upsert({
+        id: 'default',
+        registration_enabled: enabled,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id
+      });
+    }
+    await logAdminAction('toggle_registration', `registration_enabled=${enabled}`);
+  };
+
+  // Toggle Maintenance Mode
+  const toggleMaintenance = async (enabled: boolean) => {
+    const updated = { ...siteSettings, maintenance_mode: enabled };
+    setSiteSettings(updated);
+    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('site_settings').upsert({
+        id: 'default',
+        maintenance_mode: enabled,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id
+      });
+    }
+    await logAdminAction('toggle_maintenance', `maintenance_mode=${enabled}`);
+  };
+
+  // Update Site Settings
+  const updateSiteSettings = async (updates: Partial<SiteSettings>): Promise<{ success: boolean; error?: string }> => {
+    const updated = { ...siteSettings, ...updates };
+    setSiteSettings(updated);
+    localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('site_settings').upsert({
+        id: 'default',
+        ...updates,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id
+      });
+      if (error) return { success: false, error: error.message };
+    }
+    await logAdminAction('update_site_settings', undefined, updates);
+    return { success: true };
+  };
+
+  // Create Item Share Link
+  const createItemShare = async (
+    itemId: string,
+    purpose: SharePurpose,
+    expirationDays: number | null,
+    permissions: SharePermissions
+  ): Promise<ItemShare | null> => {
+    if (!user?.id) return null;
+
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    let expiresAt: string | null = null;
+    if (expirationDays && expirationDays > 0) {
+      const exp = new Date();
+      exp.setDate(exp.getDate() + expirationDays);
+      expiresAt = exp.toISOString();
+    }
+
+    const newShare: ItemShare = {
+      id: 'share-' + Date.now(),
+      item_id: itemId,
+      created_by: user.id,
+      token,
+      purpose,
+      expires_at: expiresAt,
+      revoked_at: null,
+      permissions,
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
+      const { data, error } = await supabase
+        .from('item_shares')
+        .insert([{
+          item_id: itemId,
+          created_by: user.id,
+          token,
+          purpose,
+          expires_at: expiresAt,
+          permissions,
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        const created = data as ItemShare;
+        setItemShares(prev => [created, ...prev]);
+        return created;
+      }
+    }
+
+    setItemShares(prev => [newShare, ...prev]);
+    return newShare;
+  };
+
+  // Revoke Item Share Link
+  const revokeItemShare = async (shareId: string): Promise<boolean> => {
+    const revokedAt = new Date().toISOString();
+    if (isSupabaseConfigured && supabase && isUUID(shareId)) {
+      await supabase
+        .from('item_shares')
+        .update({ revoked_at: revokedAt })
+        .eq('id', shareId)
+        .eq('created_by', user?.id);
+    }
+
+    setItemShares(prev => prev.map(s => s.id === shareId ? { ...s, revoked_at: revokedAt } : s));
+    return true;
+  };
+
+  // Get Active Item Shares
+  const getItemShares = async (itemId: string): Promise<ItemShare[]> => {
+    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
+      const { data } = await supabase
+        .from('item_shares')
+        .select('*')
+        .eq('item_id', itemId)
+        .is('revoked_at', null)
+        .order('created_at', { ascending: false });
+      if (data) return data as ItemShare[];
+    }
+    return itemShares.filter(s => s.item_id === itemId && !s.revoked_at);
+  };
+
+  // Get Shared Item by Cryptographic Token for Guest View
+  const getSharedItemByToken = async (token: string): Promise<{ success: boolean; data?: SharedItemViewData; error?: string }> => {
+    if (!token) return { success: false, error: 'Hiányzó megosztási token' };
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase.rpc('get_shared_item', { share_token: token });
+        if (!error && data) {
+          return { success: true, data: data as SharedItemViewData };
+        }
+      } catch (e) {
+        console.warn('RPC get_shared_item fallback:', e);
+      }
+
+      // Manual fallback query
+      const { data: shareData } = await supabase
+        .from('item_shares')
+        .select('*, items(*)')
+        .eq('token', token)
+        .is('revoked_at', null)
+        .maybeSingle();
+
+      if (shareData && shareData.items) {
+        const item = shareData.items;
+        const perms: SharePermissions = shareData.permissions || {};
+        if (shareData.expires_at && new Date(shareData.expires_at).getTime() < Date.now()) {
+          return { success: false, error: 'Ez a megosztási link lejárt.' };
+        }
+
+        const sharedPayload: SharedItemViewData = {
+          share_id: shareData.id,
+          purpose: shareData.purpose,
+          expires_at: shareData.expires_at,
+          permissions: perms,
+          created_at: shareData.created_at,
+          item_id: item.id,
+          name: item.name,
+          description: item.description,
+          condition: item.condition,
+          photo_url: item.photo_url,
+          additional_photos: perms.include_additional_images ? item.additional_photos : undefined,
+          purchase_date: perms.include_purchase_date ? item.purchase_date : undefined,
+          warranty_start: perms.include_warranty ? item.warranty_start : undefined,
+          warranty_end: perms.include_warranty ? item.warranty_end : undefined,
+          current_value: perms.include_value ? item.current_value : undefined,
+          purchase_price: perms.include_purchase_price ? item.purchase_price : undefined,
+        };
+        return { success: true, data: sharedPayload };
+      }
+    }
+
+    // Local state fallback
+    const localShare = itemShares.find(s => s.token === token && !s.revoked_at);
+    if (localShare) {
+      if (localShare.expires_at && new Date(localShare.expires_at).getTime() < Date.now()) {
+        return { success: false, error: 'Ez a megosztási link lejárt.' };
+      }
+      const targetItem = items.find(i => i.id === localShare.item_id);
+      if (targetItem) {
+        const perms = localShare.permissions || {};
+        const payload: SharedItemViewData = {
+          share_id: localShare.id,
+          purpose: localShare.purpose,
+          expires_at: localShare.expires_at,
+          permissions: perms,
+          created_at: localShare.created_at,
+          item_id: targetItem.id,
+          name: targetItem.name,
+          description: targetItem.description,
+          condition: targetItem.condition,
+          photo_url: targetItem.photo_url,
+          additional_photos: perms.include_additional_images ? targetItem.additional_photos : undefined,
+          purchase_date: perms.include_purchase_date ? targetItem.purchase_date : undefined,
+          warranty_start: perms.include_warranty ? targetItem.warranty_start : undefined,
+          warranty_end: perms.include_warranty ? targetItem.warranty_end : undefined,
+          current_value: perms.include_value ? targetItem.current_value : undefined,
+          purchase_price: perms.include_purchase_price ? targetItem.purchase_price : undefined,
+        };
+        return { success: true, data: payload };
+      }
+    }
+
+    return { success: false, error: 'Ez a megosztási link már nem érhető el.' };
+  };
+
+  // Fetch Users List for Admin
+  const fetchUsersList = async (): Promise<UserProfile[]> => {
+    if (!user || !isAdmin(user)) return [];
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      if (data) {
+        const mapped = data.map((p: any) => ({
+          id: p.id || p.user_id,
+          user_id: p.user_id,
+          display_name: p.display_name || p.email?.split('@')[0] || 'User',
+          email: p.email || '',
+          role: (p.role === 'admin' ? 'admin' : 'user') as UserRole,
+          status: (p.status as UserStatus) || 'active',
+          is_admin: p.role === 'admin',
+          created_at: p.created_at,
+        }));
+        setUsersList(mapped);
+        return mapped;
+      }
+    }
+    return usersList;
+  };
+
+  // Toggle User Suspension for Admin
+  const toggleUserSuspension = async (targetUserId: string, targetStatus: UserStatus): Promise<boolean> => {
+    if (!user || !isAdmin(user)) return false;
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: targetStatus })
+        .eq('user_id', targetUserId);
+      if (error) return false;
+    }
+    setUsersList(prev => prev.map(u => (u.user_id === targetUserId || u.id === targetUserId) ? { ...u, status: targetStatus } : u));
+    await logAdminAction('toggle_user_status', `user_id=${targetUserId}, status=${targetStatus}`);
+    return true;
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -998,7 +1437,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         user,
         isAuthenticated: !!user,
-        isAdmin: !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin),
+        isAdmin: isAdmin(user),
         isRegistrationSuspended,
         setIsRegistrationSuspended,
         login,
@@ -1052,6 +1491,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         getLocationPath,
         getCategoryName,
+
+        siteSettings,
+        updateSiteSettings,
+        toggleRegistration,
+        toggleMaintenance,
+
+        itemShares,
+        createItemShare,
+        revokeItemShare,
+        getItemShares,
+        getSharedItemByToken,
+        activeShareToken,
+        setActiveShareToken,
+        sharedItemData,
+        setSharedItemData,
+
+        usersList,
+        fetchUsersList,
+        toggleUserSuspension,
+        adminAuditLogs,
+        logAdminAction,
       }}
     >
       {children}

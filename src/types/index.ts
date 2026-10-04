@@ -49,16 +49,84 @@ export interface Item {
   updated_at?: string;
 }
 
+export type UserRole = 'admin' | 'user';
+export type UserStatus = 'active' | 'suspended' | 'deleted';
+
 export interface UserProfile {
   id: string;
   user_id: string;
   display_name: string;
   email: string;
+  role?: UserRole;
+  status?: UserStatus;
   is_admin?: boolean;
   created_at?: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'admin';
+export type SharePurpose = 'view' | 'sale' | 'loan';
+
+export interface SharePermissions {
+  include_purchase_date?: boolean;
+  include_warranty?: boolean;
+  include_value?: boolean;
+  include_purchase_price?: boolean;
+  include_additional_images?: boolean;
+}
+
+export interface ItemShare {
+  id: string;
+  item_id: string;
+  created_by: string;
+  token: string;
+  purpose: SharePurpose;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+  permissions: SharePermissions;
+  created_at: string;
+}
+
+export interface SharedItemViewData {
+  share_id: string;
+  purpose: SharePurpose;
+  expires_at?: string | null;
+  permissions: SharePermissions;
+  created_at: string;
+  item_id: string;
+  name: string;
+  description?: string;
+  condition: ItemCondition;
+  photo_url?: string;
+  additional_photos?: string[];
+  purchase_date?: string;
+  warranty_start?: string;
+  warranty_end?: string;
+  current_value?: number;
+  purchase_price?: number;
+}
+
+export interface SiteSettings {
+  id: string;
+  site_name: string;
+  hero_title: string;
+  hero_subtitle?: string;
+  announcement?: string | null;
+  registration_enabled: boolean;
+  maintenance_mode: boolean;
+  maintenance_message?: string | null;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  admin_id: string;
+  action: string;
+  target?: string;
+  details?: Record<string, any>;
+  created_at: string;
+}
+
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'admin' | 'guest_share';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';

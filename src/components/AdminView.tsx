@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   ShieldAlert,
   Users,
   Boxes,
   Database,
-  Download,
-  Trash2,
-  UserPlus,
   ShieldCheck,
   RefreshCw,
-  HardDrive,
   FileText,
   Search,
   Lock,
@@ -18,69 +14,67 @@ import {
   User as UserIcon,
   X,
   UserX,
-  UserCheck
+  UserCheck,
+  Share2,
+  Sliders,
+  AlertTriangle,
+  Activity,
+  Calendar
 } from 'lucide-react';
-import type { UserProfile } from '../types';
+import type { UserProfile, UserStatus } from '../types';
+import { isAdmin as checkIsAdmin } from '../lib/permissions';
 
 export const AdminView: React.FC = () => {
   const {
+    user,
     isAdmin,
-    isRegistrationSuspended,
-    setIsRegistrationSuspended,
     setCurrentView,
     items,
+    itemShares,
     categories,
     locations,
     documents,
     language,
-    signup
+    siteSettings,
+    updateSiteSettings,
+    toggleRegistration,
+    toggleMaintenance,
+    usersList,
+    fetchUsersList,
+    toggleUserSuspension,
+    adminAuditLogs,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'system' | 'global'>('users');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'settings' | 'audit'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newName, setNewName] = useState('');
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Load offline registered users + admin
-  const getRegisteredUsers = (): UserProfile[] => {
-    const savedRegs = localStorage.getItem('thingor_registered_users');
-    const localRegs: Array<{ email: string; pass: string; name: string; id: string }> = savedRegs ? JSON.parse(savedRegs) : [];
-    
-    const userList: UserProfile[] = [
-      {
-        id: 'admin-1',
-        user_id: 'admin-1',
-        display_name: 'Admin (Thingor)',
-        email: 'mythingor@gmail.com',
-        is_admin: true,
-        created_at: '2026-01-01T00:00:00Z',
-      },
-      ...localRegs.map(u => ({
-        id: u.id,
-        user_id: u.id,
-        display_name: u.name,
-        email: u.email,
-        is_admin: u.email.toLowerCase() === 'mythingor@gmail.com',
-        created_at: new Date().toISOString(),
-      }))
-    ];
+  // Settings form local state
+  const [siteName, setSiteName] = useState(siteSettings.site_name);
+  const [heroTitle, setHeroTitle] = useState(siteSettings.hero_title);
+  const [heroSubtitle, setHeroSubtitle] = useState(siteSettings.hero_subtitle || '');
+  const [announcement, setAnnouncement] = useState(siteSettings.announcement || '');
+  const [maintenanceMessage, setMaintenanceMessage] = useState(siteSettings.maintenance_message || '');
 
-    // Deduplicate by email
-    const uniqueMap = new Map<string, UserProfile>();
-    userList.forEach(u => uniqueMap.set(u.email.toLowerCase(), u));
-    return Array.from(uniqueMap.values());
-  };
+  useEffect(() => {
+    if (isAdmin) {
+      fetchUsersList();
+    }
+  }, [isAdmin]);
 
-  const [usersList, setUsersList] = useState<UserProfile[]>(getRegisteredUsers);
+  useEffect(() => {
+    setSiteName(siteSettings.site_name);
+    setHeroTitle(siteSettings.hero_title);
+    setHeroSubtitle(siteSettings.hero_subtitle || '');
+    setAnnouncement(siteSettings.announcement || '');
+    setMaintenanceMessage(siteSettings.maintenance_message || '');
+  }, [siteSettings]);
 
   // Access check
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-4">
-        <div className="p-4 rounded-full bg-rose-950/60 border border-rose-800/80 text-rose-400">
+        <div className="p-4 rounded-full bg-rose-950/60 border border-rose-800/80 text-rose-400 shadow-xl">
           <ShieldAlert className="h-12 w-12" />
         </div>
         <h2 className="text-2xl font-bold text-white">
@@ -88,8 +82,8 @@ export const AdminView: React.FC = () => {
         </h2>
         <p className="text-sm text-slate-400 max-w-md">
           {language === 'hu'
-            ? 'Ez az oldal kizárólag az áruház/rendszer adminisztrátorai számára érhető el (mythingor@gmail.com).'
-            : 'This page is restricted exclusively to system administrators (mythingor@gmail.com).'}
+            ? 'Ez az oldal kizárólag a platform adminisztrátorai számára érhető el.'
+            : 'This page is restricted exclusively to system administrators.'}
         </p>
         <button
           onClick={() => setCurrentView('dashboard')}
@@ -101,291 +95,318 @@ export const AdminView: React.FC = () => {
     );
   }
 
-  const handleExportBackup = () => {
-    const backupData = {
-      export_date: new Date().toISOString(),
-      items,
-      categories,
-      locations,
-      documents,
-      users: usersList,
-    };
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `thingor_backup_${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-
-    setActionMsg({
-      type: 'success',
-      text: language === 'hu' ? 'Adatbázis mentés sikeresen letöltve (JSON)!' : 'Database backup JSON exported successfully!'
-    });
-  };
-
-  const handleAddUserSubmit = async (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail || !newPassword) return;
-
-    const res = await signup(newEmail, newPassword, newName || newEmail.split('@')[0]);
+    const res = await updateSiteSettings({
+      site_name: siteName,
+      hero_title: heroTitle,
+      hero_subtitle: heroSubtitle,
+      announcement: announcement || null,
+      maintenance_message: maintenanceMessage,
+    });
     if (res.success) {
-      setUsersList(getRegisteredUsers());
-      setShowAddUserModal(false);
-      setNewEmail('');
-      setNewPassword('');
-      setNewName('');
-      setActionMsg({
-        type: 'success',
-        text: language === 'hu' ? `Új felhasználó sikeresen létrehozva: ${newEmail}` : `New user created successfully: ${newEmail}`
-      });
+      setActionMsg({ type: 'success', text: 'Beállítások sikeresen mentve.' });
+      setTimeout(() => setActionMsg(null), 3000);
     } else {
-      setActionMsg({
-        type: 'error',
-        text: res.error || 'Hiba a regisztrációnál'
-      });
+      setActionMsg({ type: 'error', text: res.error || 'Hiba történt a mentés során.' });
     }
   };
 
-  const handleDeleteUser = (userEmail: string) => {
-    if (userEmail.toLowerCase() === 'mythingor@gmail.com') {
-      setActionMsg({
-        type: 'error',
-        text: language === 'hu' ? 'Az elsődleges adminisztrátori fiók nem törölhető!' : 'Primary admin account cannot be deleted!'
-      });
-      return;
-    }
-
-    if (confirm(language === 'hu' ? `Biztosan törölni szeretnéd a(z) ${userEmail} felhasználót?` : `Are you sure you want to delete user ${userEmail}?`)) {
-      const savedRegs = localStorage.getItem('thingor_registered_users');
-      let registeredUsers: Array<{ email: string; pass: string; name: string; id: string }> = savedRegs ? JSON.parse(savedRegs) : [];
-      registeredUsers = registeredUsers.filter(u => u.email.toLowerCase() !== userEmail.toLowerCase());
-      localStorage.setItem('thingor_registered_users', JSON.stringify(registeredUsers));
-      
-      setUsersList(getRegisteredUsers());
+  const handleToggleUserStatus = async (targetUserId: string, currentStatus?: UserStatus) => {
+    const nextStatus: UserStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    const success = await toggleUserSuspension(targetUserId, nextStatus);
+    if (success) {
       setActionMsg({
         type: 'success',
-        text: language === 'hu' ? `Felhasználó törölve: ${userEmail}` : `User deleted: ${userEmail}`
+        text: nextStatus === 'suspended' ? 'Felhasználó felfüggesztve.' : 'Felhasználó fiókja aktiválva.'
       });
+      setTimeout(() => setActionMsg(null), 3000);
     }
   };
 
   const filteredUsers = usersList.filter(u =>
-    u.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalInventoryValue = items.reduce((acc, curr) => acc + (curr.current_value || curr.purchase_price || 0), 0);
-
   return (
-    <div className="space-y-8 pb-16">
-      
-      {/* Admin Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-emerald-950/40 to-slate-900 border border-emerald-800/40 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-slate-950 font-bold">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <h1 className="text-2xl font-black text-white tracking-tight">
-              {language === 'hu' ? 'Adminisztrációs Vezérlőpult' : 'Admin Control Center'}
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30">
-              mythingor@gmail.com
+    <div className="space-y-8 animate-fade-in pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+              Platform Admin
             </span>
           </div>
-          <p className="text-xs text-slate-400">
-            {language === 'hu'
-              ? 'Rendszer felügyelet, regisztrált felhasználók kezelése és adatbázis karbantartás.'
-              : 'System overview, user management, and database maintenance.'}
+          <h1 className="text-3xl font-extrabold text-white tracking-tight mt-2">
+            {language === 'hu' ? 'Adminisztrációs Vezérlőpult' : 'Admin Control Panel'}
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Rendszerbeállítások, regisztráció kezelése, karbantartási mód és felhasználók felügyelete.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleExportBackup}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-colors shadow-md"
-          >
-            <Download className="h-4 w-4 text-emerald-400" />
-            <span>{language === 'hu' ? 'Adatbázis Exportálása (JSON)' : 'Export Database JSON'}</span>
-          </button>
-        </div>
+        <button
+          onClick={() => fetchUsersList()}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors self-start sm:self-auto"
+        >
+          <RefreshCw className="w-3.5 h-3.5" /> Adatok frissítése
+        </button>
       </div>
 
+      {/* Action Notification Message */}
       {actionMsg && (
-        <div className={`p-4 rounded-xl border text-xs font-medium flex items-center justify-between animate-in fade-in ${
-          actionMsg.type === 'success'
-            ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-            : 'bg-rose-950/40 border-rose-800/60 text-rose-300'
-        }`}>
+        <div
+          className={`p-4 rounded-2xl border text-sm font-semibold flex items-center justify-between animate-fade-in ${
+            actionMsg.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+          }`}
+        >
           <span>{actionMsg.text}</span>
           <button onClick={() => setActionMsg(null)} className="text-slate-400 hover:text-white">
-            <X className="h-4 w-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 shadow-lg space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-            <span>{language === 'hu' ? 'Regisztrált Felhasználók' : 'Registered Users'}</span>
-            <Users className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-white">
-            {usersList.length}
-          </div>
-          <p className="text-[11px] text-slate-500">
-            {language === 'hu' ? 'Aktív fiókok a rendszerben' : 'Active accounts logged'}
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 shadow-lg space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-            <span>{language === 'hu' ? 'Rendszer Összes Tárgy' : 'Total System Items'}</span>
-            <Boxes className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-white">
-            {items.length}
-          </div>
-          <p className="text-[11px] text-slate-500">
-            €{totalInventoryValue.toLocaleString('hu-HU')} {language === 'hu' ? 'becsült összérték' : 'total value'}
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 shadow-lg space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-            <span>{language === 'hu' ? 'Helyszínek & Kategóriák' : 'Locations & Categories'}</span>
-            <Database className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-white">
-            {locations.length + categories.length}
-          </div>
-          <p className="text-[11px] text-slate-500">
-            {locations.length} {language === 'hu' ? 'helyszín' : 'locations'}, {categories.length} {language === 'hu' ? 'kategória' : 'categories'}
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 shadow-lg space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-            <span>{language === 'hu' ? 'Dokumentum Raktár' : 'Document Vault'}</span>
-            <FileText className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-3xl font-extrabold text-white">
-            {documents.length}
-          </div>
-          <p className="text-[11px] text-slate-500">
-            {language === 'hu' ? 'Garancialevelek & számlák' : 'Warranties & invoices'}
-          </p>
-        </div>
-
+      {/* Admin Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 overflow-x-auto pb-px">
+        {[
+          { id: 'overview', label: 'Rendszer Áttekintés', icon: Activity },
+          { id: 'users', label: 'Felhasználók Kezelése', icon: Users },
+          { id: 'settings', label: 'Platform Beállítások', icon: Sliders },
+          { id: 'audit', label: 'Admin Audit Napló', icon: FileText },
+        ].map(t => {
+          const Icon = t.icon;
+          const active = activeTab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id as any)}
+              className={`flex items-center gap-2 px-4 py-3 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
+                active
+                  ? 'border-emerald-500 text-emerald-400 bg-slate-900/50 rounded-t-xl'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-800">
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === 'users'
-              ? 'border-emerald-500 text-emerald-400 bg-slate-900/40'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Users className="h-4 w-4" />
-          <span>{language === 'hu' ? 'Felhasználók Kezelése' : 'User Management'}</span>
-        </button>
+      {/* TAB 1: OVERVIEW & METRICS */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Regisztrált User</span>
+                <Users className="w-5 h-5 text-blue-400" />
+              </div>
+              <p className="text-2xl font-extrabold text-white">{usersList.length || 1}</p>
+              <p className="text-[11px] text-slate-500">Összes felhasználó a rendszerben</p>
+            </div>
 
-        <button
-          onClick={() => setActiveTab('system')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === 'system'
-              ? 'border-emerald-500 text-emerald-400 bg-slate-900/40'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <HardDrive className="h-4 w-4" />
-          <span>{language === 'hu' ? 'Rendszer & Karbantartás' : 'System & Diagnostics'}</span>
-        </button>
-      </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Tárgyak Száma</span>
+                <Boxes className="w-5 h-5 text-emerald-400" />
+              </div>
+              <p className="text-2xl font-extrabold text-white">{items.length}</p>
+              <p className="text-[11px] text-slate-500">Nyilvántartott tárgy az adatbázisban</p>
+            </div>
 
-      {/* TAB 1: User Management */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Aktív Megosztások</span>
+                <Share2 className="w-5 h-5 text-teal-400" />
+              </div>
+              <p className="text-2xl font-extrabold text-white">{itemShares.length}</p>
+              <p className="text-[11px] text-slate-500">Aktív tárgymegosztási hivatkozás</p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Dokumentumok</span>
+                <FileText className="w-5 h-5 text-amber-400" />
+              </div>
+              <p className="text-2xl font-extrabold text-white">{documents.length}</p>
+              <p className="text-[11px] text-slate-500">Feltöltött privát dokumentum</p>
+            </div>
+          </div>
+
+          {/* Quick Platform Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Registration Control */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-white">Új Regisztrációk Kezelése</h3>
+                  <p className="text-xs text-slate-400">
+                    Felfüggesztheted az új fiókregisztrációkat a platformon.
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  siteSettings.registration_enabled
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                }`}>
+                  {siteSettings.registration_enabled ? 'Engedélyezve' : 'Felfüggesztve'}
+                </span>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => toggleRegistration(!siteSettings.registration_enabled)}
+                  className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
+                    siteSettings.registration_enabled
+                      ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  }`}
+                >
+                  {siteSettings.registration_enabled ? 'Új Regisztrációk Felfüggesztése' : 'Regisztráció Engedélyezése'}
+                </button>
+              </div>
+            </div>
+
+            {/* Maintenance Mode Control */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-white">Karbantartási Üzemmód</h3>
+                  <p className="text-xs text-slate-400">
+                    A látogatók és felhasználók számára karbantartási tájékoztató jelenik meg.
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  siteSettings.maintenance_mode
+                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}>
+                  {siteSettings.maintenance_mode ? 'AKTÍV KARBANTARTÁS' : 'Kikapcsolva'}
+                </span>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => toggleMaintenance(!siteSettings.maintenance_mode)}
+                  className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
+                    siteSettings.maintenance_mode
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                      : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}
+                >
+                  {siteSettings.maintenance_mode ? 'Karbantartási Mód Kikapcsolása' : 'Karbantartási Mód Aktiválása'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: USER MANAGEMENT */}
       {activeTab === 'users' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* Search Input */}
-            <div className="relative w-full sm:w-80">
+            <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <input
                 type="text"
-                placeholder={language === 'hu' ? 'Keresés név vagy e-mail alapján...' : 'Search by name or email...'}
+                placeholder="Keresés felhasználók között..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs focus:border-emerald-500 focus:outline-none"
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
-
-            <button
-              onClick={() => setShowAddUserModal(true)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all"
-            >
-              <UserPlus className="h-4 w-4 stroke-[2.5]" />
-              <span>{language === 'hu' ? 'Új Felhasználó Hozzáadása' : 'Add New User'}</span>
-            </button>
+            <span className="text-xs text-slate-400 font-medium">
+              Összesen {filteredUsers.length} felhasználó
+            </span>
           </div>
 
-          {/* Users Table */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950/80 text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-800">
+                <thead className="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
                   <tr>
-                    <th className="px-5 py-3.5">{language === 'hu' ? 'Felhasználó' : 'User'}</th>
-                    <th className="px-5 py-3.5">{language === 'hu' ? 'E-mail Cím' : 'Email Address'}</th>
-                    <th className="px-5 py-3.5">{language === 'hu' ? 'Szerepkör' : 'Role'}</th>
-                    <th className="px-5 py-3.5 text-right">{language === 'hu' ? 'Műveletek' : 'Actions'}</th>
+                    <th className="px-6 py-4">Felhasználó</th>
+                    <th className="px-6 py-4">Szerepkör</th>
+                    <th className="px-6 py-4">Státusz</th>
+                    <th className="px-6 py-4 text-right">Műveletek</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="px-5 py-4 font-semibold text-white flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-slate-200 font-bold text-xs border border-slate-700">
-                          {u.display_name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-white">{u.display_name}</p>
-                          <p className="text-[10px] text-slate-500">ID: {u.id}</p>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-slate-300 font-medium">
-                        {u.email}
-                      </td>
-                      <td className="px-5 py-4">
-                        {u.is_admin ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 font-bold text-[10px] border border-emerald-800/60">
-                            <ShieldCheck className="h-3 w-3" />
-                            Adminisztrátor
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-medium text-[10px]">
-                            Felhasználó
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        {!u.is_admin && (
-                          <button
-                            onClick={() => handleDeleteUser(u.email)}
-                            className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 hover:text-rose-200 border border-rose-800/40 transition-colors"
-                            title={language === 'hu' ? 'Felhasználó törlése' : 'Delete user'}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
+                        Nem található a keresésnek megfelelő felhasználó.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredUsers.map(u => {
+                      const isUserAdmin = checkIsAdmin(u);
+                      const isUserSuspended = u.status === 'suspended';
+                      return (
+                        <tr key={u.id || u.user_id} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-emerald-400 border border-slate-700">
+                                {u.display_name?.charAt(0).toUpperCase() || 'U'}
+                              </div>
+                              <div>
+                                <p className="font-bold text-white">{u.display_name}</p>
+                                <p className="text-[11px] text-slate-400">{u.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                              isUserAdmin
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            }`}>
+                              {isUserAdmin ? 'Admin' : 'User'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              isUserSuspended
+                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            }`}>
+                              {isUserSuspended ? 'Felfüggesztve' : 'Aktív'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {!isUserAdmin && (
+                              <button
+                                onClick={() => handleToggleUserStatus(u.user_id || u.id, u.status)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ml-auto transition-colors ${
+                                  isUserSuspended
+                                    ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                }`}
+                              >
+                                {isUserSuspended ? (
+                                  <>
+                                    <UserCheck className="w-3.5 h-3.5" /> Aktiválás
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserX className="w-3.5 h-3.5" /> Felfüggesztés
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -393,207 +414,128 @@ export const AdminView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: System Diagnostics & Data Maintenance */}
-      {activeTab === 'system' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Card: Registration Suspension Control */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <UserX className="h-5 w-5 text-emerald-400" />
-                <span>{language === 'hu' ? 'Új Regisztrációk Felfüggesztése' : 'Suspend New User Registrations'}</span>
-              </h3>
-              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
-                isRegistrationSuspended
-                  ? 'bg-rose-950/80 text-rose-400 border-rose-800/80'
-                  : 'bg-emerald-950/80 text-emerald-400 border-emerald-800/80'
-              }`}>
-                {isRegistrationSuspended
-                  ? (language === 'hu' ? '🔴 Felfüggesztve' : '🔴 Suspended')
-                  : (language === 'hu' ? '🟢 Engedélyezve' : '🟢 Open')}
-              </span>
+      {/* TAB 3: PLATFORM SETTINGS */}
+      {activeTab === 'settings' && (
+        <form onSubmit={handleSaveSettings} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+          <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4">
+            Weboldal Megjelenési & Platform Beállítások
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Oldal Neve (Site Name)
+              </label>
+              <input
+                type="text"
+                value={siteName}
+                onChange={e => setSiteName(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:border-emerald-500 focus:outline-none"
+              />
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {language === 'hu'
-                ? 'Ha a regisztráció fel van függesztve, új felhasználók nem tudnak fiókot regisztrálni a belépési panelen. A már meglévő fiókok bejelentkezése továbbra is zavartalanul működik.'
-                : 'When suspended, new users cannot register accounts from the login modal. Existing accounts can sign in normally.'}
-            </p>
-
-            <div className="pt-2">
-              <button
-                onClick={() => {
-                  const nextState = !isRegistrationSuspended;
-                  setIsRegistrationSuspended(nextState);
-                  setActionMsg({
-                    type: nextState ? 'error' : 'success',
-                    text: nextState
-                      ? (language === 'hu' ? 'Az új regisztrációk sikeresen fel lettek függesztve!' : 'New user registrations have been suspended!')
-                      : (language === 'hu' ? 'Az új regisztrációk újra engedélyezve lettek!' : 'New user registrations have been re-enabled!')
-                  });
-                }}
-                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs shadow-md transition-all ${
-                  isRegistrationSuspended
-                    ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                    : 'bg-rose-950 hover:bg-rose-900 text-rose-200 border border-rose-800/80'
-                }`}
-              >
-                {isRegistrationSuspended ? (
-                  <>
-                    <UserCheck className="h-4 w-4 stroke-[2.5]" />
-                    <span>{language === 'hu' ? 'Regisztrációk Újraengedélyezése' : 'Re-enable User Registrations'}</span>
-                  </>
-                ) : (
-                  <>
-                    <UserX className="h-4 w-4 stroke-[2.5]" />
-                    <span>{language === 'hu' ? 'Regisztrációk Felfüggesztése Most' : 'Suspend User Registrations Now'}</span>
-                  </>
-                )}
-              </button>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Hero Főcím (Landing Page Title)
+              </label>
+              <input
+                type="text"
+                value={heroTitle}
+                onChange={e => setHeroTitle(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:border-emerald-500 focus:outline-none"
+              />
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Database className="h-5 w-5 text-emerald-400" />
-              <span>{language === 'hu' ? 'Adatbázis Állapot & Mentés' : 'Database Status & Backup'}</span>
-            </h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {language === 'hu'
-                ? 'Exportáld a teljes tárgy- és helyszínleltárt egyetlen JSON biztonsági mentésbe, vagy töltsd le az adatbázist.'
-                : 'Export complete inventory records into a single JSON backup file.'}
-            </p>
-            <div className="pt-2 flex flex-col gap-2">
-              <button
-                onClick={handleExportBackup}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all"
-              >
-                <Download className="h-4 w-4 stroke-[2.5]" />
-                <span>{language === 'hu' ? 'Teljes JSON Mentés Letöltése' : 'Download Complete JSON Backup'}</span>
-              </button>
-            </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+              Hero Alcím (Subtitle)
+            </label>
+            <input
+              type="text"
+              value={heroSubtitle}
+              onChange={e => setHeroSubtitle(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:border-emerald-500 focus:outline-none"
+            />
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 text-emerald-400" />
-              <span>{language === 'hu' ? 'Mintaadatok Visszaállítása' : 'Reset Default Sample Data'}</span>
-            </h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {language === 'hu'
-                ? 'Ha újrabetöltenéd a gyári mintaadatokat (kategóriák, alapértelmezett tárolási helyszínek), itt visszaállíthatod.'
-                : 'Reset demo categories and default storage locations.'}
-            </p>
-            <div className="pt-2">
-              <button
-                onClick={() => {
-                  if (confirm(language === 'hu' ? 'Biztosan visszaállítod az alapértelmezett kategóriákat és helyszíneket?' : 'Reset default categories and locations?')) {
-                    localStorage.removeItem('thingor_categories');
-                    localStorage.removeItem('thingor_locations');
-                    window.location.reload();
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4 text-emerald-400" />
-                <span>{language === 'hu' ? 'Alapértelmezett Adatok Visszaállítása' : 'Reset Default Data'}</span>
-              </button>
-            </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+              Közlemény Banner (Announcement text)
+            </label>
+            <input
+              type="text"
+              placeholder="Opcionális fejléc üzenet a weboldalon..."
+              value={announcement}
+              onChange={e => setAnnouncement(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:border-emerald-500 focus:outline-none"
+            />
           </div>
 
-        </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+              Karbantartási Üzenet (Maintenance Message)
+            </label>
+            <textarea
+              rows={3}
+              value={maintenanceMessage}
+              onChange={e => setMaintenanceMessage(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all"
+          >
+            Beállítások Mentése
+          </button>
+        </form>
       )}
 
-      {/* Add User Modal */}
-      {showAddUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 text-slate-100 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-emerald-400" />
-                <span>{language === 'hu' ? 'Új Felhasználó Hozzáadása' : 'Add New User'}</span>
-              </h3>
-              <button onClick={() => setShowAddUserModal(false)} className="text-slate-400 hover:text-white">
-                <X className="h-5 w-5" />
-              </button>
+      {/* TAB 4: AUDIT LOGS */}
+      {activeTab === 'audit' && (
+        <div className="space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th className="px-6 py-4">Időpont</th>
+                    <th className="px-6 py-4">Művelet</th>
+                    <th className="px-6 py-4">Cél / Paraméter</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {adminAuditLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                        Nincsenek feljegyzett adminisztrátori műveletek.
+                      </td>
+                    </tr>
+                  ) : (
+                    adminAuditLogs.map(log => (
+                      <tr key={log.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4 text-slate-400 font-mono">
+                          {new Date(log.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 font-bold text-emerald-400">
+                          {log.action}
+                        </td>
+                        <td className="px-6 py-4 font-mono text-slate-300">
+                          {log.target || JSON.stringify(log.details || {})}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-
-            <form onSubmit={handleAddUserSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">
-                  {language === 'hu' ? 'Név' : 'Name'}
-                </label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    required
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">
-                  {language === 'hu' ? 'E-mail Cím' : 'Email Address'}
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input
-                    type="email"
-                    inputMode="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    placeholder="email@example.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    required
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">
-                  {language === 'hu' ? 'Jelszó' : 'Password'}
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddUserModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
-                >
-                  {language === 'hu' ? 'Mégse' : 'Cancel'}
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md"
-                >
-                  {language === 'hu' ? 'Létrehozás' : 'Create User'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
-
     </div>
   );
 };

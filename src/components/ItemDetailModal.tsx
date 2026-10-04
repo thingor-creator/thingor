@@ -18,9 +18,11 @@ import {
   FileCode,
   Image as ImageIcon,
   Upload,
-  Loader2
+  Loader2,
+  Share2
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
+import { ShareModal } from './ShareModal';
 
 export const ItemDetailModal: React.FC = () => {
   const {
@@ -40,6 +42,7 @@ export const ItemDetailModal: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'photos' | 'notes'>('overview');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // New Document Upload State
   const [isAddDocOpen, setIsAddDocOpen] = useState(false);
@@ -160,14 +163,22 @@ export const ItemDetailModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons: Edit & Delete */}
-              <div className="mt-4 flex items-center gap-2">
+              {/* Action Buttons: Edit, Share & Delete */}
+              <div className="mt-4 flex items-center gap-2 flex-wrap">
                 <button
                   onClick={handleEdit}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow transition-all"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
-                  Edit Thing
+                  Edit
+                </button>
+
+                <button
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition-all"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Megosztás
                 </button>
 
                 {isDeleting ? (
@@ -558,6 +569,12 @@ export const ItemDetailModal: React.FC = () => {
         </div>
 
       </div>
+
+      <ShareModal
+        item={item}
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+      />
     </div>
   );
 };
