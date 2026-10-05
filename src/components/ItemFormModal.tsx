@@ -21,8 +21,11 @@ export const ItemFormModal: React.FC = () => {
     locations,
     addLocation,
     getLocationPath,
-    user
+    user,
+    language
   } = useApp();
+
+  const isHu = language === 'hu';
 
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
@@ -124,10 +127,19 @@ export const ItemFormModal: React.FC = () => {
 
   // Sample photo presets for quick testing
   const PHOTO_PRESETS = [
-    { label: 'Drill / Power Tool', url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80' },
-    { label: 'Laptop / PC', url: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80' },
-    { label: 'Bicycle', url: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80' },
-    { label: 'Headphones', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80' },
+    { label: isHu ? 'Fúró gép' : 'Drill / Power Tool', url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80' },
+    { label: isHu ? 'Laptop / PC' : 'Laptop / PC', url: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80' },
+    { label: isHu ? 'Kerékpár' : 'Bicycle', url: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80' },
+    { label: isHu ? 'Fejhallgató' : 'Headphones', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80' },
+  ];
+
+  const CONDITION_OPTIONS: { value: ItemCondition; labelHu: string; labelEn: string }[] = [
+    { value: 'New', labelHu: 'Új', labelEn: 'New' },
+    { value: 'Excellent', labelHu: 'Kiváló', labelEn: 'Excellent' },
+    { value: 'Good', labelHu: 'Jó', labelEn: 'Good' },
+    { value: 'Fair', labelHu: 'Elfogadható', labelEn: 'Fair' },
+    { value: 'Poor', labelHu: 'Gyenge', labelEn: 'Poor' },
+    { value: 'Broken', labelHu: 'Hibás / Törött', labelEn: 'Broken' },
   ];
 
   return (
@@ -142,10 +154,14 @@ export const ItemFormModal: React.FC = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">
-                {editingItem ? 'Edit Thing' : '+ Add New Thing'}
+                {editingItem
+                  ? (isHu ? 'Tárgy Szerkesztése' : 'Edit Thing')
+                  : (isHu ? '+ Új Tárgy Hozzáadása' : '+ Add New Thing')}
               </h2>
               <p className="text-xs text-slate-400">
-                Record details, location, purchase data, and warranty info.
+                {isHu
+                  ? 'Rögzítsd a tárgy részleteit, helyszínét, vásárlási és garancia adatait.'
+                  : 'Record details, location, purchase data, and warranty info.'}
               </p>
             </div>
           </div>
@@ -161,20 +177,20 @@ export const ItemFormModal: React.FC = () => {
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
 
-          {/* SECTION 1: ESSENTIAL DETAILS (Section 10) */}
+          {/* SECTION 1: ESSENTIAL DETAILS */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-              1. Basic Information
+              {isHu ? '1. Alapadatok' : '1. Basic Information'}
             </h3>
 
             {/* Name */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Name *
+                {isHu ? 'Tárgy Neve *' : 'Name *'}
               </label>
               <input
                 type="text"
-                placeholder="e.g. Makita DHP486 Drill"
+                placeholder={isHu ? 'pl. Makita DHP486 Ütvefúró' : 'e.g. Makita DHP486 Drill'}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -186,7 +202,7 @@ export const ItemFormModal: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Category *
+                  {isHu ? 'Kategória *' : 'Category *'}
                 </label>
                 <select
                   value={categoryId}
@@ -202,14 +218,14 @@ export const ItemFormModal: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-slate-300">
-                    Location *
+                    {isHu ? 'Helyszín *' : 'Location *'}
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowAddLoc(!showAddLoc)}
                     className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium"
                   >
-                    + New spot
+                    {isHu ? '+ Új helyszín' : '+ New spot'}
                   </button>
                 </div>
 
@@ -217,7 +233,7 @@ export const ItemFormModal: React.FC = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="e.g. Garage shelf"
+                      placeholder={isHu ? 'pl. Garázs polc' : 'e.g. Garage shelf'}
                       value={newLocName}
                       onChange={(e) => setNewLocName(e.target.value)}
                       className="flex-1 p-2 rounded-xl border border-slate-800 bg-slate-950 text-xs"
@@ -227,7 +243,7 @@ export const ItemFormModal: React.FC = () => {
                       onClick={handleQuickAddLoc}
                       className="px-3 py-1 bg-emerald-500 text-slate-950 rounded-xl text-xs font-bold"
                     >
-                      Save
+                      {isHu ? 'Mentés' : 'Save'}
                     </button>
                   </div>
                 ) : (
@@ -249,7 +265,7 @@ export const ItemFormModal: React.FC = () => {
             {/* Photo URL & Storage File Upload */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Photo (URL or File Upload)
+                {isHu ? 'Kép (URL vagy Fájl feltöltés)' : 'Photo (URL or File Upload)'}
               </label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
@@ -271,7 +287,11 @@ export const ItemFormModal: React.FC = () => {
                   ) : (
                     <Upload className="h-4 w-4 text-emerald-400" />
                   )}
-                  <span>{isUploadingPhoto ? 'Uploading...' : 'Upload File'}</span>
+                  <span>
+                    {isUploadingPhoto
+                      ? (isHu ? 'Feltöltés...' : 'Uploading...')
+                      : (isHu ? 'Fájl Feltöltése' : 'Upload File')}
+                  </span>
                   <input
                     type="file"
                     accept="image/*"
@@ -297,9 +317,11 @@ export const ItemFormModal: React.FC = () => {
                 <p className="text-[11px] text-rose-400 mt-1 font-medium">{photoUploadError}</p>
               )}
 
-              {/* Sample Photo Presets for convenience */}
+              {/* Sample Photo Presets */}
               <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] text-slate-500 font-semibold">Quick sample photo:</span>
+                <span className="text-[10px] text-slate-500 font-semibold">
+                  {isHu ? 'Gyors mintakép:' : 'Quick sample photo:'}
+                </span>
                 {PHOTO_PRESETS.map((p, idx) => (
                   <button
                     key={idx}
@@ -316,11 +338,11 @@ export const ItemFormModal: React.FC = () => {
             {/* Description */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Description (Optional)
+                {isHu ? 'Leírás (Opcionális)' : 'Description (Optional)'}
               </label>
               <textarea
                 rows={2}
-                placeholder="Brief description or spec sheet..."
+                placeholder={isHu ? 'Rövid leírás, tulajdonságok vagy adatlap...' : 'Brief description or spec sheet...'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500 focus:outline-none"
@@ -328,16 +350,16 @@ export const ItemFormModal: React.FC = () => {
             </div>
           </div>
 
-          {/* SECTION 2: PURCHASE & VALUATION (Section 10) */}
+          {/* SECTION 2: PURCHASE & VALUATION */}
           <div className="space-y-4 pt-4 border-t border-slate-800">
             <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-              2. Purchase & Current Valuation
+              {isHu ? '2. Vásárlási és Érték Adatok' : '2. Purchase & Current Valuation'}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Purchase Date
+                  {isHu ? 'Vásárlás Dátuma' : 'Purchase Date'}
                 </label>
                 <input
                   type="date"
@@ -349,7 +371,7 @@ export const ItemFormModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Purchase Price (€)
+                  {isHu ? 'Vételár (€ / Ft)' : 'Purchase Price (€)'}
                 </label>
                 <input
                   type="number"
@@ -363,7 +385,7 @@ export const ItemFormModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Current Value (€)
+                  {isHu ? 'Jelenlegi Becsült Érték (€ / Ft)' : 'Current Value (€)'}
                 </label>
                 <input
                   type="number"
@@ -379,11 +401,11 @@ export const ItemFormModal: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Store / Seller
+                  {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Makita Store, Amazon, Local shop"
+                  placeholder={isHu ? 'pl. Praktiker, MediaMarkt, Alza, Helyi bolt...' : 'e.g. Makita Store, Amazon, Local shop'}
                   value={storeSeller}
                   onChange={(e) => setStoreSeller(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
@@ -392,34 +414,33 @@ export const ItemFormModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Condition *
+                  {isHu ? 'Állapot *' : 'Condition *'}
                 </label>
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value as ItemCondition)}
                   className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
                 >
-                  <option value="New">New</option>
-                  <option value="Excellent">Excellent</option>
-                  <option value="Good">Good</option>
-                  <option value="Fair">Fair</option>
-                  <option value="Poor">Poor</option>
-                  <option value="Broken">Broken</option>
+                  {CONDITION_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {isHu ? opt.labelHu : opt.labelEn}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
           </div>
 
-          {/* SECTION 3: WARRANTY & NOTES (Section 10) */}
+          {/* SECTION 3: WARRANTY & NOTES */}
           <div className="space-y-4 pt-4 border-t border-slate-800">
             <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-              3. Warranty & Notes
+              {isHu ? '3. Garancia és Megjegyzések' : '3. Warranty & Notes'}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Warranty Start
+                  {isHu ? 'Garancia Kezdete' : 'Warranty Start'}
                 </label>
                 <input
                   type="date"
@@ -431,7 +452,7 @@ export const ItemFormModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Warranty Expiration
+                  {isHu ? 'Garancia Lejárata' : 'Warranty Expiration'}
                 </label>
                 <input
                   type="date"
@@ -444,11 +465,11 @@ export const ItemFormModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Notes & Serial Numbers
+                {isHu ? 'Megjegyzések & Gyári Számok' : 'Notes & Serial Numbers'}
               </label>
               <textarea
                 rows={3}
-                placeholder="Serial numbers, maintenance logs, accessories included..."
+                placeholder={isHu ? 'Gyári szám, szerviz napló, mellékelt tartozékok...' : 'Serial numbers, maintenance logs, accessories included...'}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500"
@@ -461,15 +482,17 @@ export const ItemFormModal: React.FC = () => {
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm"
+              className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm font-semibold"
             >
-              Cancel
+              {isHu ? 'Mégse' : 'Cancel'}
             </button>
             <button
               type="submit"
               className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40"
             >
-              {editingItem ? 'Save Changes' : 'Create Thing'}
+              {editingItem
+                ? (isHu ? 'Módosítások Mentése' : 'Save Changes')
+                : (isHu ? 'Tárgy Létrehozása' : 'Create Thing')}
             </button>
           </div>
 
