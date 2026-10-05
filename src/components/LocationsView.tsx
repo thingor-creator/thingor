@@ -27,6 +27,7 @@ export const LocationsView: React.FC = () => {
 
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string>('');
+  const [deletingLocId, setDeletingLocId] = useState<string | null>(null);
 
   const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +52,7 @@ export const LocationsView: React.FC = () => {
     const locItems = items.filter(i => i.location_id === loc.id);
     const totalItemCount = locItems.length;
     const totalVal = locItems.reduce((s, i) => s + (i.current_value ?? i.purchase_price ?? 0), 0);
+    const isDeleting = deletingLocId === loc.id;
 
     return (
       <div key={loc.id} className="space-y-2">
@@ -92,20 +94,51 @@ export const LocationsView: React.FC = () => {
             </div>
 
             <button
-              onClick={() => handleSelectLocationFilter(loc.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSelectLocationFilter(loc.id);
+              }}
               className="p-1.5 rounded-lg bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800"
               title={isHu ? 'Tárgyak megtekintése ezen a helyszínen' : 'View items in location'}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            <button
-              onClick={() => deleteLocation(loc.id)}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
-              title={isHu ? 'Helyszín törlése' : 'Delete location'}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            {isDeleting ? (
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[11px] text-rose-400 font-semibold">{isHu ? 'Törlöd?' : 'Delete?'}</span>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await deleteLocation(loc.id);
+                    setDeletingLocId(null);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors"
+                >
+                  {isHu ? 'Igen' : 'Yes'}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeletingLocId(null);
+                  }}
+                  className="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+                >
+                  {isHu ? 'Mégse' : 'No'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeletingLocId(loc.id);
+                }}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                title={isHu ? 'Helyszín törlése' : 'Delete location'}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
