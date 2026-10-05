@@ -20,7 +20,11 @@ export const LocationsView: React.FC = () => {
     setCurrentView,
     setFilters,
     getLocationPath,
+    language,
+    t
   } = useApp();
+
+  const isHu = language === 'hu';
 
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string>('');
@@ -70,7 +74,7 @@ export const LocationsView: React.FC = () => {
                 </h3>
                 {depth === 0 && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                    Root Area
+                    {isHu ? 'Fő Helyszín' : 'Root Area'}
                   </span>
                 )}
               </div>
@@ -82,14 +86,16 @@ export const LocationsView: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <span className="text-xs font-bold text-white block">{totalItemCount} items</span>
+              <span className="text-xs font-bold text-white block">
+                {totalItemCount} {isHu ? 'tárgy' : 'items'}
+              </span>
               <span className="text-[11px] text-emerald-400 font-medium">€{totalVal}</span>
             </div>
 
             <button
               onClick={() => handleSelectLocationFilter(loc.id)}
               className="p-1.5 rounded-lg bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800"
-              title="View items in location"
+              title={isHu ? 'Tárgyak megtekintése ezen a helyszínen' : 'View items in location'}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -97,7 +103,7 @@ export const LocationsView: React.FC = () => {
             <button
               onClick={() => deleteLocation(loc.id)}
               className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
-              title="Delete location"
+              title={isHu ? 'Helyszín törlése' : 'Delete location'}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -122,14 +128,16 @@ export const LocationsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Locations
+              {t('locations')}
             </h1>
             <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-emerald-400 font-bold text-xs">
-              {locations.length} storage spots
+              {locations.length} {isHu ? 'tárolási helyszín' : 'storage spots'}
             </span>
           </div>
           <p className="text-sm text-slate-400 mt-1">
-            Organize physical spaces into multi-level hierarchy: Home → Garage → Workshop → Cabinet.
+            {isHu
+              ? 'Rendszerezd a fizikai tereket több-szintű hierarchiába: Otthon → Garázs → Műhely → Szerszámos szekrény.'
+              : 'Organize physical spaces into multi-level hierarchy: Home → Garage → Workshop → Cabinet.'}
           </p>
         </div>
 
@@ -138,7 +146,7 @@ export const LocationsView: React.FC = () => {
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02]"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          Add Location
+          {isHu ? '+ Helyszín Hozzáadása' : 'Add Location'}
         </button>
       </div>
 
@@ -148,7 +156,8 @@ export const LocationsView: React.FC = () => {
           <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-emerald-400" /> Add New Location Spot
+                <MapPin className="h-5 w-5 text-emerald-400" />
+                {isHu ? 'Új Helyszín Hozzáadása' : 'Add New Location Spot'}
               </h3>
               <button onClick={() => setIsLocationModalOpen(false)} className="text-slate-400 hover:text-white">
                 <X className="h-5 w-5" />
@@ -157,10 +166,12 @@ export const LocationsView: React.FC = () => {
 
             <form onSubmit={handleCreateLocation} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Location Name *</label>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  {isHu ? 'Helyszín Neve *' : 'Location Name *'}
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. Garage, Workshop, Tool Cabinet"
+                  placeholder={isHu ? 'pl. Garázs, Műhely, Szerszámos szekrény' : 'e.g. Garage, Workshop, Tool Cabinet'}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -169,13 +180,19 @@ export const LocationsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Parent Location (Optional)</label>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  {isHu ? 'Szülő Helyszín (Opcionális)' : 'Parent Location (Optional)'}
+                </label>
                 <select
                   value={parentId}
                   onChange={(e) => setParentId(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500"
                 >
-                  <option value="">None (Top-level area, e.g. Home, Office)</option>
+                  <option value="">
+                    {isHu
+                      ? 'Nincs (Fő helyszín / terület, pl. Otthon, Iroda)'
+                      : 'None (Top-level area, e.g. Home, Office)'}
+                  </option>
                   {locations.map(loc => (
                     <option key={loc.id} value={loc.id}>
                       {getLocationPath(loc.id)}
@@ -188,15 +205,15 @@ export const LocationsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsLocationModalOpen(false)}
-                  className="px-3 py-2 text-slate-400 hover:text-white"
+                  className="px-3 py-2 text-slate-400 hover:text-white font-semibold"
                 >
-                  Cancel
+                  {isHu ? 'Mégse' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 font-bold bg-emerald-500 text-slate-950 rounded-xl"
                 >
-                  Create Location
+                  {isHu ? 'Helyszín Létrehozása' : 'Create Location'}
                 </button>
               </div>
             </form>
@@ -208,7 +225,9 @@ export const LocationsView: React.FC = () => {
       <div className="space-y-4">
         {rootLocations.length === 0 ? (
           <div className="p-12 text-center rounded-2xl border border-slate-800 bg-slate-900/40 text-slate-400 text-xs">
-            No locations created yet. Click "Add Location" to start mapping your rooms and cabinets.
+            {isHu
+              ? 'Még nincsenek létrehozott helyszínek. Kattints a "+ Helyszín Hozzáadása" gombra a helyiségek és szekrények felvételéhez.'
+              : 'No locations created yet. Click "Add Location" to start mapping your rooms and cabinets.'}
           </div>
         ) : (
           rootLocations.map(root => renderLocationBranch(root))
