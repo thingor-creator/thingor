@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import type {
   Item,
   Category,
@@ -271,6 +271,107 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isSupabaseInfoOpen, setIsSupabaseInfoOpen] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+
+  // PWA History & Back Navigation Handler
+  const isPoppingRef = useRef(false);
+  const prevModalRef = useRef(false);
+
+  const isAnyModalOpen = Boolean(
+    selectedItemId ||
+    isAddEditItemModalOpen ||
+    isLocationModalOpen ||
+    isCategoryModalOpen ||
+    isAuthModalOpen ||
+    isSupabaseInfoOpen
+  );
+
+  // Push history entry when any modal opens so device Back button closes modal first instead of exiting PWA
+  useEffect(() => {
+    if (isAnyModalOpen && !prevModalRef.current) {
+      window.history.pushState({ view: currentView, isModal: true }, '');
+    } else if (!isAnyModalOpen && prevModalRef.current) {
+      if (!isPoppingRef.current && window.history.state && window.history.state.isModal) {
+        window.history.back();
+      }
+    }
+    prevModalRef.current = isAnyModalOpen;
+  }, [isAnyModalOpen, currentView]);
+
+  // Handle popstate (Device Back Button / Browser Back Arrow / PWA Swipe Back)
+  useEffect(() => {
+    if (!window.history.state || !window.history.state.view) {
+      window.history.replaceState({ view: currentView, isModal: false }, '');
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      isPoppingRef.current = true;
+      setTimeout(() => {
+        isPoppingRef.current = false;
+      }, 100);
+
+      // 1. Close open modals first
+      if (selectedItemId) {
+        setSelectedItemId(null);
+        return;
+      }
+      if (isAddEditItemModalOpen) {
+        setIsAddEditItemModalOpen(false);
+        return;
+      }
+      if (isLocationModalOpen) {
+        setIsLocationModalOpen(false);
+        return;
+      }
+      if (isCategoryModalOpen) {
+        setIsCategoryModalOpen(false);
+        return;
+      }
+      if (isAuthModalOpen) {
+        setIsAuthModalOpen(false);
+        return;
+      }
+      if (isSupabaseInfoOpen) {
+        setIsSupabaseInfoOpen(false);
+        return;
+      }
+
+      // 2. Change view if history state contains a view
+      if (e.state && e.state.view) {
+        setCurrentView(e.state.view);
+      } else {
+        const savedUser = localStorage.getItem('thingor_user');
+        if (savedUser && currentView !== 'dashboard' && currentView !== 'landing') {
+          setCurrentView('dashboard');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    currentView,
+    selectedItemId,
+    isAddEditItemModalOpen,
+    isLocationModalOpen,
+    isCategoryModalOpen,
+    isAuthModalOpen,
+    isSupabaseInfoOpen
+  ]);
+
+  // Custom view changer that pushes history entries when navigating views
+  const handleSetCurrentView = (view: ViewMode) => {
+    if (view !== currentView) {
+      setSelectedItemId(null);
+      setIsAddEditItemModalOpen(false);
+      setIsLocationModalOpen(false);
+      setIsCategoryModalOpen(false);
+      setIsAuthModalOpen(false);
+      setIsSupabaseInfoOpen(false);
+
+      window.history.pushState({ view, isModal: false }, '');
+      setCurrentView(view);
+    }
+  };
 
   // Sync to LocalStorage
   useEffect(() => {
@@ -1680,7 +1781,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         logout,
 
         currentView,
-        setCurrentView,
+        setCurrentView: handleSetCurrentView,
         selectedItemId,
         setSelectedItemId,
 
