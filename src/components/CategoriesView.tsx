@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Tag, Plus, ChevronRight, X } from 'lucide-react';
+import { Tag, ChevronRight, X } from 'lucide-react';
 
 export const CategoriesView: React.FC = () => {
   const {

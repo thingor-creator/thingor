@@ -22,7 +22,6 @@ export const DashboardView: React.FC = () => {
     setCurrentView,
     setIsAddEditItemModalOpen,
     setEditingItem,
-    setIsLocationModalOpen,
     setSelectedItemId,
     getLocationPath,
     t,

@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext';
 import type { LocationItem } from '../types';
 import {
   MapPin,
-  Plus,
   Trash2,
   ChevronRight,
   X
