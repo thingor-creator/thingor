@@ -145,8 +145,7 @@ export const LocationsView: React.FC = () => {
           onClick={() => setIsLocationModalOpen(true)}
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02]"
         >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          {isHu ? '+ Helyszín Hozzáadása' : 'Add Location'}
+          {isHu ? 'Helyszín Hozzáadása' : 'Add Location'}
         </button>
       </div>
 

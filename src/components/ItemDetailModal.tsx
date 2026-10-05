@@ -37,8 +37,11 @@ export const ItemDetailModal: React.FC = () => {
     getCategoryName,
     addDocument,
     deleteDocument,
-    user
+    user,
+    language
   } = useApp();
+
+  const isHu = language === 'hu';
 
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'photos' | 'notes'>('overview');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -228,7 +231,7 @@ export const ItemDetailModal: React.FC = () => {
                   : 'border-transparent text-slate-400 hover:text-white'
                 }`}
             >
-              Documents ({itemDocs.length})
+              {isHu ? 'Dokumentumok' : 'Documents'} ({itemDocs.length})
             </button>
             <button
               onClick={() => setActiveTab('photos')}
@@ -378,21 +381,23 @@ export const ItemDetailModal: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <FileText className="h-4 w-4 text-emerald-400" />
-                  Attached Documents
+                  {isHu ? 'Csatolt Dokumentumok' : 'Attached Documents'}
                 </h3>
 
                 <button
                   onClick={() => setIsAddDocOpen(!isAddDocOpen)}
                   className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1"
                 >
-                  <Plus className="h-3.5 w-3.5" /> Upload Document
+                  <Plus className="h-3.5 w-3.5" /> {isHu ? 'Dokumentum Feltöltése' : 'Upload Document'}
                 </button>
               </div>
 
               {/* Add document mini-form */}
               {isAddDocOpen && (
                 <form onSubmit={handleAddDocSubmit} className="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-3">
-                  <h4 className="text-xs font-bold text-white">Add New Document Record</h4>
+                  <h4 className="text-xs font-bold text-white">
+                    {isHu ? 'Új Dokumentum Rögzítése' : 'Add New Document Record'}
+                  </h4>
 
                   {/* File Upload Area */}
                   <div className="p-3 rounded-lg border border-dashed border-slate-800 bg-slate-900/60 flex flex-col items-center justify-center gap-1.5">
@@ -404,7 +409,11 @@ export const ItemDetailModal: React.FC = () => {
                       ) : (
                         <Upload className="h-4 w-4 text-slate-950" />
                       )}
-                      <span>{isUploadingDoc ? 'Uploading...' : 'Upload File to Storage'}</span>
+                      <span>
+                        {isUploadingDoc
+                          ? (isHu ? 'Feltöltés...' : 'Uploading...')
+                          : (isHu ? 'Fájl Feltöltése' : 'Upload File to Storage')}
+                      </span>
                       <input
                         type="file"
                         accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
@@ -425,7 +434,9 @@ export const ItemDetailModal: React.FC = () => {
                         }}
                       />
                     </label>
-                    <p className="text-[10px] text-slate-400">PDF, PNG, JPG or DOC up to 15MB</p>
+                    <p className="text-[10px] text-slate-400">
+                      {isHu ? 'PDF, PNG, JPG vagy DOC maximum 15MB' : 'PDF, PNG, JPG or DOC up to 15MB'}
+                    </p>
                     {docUploadError && (
                       <p className="text-[11px] text-rose-400 font-medium">{docUploadError}</p>
                     )}
@@ -433,10 +444,12 @@ export const ItemDetailModal: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-slate-400 mb-1">Document Name *</label>
+                      <label className="block text-slate-400 mb-1">
+                        {isHu ? 'Dokumentum Neve *' : 'Document Name *'}
+                      </label>
                       <input
                         type="text"
-                        placeholder="e.g. Invoice_Receipt.pdf"
+                        placeholder={isHu ? 'pl. Szamla_Nyugta.pdf' : 'e.g. Invoice_Receipt.pdf'}
                         value={newDocName}
                         onChange={(e) => setNewDocName(e.target.value)}
                         required
@@ -444,18 +457,20 @@ export const ItemDetailModal: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 mb-1">Document Type</label>
+                      <label className="block text-slate-400 mb-1">
+                        {isHu ? 'Dokumentum Típusa' : 'Document Type'}
+                      </label>
                       <select
                         value={newDocType}
                         onChange={(e) => setNewDocType(e.target.value as ItemDocument['document_type'])}
                         className="w-full p-2 rounded-lg border border-slate-800 bg-slate-900 text-white"
                       >
-                        <option value="Invoice">Invoice / Receipt</option>
-                        <option value="Warranty">Warranty Certificate</option>
-                        <option value="Manual">User Manual</option>
-                        <option value="Certificate">Certificate</option>
-                        <option value="Photo">Photo Record</option>
-                        <option value="Other">Other</option>
+                        <option value="Invoice">{isHu ? 'Számla / Nyugta' : 'Invoice / Receipt'}</option>
+                        <option value="Warranty">{isHu ? 'Garancialevél' : 'Warranty Certificate'}</option>
+                        <option value="Manual">{isHu ? 'Használati Útmutató' : 'User Manual'}</option>
+                        <option value="Certificate">{isHu ? 'Igazolás / Tanúsítvány' : 'Certificate'}</option>
+                        <option value="Photo">{isHu ? 'Fénykép Dok' : 'Photo Record'}</option>
+                        <option value="Other">{isHu ? 'Egyéb' : 'Other'}</option>
                       </select>
                     </div>
                   </div>
@@ -466,13 +481,13 @@ export const ItemDetailModal: React.FC = () => {
                       onClick={() => setIsAddDocOpen(false)}
                       className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
                     >
-                      Cancel
+                      {isHu ? 'Mégse' : 'Cancel'}
                     </button>
                     <button
                       type="submit"
                       className="px-4 py-1.5 text-xs font-bold bg-emerald-500 text-slate-950 rounded-lg"
                     >
-                      Save Document
+                      {isHu ? 'Dokumentum Mentése' : 'Save Document'}
                     </button>
                   </div>
                 </form>
@@ -481,7 +496,9 @@ export const ItemDetailModal: React.FC = () => {
               {/* Documents List */}
               {itemDocs.length === 0 ? (
                 <div className="p-8 text-center rounded-xl border border-slate-800 bg-slate-950/40 text-slate-400 text-xs">
-                  No documents attached to this item yet. Click "Upload Document" to add invoices or manuals.
+                  {isHu
+                    ? 'Még nincsenek csatolt dokumentumok ehhez a tárgyhoz. Kattints a "Dokumentum Feltöltése" gombra számlák vagy útmutatók hozzáadásához.'
+                    : 'No documents attached to this item yet. Click "Upload Document" to add invoices or manuals.'}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -497,7 +514,13 @@ export const ItemDetailModal: React.FC = () => {
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white truncate">{doc.file_name}</p>
                           <p className="text-[11px] text-slate-400">
-                            {doc.document_type} • Added {new Date(doc.created_at).toLocaleDateString()}
+                            {(isHu ? (
+                              doc.document_type === 'Invoice' ? 'Számla / Nyugta' :
+                              doc.document_type === 'Warranty' ? 'Garancialevél' :
+                              doc.document_type === 'Manual' ? 'Útmutató' :
+                              doc.document_type === 'Certificate' ? 'Igazolás' :
+                              doc.document_type === 'Photo' ? 'Fénykép' : 'Egyéb'
+                            ) : doc.document_type)} • {isHu ? 'Hozzáadva:' : 'Added'} {new Date(doc.created_at).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')}
                           </p>
                         </div>
                       </div>
@@ -509,12 +532,12 @@ export const ItemDetailModal: React.FC = () => {
                           rel="noreferrer"
                           className="p-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 text-xs flex items-center gap-1"
                         >
-                          <ExternalLink className="h-3.5 w-3.5" /> View
+                          <ExternalLink className="h-3.5 w-3.5" /> {isHu ? 'Megtekintés' : 'View'}
                         </a>
                         <button
                           onClick={() => deleteDocument(doc.id)}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400"
-                          title="Delete document"
+                          title={isHu ? 'Dokumentum törlése' : 'Delete document'}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

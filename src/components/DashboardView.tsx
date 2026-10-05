@@ -63,45 +63,16 @@ export const DashboardView: React.FC = () => {
   return (
     <div className="space-y-8 pb-16">
       
-      {/* Header & Quick Action Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {t('dashboard')}
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            {language === 'hu'
-              ? 'Áttekintés a vagyontárgyaidról, teljes leltári értékről és garancia állapotokról.'
-              : 'Overview of your personal assets, total inventory value, and warranty statuses.'}
-          </p>
-        </div>
-
-        {/* Gyors műveletek */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <button
-            onClick={handleOpenAddThing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>{t('add_thing')}</span>
-          </button>
-          
-          <button
-            onClick={() => setCurrentView('items')}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-200 text-sm font-semibold transition-colors"
-          >
-            <Boxes className="h-4 w-4 text-emerald-400" />
-            {t('browse_things')}
-          </button>
-
-          <button
-            onClick={() => setIsLocationModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-200 text-sm font-semibold transition-colors"
-          >
-            <MapPin className="h-4 w-4 text-emerald-400" />
-            {t('add_location')}
-          </button>
-        </div>
+      {/* Header */}
+      <div className="border-b border-slate-800 pb-6">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          {t('dashboard')}
+        </h1>
+        <p className="text-sm text-slate-400 mt-1">
+          {language === 'hu'
+            ? 'Áttekintés a vagyontárgyaidról, teljes leltári értékről és garancia állapotokról.'
+            : 'Overview of your personal assets, total inventory value, and warranty statuses.'}
+        </p>
       </div>
 
       {/* DASHBOARD CARDS */}
