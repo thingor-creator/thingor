@@ -28,12 +28,26 @@ export const LocationsView: React.FC = () => {
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string>('');
   const [deletingLocId, setDeletingLocId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
 
-    await addLocation(name, parentId || null);
+    // Check duplicate location name (case-insensitive)
+    const isDuplicate = locations.some(l => l.name.trim().toLowerCase() === trimmed.toLowerCase());
+    if (isDuplicate) {
+      setCreateError(
+        isHu
+          ? 'Már létezik ilyen nevű helyszín! Kérjük, adj meg más nevet.'
+          : 'A location with this name already exists! Please enter a different name.'
+      );
+      return;
+    }
+
+    setCreateError(null);
+    await addLocation(trimmed, parentId || null);
     setName('');
     setParentId('');
     setIsLocationModalOpen(false);
@@ -196,6 +210,12 @@ export const LocationsView: React.FC = () => {
             </div>
 
             <form onSubmit={handleCreateLocation} className="space-y-4 text-xs">
+              {createError && (
+                <div className="p-3 rounded-xl border border-rose-800/80 bg-rose-950/60 text-rose-300 text-xs font-semibold">
+                  {createError}
+                </div>
+              )}
+
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">
                   {isHu ? 'Helyszín Neve *' : 'Location Name *'}
@@ -204,7 +224,10 @@ export const LocationsView: React.FC = () => {
                   type="text"
                   placeholder={isHu ? 'pl. Garázs, Műhely, Szerszámos szekrény' : 'e.g. Garage, Workshop, Tool Cabinet'}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (createError) setCreateError(null);
+                  }}
                   required
                   className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500"
                 />

@@ -988,12 +988,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // CRUD Locations (M7 Cloud Integration)
   const addLocation = async (name: string, parentId?: string | null): Promise<LocationItem> => {
+    const trimmed = name.trim();
     const safeParentId = parentId && parentId !== '' ? parentId : null;
+
+    // Prevent duplicate location creation (case-insensitive check)
+    const existing = locations.find(l => l.name.trim().toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      return existing;
+    }
 
     if (isSupabaseConfigured && supabase && user?.id) {
       const { data, error } = await supabase
         .from('locations')
-        .insert([{ name, parent_id: safeParentId, user_id: user.id }])
+        .insert([{ name: trimmed, parent_id: safeParentId, user_id: user.id }])
         .select()
         .single();
 
@@ -1005,7 +1012,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const newLoc: LocationItem = {
       id: 'loc-' + Date.now(),
-      name,
+      name: trimmed,
       parent_id: safeParentId,
       user_id: user?.id,
       created_at: new Date().toISOString(),
