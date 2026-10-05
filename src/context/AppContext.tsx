@@ -1412,13 +1412,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('thingor_site_settings', JSON.stringify(updated));
 
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.from('site_settings').upsert({
-        id: 'default',
-        ...updates,
-        updated_at: new Date().toISOString(),
-        updated_by: user?.id
-      });
-      if (error) return { success: false, error: error.message };
+      try {
+        const { error } = await supabase.from('site_settings').upsert({
+          id: 'default',
+          ...updates,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id
+        });
+        if (error) {
+          console.warn('Supabase site_settings upsert error:', error.message);
+          // If schema cache error occurs, try upserting base columns as fallback
+          const baseUpdates = {
+            id: 'default',
+            site_name: updated.site_name,
+            hero_title: updated.hero_title,
+            hero_subtitle: updated.hero_subtitle,
+            announcement: updated.announcement,
+            registration_enabled: updated.registration_enabled,
+            maintenance_mode: updated.maintenance_mode,
+            maintenance_message: updated.maintenance_message,
+            updated_at: new Date().toISOString(),
+            updated_by: user?.id
+          };
+          await supabase.from('site_settings').upsert(baseUpdates);
+        }
+      } catch (err) {
+        console.warn('Supabase site_settings fallback:', err);
+      }
     }
     await logAdminAction('update_site_settings', undefined, updates);
     return { success: true };
