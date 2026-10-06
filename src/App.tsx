@@ -10,6 +10,7 @@ import { DocumentsView } from './components/DocumentsView';
 import { RepairsView } from './components/RepairsView';
 import { FinancingView } from './components/FinancingView';
 import { HouseholdView } from './components/HouseholdView';
+import { NotesView } from './components/NotesView';
 import { AdminView } from './components/AdminView';
 import { SharedItemView } from './components/SharedItemView';
 import { ItemDetailModal } from './components/ItemDetailModal';
@@ -140,6 +141,7 @@ const AppContent: React.FC = () => {
           {currentView === 'repairs' && <RepairsView />}
           {currentView === 'financing' && <FinancingView />}
           {currentView === 'household' && <HouseholdView />}
+          {currentView === 'notes' && <NotesView />}
           {currentView === 'admin' && <AdminView />}
         </main>
       )}

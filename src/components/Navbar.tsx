@@ -10,6 +10,7 @@ import {
   Wrench,
   CreditCard,
   Users,
+  StickyNote,
   Plus,
   LogOut,
   Menu,
@@ -166,6 +167,18 @@ export const Navbar: React.FC = () => {
               >
                 <Users className="h-4 w-4 shrink-0 text-slate-400" />
                 <span>{t('household')}</span>
+              </button>
+
+              <button
+                onClick={() => handleNav('notes')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  currentView === 'notes'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <StickyNote className="h-4 w-4 shrink-0 text-amber-400" />
+                <span>{t('quick_notes')}</span>
               </button>
 
               {isAdmin && (
@@ -424,6 +437,19 @@ export const Navbar: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Users className="h-5 w-5" />
                   {t('household')}
+                </div>
+                <ChevronRight className="h-4 w-4 opacity-60" />
+              </button>
+
+              <button
+                onClick={() => handleNav('notes')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-medium ${
+                  currentView === 'notes' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <StickyNote className="h-5 w-5 text-amber-400" />
+                  {t('quick_notes')}
                 </div>
                 <ChevronRight className="h-4 w-4 opacity-60" />
               </button>

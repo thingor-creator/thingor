@@ -268,7 +268,39 @@ export interface AdminAuditLog {
   created_at: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'admin' | 'guest_share' | 'legal';
+// Item Relationship & Linked Items
+export type ItemRelationType =
+  | 'accessory'       // Tartozéka
+  | 'compatible'      // Kompatibilis vele
+  | 'part_of'          // Része / Magában foglalja
+  | 'required_for'    // Használatához szükséges
+  | 'pair'            // Párja
+  | 'related'         // Kapcsolódik hozzá
+  | 'bought_together'; // Együtt vásárolva
+
+export interface ItemRelation {
+  id: string;
+  source_item_id: string;
+  target_item_id: string;
+  relation_type: ItemRelationType;
+  created_at?: string;
+}
+
+// Quick Notes Module
+export interface QuickNote {
+  id: string;
+  user_id?: string;
+  title: string;
+  content: string;
+  location_hint?: string;
+  tags?: string[];
+  is_converted?: boolean;
+  converted_item_id?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'admin' | 'guest_share' | 'legal';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';

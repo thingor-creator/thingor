@@ -23,7 +23,8 @@ import {
   CreditCard,
   Wrench,
   Users,
-  CheckCircle2
+  CheckCircle2,
+  Link2
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
 import { ShareModal } from './ShareModal';
@@ -44,6 +45,10 @@ export const ItemDetailModal: React.FC = () => {
     repairs,
     financings,
     recordInstallmentPayment,
+    itemRelations,
+    addItemRelation,
+    deleteItemRelation,
+    getItemRelations,
     user,
     language
   } = useApp();
@@ -61,6 +66,11 @@ export const ItemDetailModal: React.FC = () => {
   const [newDocUrl, setNewDocUrl] = useState('');
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [docUploadError, setDocUploadError] = useState<string | null>(null);
+
+  // New Relation State
+  const [isAddRelationOpen, setIsAddRelationOpen] = useState(false);
+  const [targetItemIdRelation, setTargetItemIdRelation] = useState('');
+  const [relationTypeForm, setRelationTypeForm] = useState<any>('accessory');
 
   if (!selectedItemId) return null;
 
@@ -476,6 +486,141 @@ export const ItemDetailModal: React.FC = () => {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ITEM RELATIONSHIPS CARD (Section 1 & 2) */}
+              {(() => {
+                const currentRelations = getItemRelations(item.id);
+
+                const getRelationLabel = (relType: string, isSource: boolean) => {
+                  switch (relType) {
+                    case 'accessory': return isSource ? (isHu ? 'Tartozéka' : 'Accessory of') : (isHu ? 'Tartozék tárgya' : 'Has accessory');
+                    case 'compatible': return isHu ? 'Kompatibilis vele' : 'Compatible with';
+                    case 'part_of': return isSource ? (isHu ? 'Magában foglalja' : 'Includes part') : (isHu ? 'Része a tárgynak' : 'Part of');
+                    case 'required_for': return isSource ? (isHu ? 'Használatához szükséges' : 'Required for') : (isHu ? 'Szükséges ehhez' : 'Needs item');
+                    case 'pair': return isHu ? 'Párja' : 'Paired with';
+                    case 'bought_together': return isHu ? 'Együtt vásárolva' : 'Bought together with';
+                    default: return isHu ? 'Kapcsolódik hozzá' : 'Related to';
+                  }
+                };
+
+                const handleAddRelationSubmit = async (e: React.FormEvent) => {
+                  e.preventDefault();
+                  if (!targetItemIdRelation) return;
+                  await addItemRelation(item.id, targetItemIdRelation, relationTypeForm);
+                  setTargetItemIdRelation('');
+                  setIsAddRelationOpen(false);
+                };
+
+                return (
+                  <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Link2 className="h-4 w-4 text-emerald-400" />
+                        {isHu ? 'Kapcsolódó Tárgyak & Tartozékok' : 'Linked Items & Accessories'}
+                      </h3>
+                      <button
+                        onClick={() => setIsAddRelationOpen(!isAddRelationOpen)}
+                        className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {isHu ? 'Tárgy összekapcsolása' : 'Link Item'}
+                      </button>
+                    </div>
+
+                    {isAddRelationOpen && (
+                      <form onSubmit={handleAddRelationSubmit} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-slate-400 mb-1">{isHu ? 'Melyik tárggyal?' : 'Which item?'}</label>
+                            <select
+                              required
+                              value={targetItemIdRelation}
+                              onChange={(e) => setTargetItemIdRelation(e.target.value)}
+                              className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                            >
+                              <option value="">{isHu ? '-- Válassz tárgyat --' : '-- Select item --'}</option>
+                              {items.filter(i => i.id !== item.id).map(i => (
+                                <option key={i.id} value={i.id}>{i.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 mb-1">{isHu ? 'Kapcsolat típusa' : 'Relation type'}</label>
+                            <select
+                              value={relationTypeForm}
+                              onChange={(e) => setRelationTypeForm(e.target.value as any)}
+                              className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                            >
+                              <option value="accessory">{isHu ? 'Tartozéka' : 'Accessory'}</option>
+                              <option value="compatible">{isHu ? 'Kompatibilis vele' : 'Compatible'}</option>
+                              <option value="part_of">{isHu ? 'Része / Magában foglalja' : 'Part of / Includes'}</option>
+                              <option value="required_for">{isHu ? 'Használatához szükséges' : 'Required for'}</option>
+                              <option value="pair">{isHu ? 'Párja' : 'Pair'}</option>
+                              <option value="related">{isHu ? 'Kapcsolódik hozzá' : 'Related'}</option>
+                              <option value="bought_together">{isHu ? 'Együtt vásárolva' : 'Bought together'}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setIsAddRelationOpen(false)}
+                            className="px-2.5 py-1 text-slate-400 hover:text-white"
+                          >
+                            {isHu ? 'Mégse' : 'Cancel'}
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-3 py-1 bg-emerald-500 text-slate-950 font-bold rounded-lg"
+                          >
+                            {isHu ? 'Összekapcsolás' : 'Link'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {currentRelations.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic">
+                        {isHu ? 'Ehhez a tárgyhoz még nincs kapcsolódó tárgy vagy tartozék beállítva.' : 'No linked items or accessories configured for this item.'}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {currentRelations.map(rel => {
+                          const isSource = rel.source_item_id === item.id;
+                          const otherItemId = isSource ? rel.target_item_id : rel.source_item_id;
+                          const otherItem = items.find(i => i.id === otherItemId);
+
+                          return (
+                            <div key={rel.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-semibold text-[10px]">
+                                  {getRelationLabel(rel.relation_type, isSource)}
+                                </span>
+                                <button
+                                  onClick={() => otherItem && setSelectedItemId(otherItem.id)}
+                                  className="font-semibold text-white hover:text-emerald-400 transition"
+                                >
+                                  {otherItem ? otherItem.name : (isHu ? 'Törölt tárgy' : 'Deleted item')}
+                                </button>
+                              </div>
+
+                              <button
+                                onClick={() => deleteItemRelation(rel.id)}
+                                className="p-1 text-slate-400 hover:text-red-400"
+                                title={isHu ? 'Kapcsolat törlése' : 'Remove link'}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

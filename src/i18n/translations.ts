@@ -16,6 +16,7 @@ export interface TranslationKeys {
   repairs: string;
   financing: string;
   household: string;
+  quick_notes: string;
   admin_panel: string;
   add_thing: string;
   browse_things: string;
@@ -98,6 +99,7 @@ export const translations: Record<Language, TranslationKeys> = {
     repairs: 'Javítások',
     financing: 'Finanszírozás',
     household: 'Család / Háztartás',
+    quick_notes: 'Jegyzetek',
     admin_panel: 'Adminisztráció',
     add_thing: 'Tárgy hozzáadása',
     browse_things: 'Tárgyak böngészése',
@@ -173,6 +175,7 @@ export const translations: Record<Language, TranslationKeys> = {
     repairs: 'Repairs',
     financing: 'Financing',
     household: 'Household & Family',
+    quick_notes: 'Quick Notes',
     admin_panel: 'Admin Panel',
     add_thing: 'Add Thing',
     browse_things: 'Browse things',

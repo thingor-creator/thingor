@@ -26,7 +26,10 @@ import type {
   HouseholdMember,
   HouseholdInvite,
   HouseholdRole,
-  RepairStatus
+  RepairStatus,
+  ItemRelation,
+  ItemRelationType,
+  QuickNote
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
@@ -142,6 +145,19 @@ interface AppContextType {
   removeHouseholdMember: (memberId: string) => Promise<void>;
   updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
   leaveHousehold: () => Promise<void>;
+
+  // Item Relationships
+  itemRelations: ItemRelation[];
+  addItemRelation: (sourceItemId: string, targetItemId: string, relationType: ItemRelationType) => Promise<ItemRelation>;
+  deleteItemRelation: (relationId: string) => Promise<void>;
+  getItemRelations: (itemId: string) => ItemRelation[];
+
+  // Quick Notes
+  quickNotes: QuickNote[];
+  addQuickNote: (note: Omit<QuickNote, 'id' | 'created_at'>) => Promise<QuickNote>;
+  updateQuickNote: (id: string, updates: Partial<QuickNote>) => Promise<void>;
+  deleteQuickNote: (id: string) => Promise<void>;
+  convertNoteToItem: (noteId: string) => Promise<void>;
 
   // Helper getters
   getLocationPath: (locationId: string) => string;
@@ -331,6 +347,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [household]);
   useEffect(() => { localStorage.setItem('thingor_household_members', JSON.stringify(householdMembers)); }, [householdMembers]);
   useEffect(() => { localStorage.setItem('thingor_household_invites', JSON.stringify(householdInvites)); }, [householdInvites]);
+
+  // Item Relations & Quick Notes State
+  const [itemRelations, setItemRelations] = useState<ItemRelation[]>(() => {
+    const saved = localStorage.getItem('thingor_item_relations');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  const [quickNotes, setQuickNotes] = useState<QuickNote[]>(() => {
+    const saved = localStorage.getItem('thingor_quick_notes');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => { localStorage.setItem('thingor_item_relations', JSON.stringify(itemRelations)); }, [itemRelations]);
+  useEffect(() => { localStorage.setItem('thingor_quick_notes', JSON.stringify(quickNotes)); }, [quickNotes]);
 
   // UI state
   const [currentView, setCurrentView] = useState<ViewMode>(() => {
@@ -812,6 +848,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
           const { data: allInvites } = await supabase.from('household_invites').select('*').eq('household_id', memberData.household_id);
           if (allInvites && isMounted) setHouseholdInvites(allInvites as HouseholdInvite[]);
+        }
+      });
+
+    // Load item relations
+    supabase
+      .from('item_relations')
+      .select('*')
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setItemRelations(data as ItemRelation[]);
+        }
+      });
+
+    // Load quick notes
+    supabase
+      .from('quick_notes')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setQuickNotes(data as QuickNote[]);
         }
       });
 
@@ -1557,6 +1615,108 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // CRUD Item Relations
+  const addItemRelation = async (sourceItemId: string, targetItemId: string, relationType: ItemRelationType): Promise<ItemRelation> => {
+    const newRel: ItemRelation = {
+      id: 'rel-' + Date.now(),
+      source_item_id: sourceItemId,
+      target_item_id: targetItemId,
+      relation_type: relationType,
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('item_relations').insert([{
+        source_item_id: sourceItemId,
+        target_item_id: targetItemId,
+        relation_type: relationType
+      }]).select().single();
+
+      if (!error && data) {
+        setItemRelations(prev => [...prev, data as ItemRelation]);
+        return data as ItemRelation;
+      }
+    }
+
+    setItemRelations(prev => [...prev, newRel]);
+    return newRel;
+  };
+
+  const deleteItemRelation = async (relationId: string): Promise<void> => {
+    setItemRelations(prev => prev.filter(r => r.id !== relationId));
+    if (isSupabaseConfigured && supabase && isUUID(relationId)) {
+      await supabase.from('item_relations').delete().eq('id', relationId);
+    }
+  };
+
+  const getItemRelations = (itemId: string): ItemRelation[] => {
+    return itemRelations.filter(r => r.source_item_id === itemId || r.target_item_id === itemId);
+  };
+
+  // CRUD Quick Notes
+  const addQuickNote = async (noteData: Omit<QuickNote, 'id' | 'created_at'>): Promise<QuickNote> => {
+    const newNote: QuickNote = {
+      ...noteData,
+      id: 'note-' + Date.now(),
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase.from('quick_notes').insert([{
+        ...noteData,
+        user_id: user.id
+      }]).select().single();
+
+      if (!error && data) {
+        setQuickNotes(prev => [data as QuickNote, ...prev]);
+        return data as QuickNote;
+      }
+    }
+
+    setQuickNotes(prev => [newNote, ...prev]);
+    return newNote;
+  };
+
+  const updateQuickNote = async (id: string, updates: Partial<QuickNote>): Promise<void> => {
+    const updatedAt = new Date().toISOString();
+    setQuickNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates, updated_at: updatedAt } : n));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      await supabase.from('quick_notes').update({ ...updates, updated_at: updatedAt }).eq('id', id);
+    }
+  };
+
+  const deleteQuickNote = async (id: string): Promise<void> => {
+    setQuickNotes(prev => prev.filter(n => n.id !== id));
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      await supabase.from('quick_notes').delete().eq('id', id);
+    }
+  };
+
+  const convertNoteToItem = async (noteId: string): Promise<void> => {
+    const note = quickNotes.find(n => n.id === noteId);
+    if (!note) return;
+
+    // Create full item pre-filled from note
+    const createdItem = await addItem({
+      name: note.title,
+      description: `${note.content}\n\n[Átalakítva jegyzetből] ${note.location_hint ? `Hely: ${note.location_hint}` : ''}`.trim(),
+      category_id: categories[0]?.id || 'cat-11',
+      location_id: locations[0]?.id || 'loc-1',
+      condition: 'Good',
+      status: 'Working',
+      ownership_scope: 'private',
+    });
+
+    // Mark note as converted
+    await updateQuickNote(noteId, {
+      is_converted: true,
+      converted_item_id: createdItem.id,
+    });
+  };
+
   // Admin Audit Log logger
   const logAdminAction = async (action: string, target?: string, details?: any) => {
     if (!user || !isAdmin(user)) return;
@@ -2243,6 +2403,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         removeHouseholdMember,
         updateMemberRole,
         leaveHousehold,
+
+        itemRelations,
+        addItemRelation,
+        deleteItemRelation,
+        getItemRelations,
+
+        quickNotes,
+        addQuickNote,
+        updateQuickNote,
+        deleteQuickNote,
+        convertNoteToItem,
 
         getLocationPath,
         getCategoryName,
