@@ -162,21 +162,51 @@ export const ItemDetailModal: React.FC = () => {
             <div className="flex-1 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1">
+                  <span
+                    onClick={handleEdit}
+                    className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1 cursor-pointer hover:border-emerald-500 hover:bg-emerald-900/40 transition-all"
+                    title={isHu ? 'Kattints a szerkesztéshez' : 'Click to edit'}
+                  >
                     <Tag className="h-3 w-3" />
                     {categoryName}
                   </span>
 
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
+                  <span
+                    onClick={handleEdit}
+                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 hover:text-white transition-all"
+                    title={isHu ? 'Kattints a szerkesztéshez' : 'Click to edit'}
+                  >
                     {isHu ? `${item.condition} állapot` : `${item.condition} condition`}
+                  </span>
+
+                  <span
+                    onClick={handleEdit}
+                    className="text-[11px] text-emerald-400/80 font-medium flex items-center gap-1 cursor-pointer hover:text-emerald-300 ml-auto"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    {isHu ? 'Kattints bármelyik adatra a szerkesztéshez' : 'Click any field to edit'}
                   </span>
                 </div>
 
-                <h2 className="text-2xl font-extrabold text-white tracking-tight">{item.name}</h2>
+                <div
+                  onClick={handleEdit}
+                  className="group/title cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-900 hover:border hover:border-emerald-500/30 transition-all relative flex items-center justify-between"
+                  title={isHu ? 'Kattints a név szerkesztéséhez' : 'Click to edit name'}
+                >
+                  <h2 className="text-2xl font-extrabold text-white tracking-tight group-hover/title:text-emerald-300 transition-colors">
+                    {item.name}
+                  </h2>
+                  <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/title:opacity-100 transition-opacity ml-2 shrink-0" />
+                </div>
 
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+                <div
+                  onClick={handleEdit}
+                  className="mt-2 flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer group/loc hover:text-emerald-300 transition-colors"
+                  title={isHu ? 'Kattints a helyszín szerkesztéséhez' : 'Click to edit location'}
+                >
                   <MapPin className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                  <span className="font-medium text-slate-300">{locationPath}</span>
+                  <span className="font-medium text-slate-300 group-hover/loc:text-emerald-300 transition-colors">{locationPath}</span>
+                  <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/loc:opacity-100 transition-opacity ml-1" />
                 </div>
               </div>
 
@@ -276,66 +306,115 @@ export const ItemDetailModal: React.FC = () => {
             <div className="space-y-6">
 
               {/* Description */}
-              {item.description && (
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              <div
+                onClick={handleEdit}
+                className="group/desc cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all relative"
+                title={isHu ? 'Kattints a leírás szerkesztéséhez' : 'Click to edit description'}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     {isHu ? 'Leírás' : 'Description'}
                   </h3>
-                  <p className="text-sm text-slate-300 leading-relaxed">{item.description}</p>
+                  <Edit3 className="h-3.5 w-3.5 text-emerald-400 opacity-0 group-hover/desc:opacity-100 transition-opacity" />
                 </div>
-              )}
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  {item.description || <span className="text-slate-500 italic">{isHu ? 'Kattints ide leírás hozzáadásához...' : 'Click to add description...'}</span>}
+                </p>
+              </div>
 
               {/* Specs Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
-                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
-                  </span>
+                <div
+                  onClick={handleEdit}
+                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                  title={isHu ? 'Kattints a vásárlási dátum szerkesztéséhez' : 'Click to edit purchase date'}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
+                    </span>
+                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                  </div>
                   <span className="text-sm font-bold text-white mt-1 block">
                     {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
-                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
-                  </span>
+                <div
+                  onClick={handleEdit}
+                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                  title={isHu ? 'Kattints a vételár szerkesztéséhez' : 'Click to edit purchase price'}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
+                    </span>
+                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                  </div>
                   <span className="text-sm font-bold text-white mt-1 block">
                     {item.purchase_price ? `€${item.purchase_price}` : 'N/A'}
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
-                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
-                  </span>
+                <div
+                  onClick={handleEdit}
+                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                  title={isHu ? 'Kattints a jelenlegi érték szerkesztéséhez' : 'Click to edit current value'}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
+                    </span>
+                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                  </div>
                   <span className="text-sm font-bold text-emerald-400 mt-1 block">
                     {item.current_value ? `€${item.current_value}` : 'N/A'}
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
-                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Store className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
-                  </span>
+                <div
+                  onClick={handleEdit}
+                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                  title={isHu ? 'Kattints az üzlet szerkesztéséhez' : 'Click to edit store'}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <Store className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
+                    </span>
+                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                  </div>
                   <span className="text-sm font-semibold text-white mt-1 block truncate">
                     {item.store_seller || (isHu ? 'Nincs megadva' : 'Unspecified')}
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
-                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Helyszín' : 'Location'}
-                  </span>
+                <div
+                  onClick={handleEdit}
+                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                  title={isHu ? 'Kattints a helyszín szerkesztéséhez' : 'Click to edit location'}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Helyszín' : 'Location'}
+                    </span>
+                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                  </div>
                   <span className="text-xs font-semibold text-white mt-1 block truncate">
                     {locationPath}
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
-                  <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Tag className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Állapot' : 'Condition'}
-                  </span>
+                <div
+                  onClick={handleEdit}
+                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                  title={isHu ? 'Kattints az állapot szerkesztéséhez' : 'Click to edit condition'}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <Tag className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Állapot' : 'Condition'}
+                    </span>
+                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                  </div>
                   <span className="text-sm font-bold text-white mt-1 block">
                     {item.condition}
                   </span>
@@ -343,7 +422,11 @@ export const ItemDetailModal: React.FC = () => {
               </div>
 
               {/* WARRANTY CARD (Section 11) */}
-              <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-3">
+              <div
+                onClick={handleEdit}
+                className="group/war p-4 rounded-2xl border border-slate-800 bg-slate-950/80 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer space-y-3 relative"
+                title={isHu ? 'Kattints a garancia szerkesztéséhez' : 'Click to edit warranty'}
+              >
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-emerald-400" />
@@ -832,15 +915,29 @@ export const ItemDetailModal: React.FC = () => {
           {/* TAB 4: NOTES (Section 11) */}
           {activeTab === 'notes' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <FileCode className="h-4 w-4 text-emerald-400" />
-                {isHu ? 'Megjegyzések és karbantartási napló' : 'Item Notes & Maintenance Log'}
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <FileCode className="h-4 w-4 text-emerald-400" />
+                  {isHu ? 'Megjegyzések és karbantartási napló' : 'Item Notes & Maintenance Log'}
+                </h3>
+                <button
+                  onClick={handleEdit}
+                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  {isHu ? 'Szerkesztés' : 'Edit Notes'}
+                </button>
+              </div>
 
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-950 text-sm text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
+              <div
+                onClick={handleEdit}
+                className="group/notes cursor-pointer p-4 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all text-sm text-slate-300 leading-relaxed font-sans whitespace-pre-wrap relative"
+                title={isHu ? 'Kattints a megjegyzések szerkesztéséhez' : 'Click to edit notes'}
+              >
+                <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/notes:opacity-100 transition-opacity absolute top-3 right-3" />
                 {item.notes || (isHu
-                  ? 'Még nincsenek egyedi megjegyzések ehhez a tárgyhoz. Kattints a "Szerkesztés" gombra gyári számok, megjegyzések vagy tartozékok rögzítéséhez.'
-                  : 'No custom notes added to this item yet. Click "Edit Thing" to add serial numbers, maintenance notes, or accessories.')}
+                  ? 'Még nincsenek egyedi megjegyzések ehhez a tárgyhoz. Kattints bárhová a megjegyzések rögzítéséhez.'
+                  : 'No custom notes added to this item yet. Click anywhere to add notes.')}
               </div>
             </div>
           )}
