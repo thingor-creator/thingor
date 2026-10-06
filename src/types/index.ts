@@ -31,26 +31,33 @@ export interface ItemDocument {
 export type ItemStatus = 'Working' | 'Faulty' | 'UnderRepair' | 'Repaired' | 'Scrapped';
 export type ItemOwnershipScope = 'private' | 'household';
 
-export type RepairUrgency = 'low' | 'normal' | 'high' | 'urgent';
-export type RepairStatus = 'pending' | 'in_progress' | 'repaired' | 'scrapped';
+export type RepairUrgency = 'low' | 'medium' | 'normal' | 'high' | 'urgent';
+export type RepairStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'repaired' | 'scrapped';
 
 export interface ItemRepair {
   id: string;
   item_id: string;
   user_id?: string;
-  title: string;
-  description: string;
-  reported_at: string;
+  title?: string;
+  fault_title?: string;
+  description?: string;
+  fault_description?: string;
+  reported_at?: string;
+  reported_date?: string;
   urgency: RepairUrgency;
-  usable: boolean;
+  usable?: boolean;
+  still_usable?: boolean;
   photo_url?: string;
   status: RepairStatus;
   repair_shop?: string;
+  repairer_name?: string;
   estimated_completion?: string;
+  expected_completion?: string;
   parts_cost?: number;
   labor_cost?: number;
-  total_cost?: number;
+  total_cost: number;
   is_warranty_repair?: boolean;
+  is_warranty?: boolean;
   notes?: string;
   completed_at?: string;
   created_at: string;
@@ -67,11 +74,14 @@ export interface ItemFinancing {
   monthly_installment: number;
   total_installments: number;
   paid_installments: number;
-  first_payment_date: string;
-  next_payment_date: string;
-  end_date: string;
+  remaining_installments: number;
+  remaining_debt: number;
+  start_date?: string;
+  first_payment_date?: string;
+  next_payment_date?: string;
+  end_date?: string;
   notes?: string;
-  is_active: boolean;
+  is_active?: boolean;
   created_at: string;
 }
 
@@ -80,7 +90,8 @@ export type HouseholdRole = 'owner' | 'admin' | 'member' | 'viewer';
 export interface Household {
   id: string;
   name: string;
-  created_by: string;
+  owner_id?: string;
+  created_by?: string;
   created_at: string;
 }
 
@@ -88,8 +99,10 @@ export interface HouseholdMember {
   id: string;
   household_id: string;
   user_id: string;
-  email: string;
-  display_name: string;
+  email?: string;
+  user_email?: string;
+  display_name?: string;
+  user_name?: string;
   role: HouseholdRole;
   joined_at: string;
 }
@@ -97,11 +110,13 @@ export interface HouseholdMember {
 export interface HouseholdInvite {
   id: string;
   household_id: string;
-  email: string;
+  email?: string;
+  invited_email?: string;
   role: HouseholdRole;
   token: string;
   invited_by: string;
-  expires_at: string;
+  status?: 'pending' | 'accepted' | 'declined' | 'expired';
+  expires_at?: string;
   created_at: string;
 }
 

@@ -1567,6 +1567,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }]).select().single();
 
       if (mErr) return { success: false, error: mErr.message };
+      if (memberData) setHouseholdMembers(prev => [...prev, memberData as HouseholdMember]);
 
       await supabase.from('household_invites').update({ status: 'accepted' }).eq('id', invite.id);
 

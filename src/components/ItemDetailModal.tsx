@@ -22,8 +22,6 @@ import {
   Share2,
   CreditCard,
   Wrench,
-  Users,
-  CheckCircle2,
   Link2
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
@@ -45,7 +43,6 @@ export const ItemDetailModal: React.FC = () => {
     repairs,
     financings,
     recordInstallmentPayment,
-    itemRelations,
     addItemRelation,
     deleteItemRelation,
     getItemRelations,

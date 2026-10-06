@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { StickyNote, Plus, Search, Tag, MapPin, ArrowRight, Trash2, Edit3, CheckCircle2, Package } from 'lucide-react';
+import { StickyNote, Plus, Search, MapPin, ArrowRight, Trash2, Edit3, CheckCircle2, Package } from 'lucide-react';
 import type { QuickNote } from '../types';
 
 export const NotesView: React.FC = () => {
