@@ -22,7 +22,8 @@ import {
   Share2,
   CreditCard,
   Wrench,
-  Link2
+  Link2,
+  Check
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
 import { ShareModal } from './ShareModal';
@@ -34,10 +35,13 @@ export const ItemDetailModal: React.FC = () => {
     items,
     documents,
     deleteItem,
+    updateItem,
     setEditingItem,
     setIsAddEditItemModalOpen,
     getLocationPath,
     getCategoryName,
+    categories,
+    locations,
     addDocument,
     deleteDocument,
     repairs,
@@ -55,6 +59,53 @@ export const ItemDetailModal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'photos' | 'notes'>('overview');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Inline Editing State for specific fields
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [inlineValue, setInlineValue] = useState<any>('');
+  const [inlineSecondValue, setInlineSecondValue] = useState<any>('');
+  const [isSavingInline, setIsSavingInline] = useState(false);
+
+  const startInlineEdit = (e: React.MouseEvent, fieldName: string, initialValue: any, initialSecondValue?: any) => {
+    e.stopPropagation();
+    setEditingField(fieldName);
+    setInlineValue(initialValue ?? '');
+    if (initialSecondValue !== undefined) {
+      setInlineSecondValue(initialSecondValue ?? '');
+    }
+  };
+
+  const cancelInlineEdit = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingField(null);
+    setInlineValue('');
+    setInlineSecondValue('');
+  };
+
+  const saveInlineField = async (e?: React.MouseEvent | React.FormEvent, fieldName?: string) => {
+    if (e) e.stopPropagation();
+    const fieldToSave = fieldName || editingField;
+    if (!fieldToSave || !item) return;
+
+    setIsSavingInline(true);
+    let updates: Record<string, any> = {};
+
+    if (fieldToSave === 'warranty') {
+      updates = {
+        warranty_start: inlineValue || null,
+        warranty_end: inlineSecondValue || null,
+      };
+    } else if (fieldToSave === 'purchase_price' || fieldToSave === 'current_value') {
+      const val = inlineValue !== '' ? parseFloat(inlineValue) : null;
+      updates = { [fieldToSave]: val };
+    } else {
+      updates = { [fieldToSave]: inlineValue || null };
+    }
+
+    await updateItem(item.id, updates);
+    setIsSavingInline(false);
+    setEditingField(null);
+  };
 
   // New Document Upload State
   const [isAddDocOpen, setIsAddDocOpen] = useState(false);
@@ -162,52 +213,150 @@ export const ItemDetailModal: React.FC = () => {
             <div className="flex-1 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span
-                    onClick={handleEdit}
-                    className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1 cursor-pointer hover:border-emerald-500 hover:bg-emerald-900/40 transition-all"
-                    title={isHu ? 'Kattints a szerkesztéshez' : 'Click to edit'}
-                  >
-                    <Tag className="h-3 w-3" />
-                    {categoryName}
-                  </span>
+                  {/* Category Badge Inline Edit */}
+                  {editingField === 'category_id' ? (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="px-2 py-1 rounded-lg text-xs font-semibold bg-slate-950 text-white border border-emerald-500 focus:outline-none"
+                        autoFocus
+                      >
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{getCategoryName(cat.id)}</option>
+                        ))}
+                      </select>
+                      <button onClick={(e) => saveInlineField(e, 'category_id')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span
+                      onClick={(e) => startInlineEdit(e, 'category_id', item.category_id)}
+                      className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1 cursor-pointer hover:border-emerald-500 hover:bg-emerald-900/40 transition-all"
+                      title={isHu ? 'Kattints a kategória módosításához' : 'Click to edit category'}
+                    >
+                      <Tag className="h-3 w-3" />
+                      {categoryName}
+                    </span>
+                  )}
 
-                  <span
-                    onClick={handleEdit}
-                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 hover:text-white transition-all"
-                    title={isHu ? 'Kattints a szerkesztéshez' : 'Click to edit'}
-                  >
-                    {isHu ? `${item.condition} állapot` : `${item.condition} condition`}
-                  </span>
+                  {/* Condition Badge Inline Edit */}
+                  {editingField === 'condition' ? (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="px-2 py-1 rounded-lg text-xs font-medium bg-slate-950 text-white border border-emerald-500 focus:outline-none"
+                        autoFocus
+                      >
+                        <option value="New">{isHu ? 'Új' : 'New'}</option>
+                        <option value="Excellent">{isHu ? 'Kiváló' : 'Excellent'}</option>
+                        <option value="Good">{isHu ? 'Jó' : 'Good'}</option>
+                        <option value="Fair">{isHu ? 'Elfogadható' : 'Fair'}</option>
+                        <option value="Poor">{isHu ? 'Gyenge' : 'Poor'}</option>
+                        <option value="Broken">{isHu ? 'Hibás' : 'Broken'}</option>
+                      </select>
+                      <button onClick={(e) => saveInlineField(e, 'condition')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span
+                      onClick={(e) => startInlineEdit(e, 'condition', item.condition)}
+                      className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 hover:text-white transition-all"
+                      title={isHu ? 'Kattints az állapot módosításához' : 'Click to edit condition'}
+                    >
+                      {isHu ? `${item.condition} állapot` : `${item.condition} condition`}
+                    </span>
+                  )}
 
-                  <span
-                    onClick={handleEdit}
-                    className="text-[11px] text-emerald-400/80 font-medium flex items-center gap-1 cursor-pointer hover:text-emerald-300 ml-auto"
-                  >
-                    <Edit3 className="h-3 w-3" />
-                    {isHu ? 'Kattints bármelyik adatra a szerkesztéshez' : 'Click any field to edit'}
+                  <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1 ml-auto">
+                    <Edit3 className="h-3 w-3 text-emerald-400" />
+                    {isHu ? 'Kattints az adatra a gyors szerkesztéshez' : 'Click field for inline edit'}
                   </span>
                 </div>
 
-                <div
-                  onClick={handleEdit}
-                  className="group/title cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-900 hover:border hover:border-emerald-500/30 transition-all relative flex items-center justify-between"
-                  title={isHu ? 'Kattints a név szerkesztéséhez' : 'Click to edit name'}
-                >
-                  <h2 className="text-2xl font-extrabold text-white tracking-tight group-hover/title:text-emerald-300 transition-colors">
-                    {item.name}
-                  </h2>
-                  <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/title:opacity-100 transition-opacity ml-2 shrink-0" />
-                </div>
+                {/* Name Title Inline Edit */}
+                {editingField === 'name' ? (
+                  <div className="flex items-center gap-2 my-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      value={inlineValue}
+                      onChange={(e) => setInlineValue(e.target.value)}
+                      className="text-xl font-extrabold bg-slate-950 border border-emerald-500 text-white rounded-xl px-3 py-1.5 w-full focus:outline-none"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveInlineField(e, 'name');
+                        if (e.key === 'Escape') cancelInlineEdit(e);
+                      }}
+                    />
+                    <button
+                      onClick={(e) => saveInlineField(e, 'name')}
+                      disabled={isSavingInline}
+                      className="p-2 rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 font-bold shrink-0 shadow"
+                      title={isHu ? 'Mentés' : 'Save'}
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={cancelInlineEdit}
+                      className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white shrink-0"
+                      title={isHu ? 'Mégse' : 'Cancel'}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'name', item.name)}
+                    className="group/title cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-900/80 hover:border hover:border-emerald-500/40 transition-all relative flex items-center justify-between"
+                    title={isHu ? 'Kattints a név módosításához' : 'Click to edit name'}
+                  >
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight group-hover/title:text-emerald-300 transition-colors">
+                      {item.name}
+                    </h2>
+                    <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/title:opacity-100 transition-opacity ml-2 shrink-0" />
+                  </div>
+                )}
 
-                <div
-                  onClick={handleEdit}
-                  className="mt-2 flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer group/loc hover:text-emerald-300 transition-colors"
-                  title={isHu ? 'Kattints a helyszín szerkesztéséhez' : 'Click to edit location'}
-                >
-                  <MapPin className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                  <span className="font-medium text-slate-300 group-hover/loc:text-emerald-300 transition-colors">{locationPath}</span>
-                  <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/loc:opacity-100 transition-opacity ml-1" />
-                </div>
+                {/* Location Path Inline Edit */}
+                {editingField === 'location_id' ? (
+                  <div className="flex items-center gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={inlineValue}
+                      onChange={(e) => setInlineValue(e.target.value)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-950 text-white border border-emerald-500 focus:outline-none"
+                      autoFocus
+                    >
+                      {locations.map(loc => (
+                        <option key={loc.id} value={loc.id}>{getLocationPath(loc.id)}</option>
+                      ))}
+                    </select>
+                    <button onClick={(e) => saveInlineField(e, 'location_id')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'location_id', item.location_id)}
+                    className="mt-2 flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer group/loc hover:text-emerald-300 transition-colors"
+                    title={isHu ? 'Kattints a helyszín módosításához' : 'Click to edit location'}
+                  >
+                    <MapPin className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                    <span className="font-medium text-slate-300 group-hover/loc:text-emerald-300 transition-colors">{locationPath}</span>
+                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/loc:opacity-100 transition-opacity ml-1" />
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons: Edit, Share & Delete */}
@@ -305,174 +454,408 @@ export const ItemDetailModal: React.FC = () => {
           {activeTab === 'overview' && (
             <div className="space-y-6">
 
-              {/* Description */}
-              <div
-                onClick={handleEdit}
-                className="group/desc cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all relative"
-                title={isHu ? 'Kattints a leírás szerkesztéséhez' : 'Click to edit description'}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    {isHu ? 'Leírás' : 'Description'}
-                  </h3>
-                  <Edit3 className="h-3.5 w-3.5 text-emerald-400 opacity-0 group-hover/desc:opacity-100 transition-opacity" />
+              {/* Description Inline Edit */}
+              {editingField === 'description' ? (
+                <div className="p-3.5 rounded-xl border border-emerald-500 bg-slate-950 space-y-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                      {isHu ? 'Leírás szerkesztése' : 'Edit Description'}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <button onClick={cancelInlineEdit} className="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">
+                        {isHu ? 'Mégse' : 'Cancel'}
+                      </button>
+                      <button onClick={(e) => saveInlineField(e, 'description')} className="px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> {isHu ? 'Mentés' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={inlineValue}
+                    onChange={(e) => setInlineValue(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-sm focus:outline-none"
+                    autoFocus
+                  />
                 </div>
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  {item.description || <span className="text-slate-500 italic">{isHu ? 'Kattints ide leírás hozzáadásához...' : 'Click to add description...'}</span>}
-                </p>
-              </div>
+              ) : (
+                <div
+                  onClick={(e) => startInlineEdit(e, 'description', item.description || '')}
+                  className="group/desc cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all relative"
+                  title={isHu ? 'Kattints a leírás inline szerkesztéséhez' : 'Click to edit description'}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      {isHu ? 'Leírás' : 'Description'}
+                    </h3>
+                    <Edit3 className="h-3.5 w-3.5 text-emerald-400 opacity-0 group-hover/desc:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    {item.description || <span className="text-slate-500 italic">{isHu ? 'Kattints ide leírás hozzáadásához...' : 'Click to add description...'}</span>}
+                  </p>
+                </div>
+              )}
 
               {/* Specs Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div
-                  onClick={handleEdit}
-                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
-                  title={isHu ? 'Kattints a vásárlási dátum szerkesztéséhez' : 'Click to edit purchase date'}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
+                {/* Purchase Date */}
+                {editingField === 'purchase_date' ? (
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
                     </span>
-                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
-                  </div>
-                  <span className="text-sm font-bold text-white mt-1 block">
-                    {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
-                  </span>
-                </div>
-
-                <div
-                  onClick={handleEdit}
-                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
-                  title={isHu ? 'Kattints a vételár szerkesztéséhez' : 'Click to edit purchase price'}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                      <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
-                    </span>
-                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
-                  </div>
-                  <span className="text-sm font-bold text-white mt-1 block">
-                    {item.purchase_price ? `€${item.purchase_price}` : 'N/A'}
-                  </span>
-                </div>
-
-                <div
-                  onClick={handleEdit}
-                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
-                  title={isHu ? 'Kattints a jelenlegi érték szerkesztéséhez' : 'Click to edit current value'}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                      <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
-                    </span>
-                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
-                  </div>
-                  <span className="text-sm font-bold text-emerald-400 mt-1 block">
-                    {item.current_value ? `€${item.current_value}` : 'N/A'}
-                  </span>
-                </div>
-
-                <div
-                  onClick={handleEdit}
-                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
-                  title={isHu ? 'Kattints az üzlet szerkesztéséhez' : 'Click to edit store'}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                      <Store className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
-                    </span>
-                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
-                  </div>
-                  <span className="text-sm font-semibold text-white mt-1 block truncate">
-                    {item.store_seller || (isHu ? 'Nincs megadva' : 'Unspecified')}
-                  </span>
-                </div>
-
-                <div
-                  onClick={handleEdit}
-                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
-                  title={isHu ? 'Kattints a helyszín szerkesztéséhez' : 'Click to edit location'}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Helyszín' : 'Location'}
-                    </span>
-                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
-                  </div>
-                  <span className="text-xs font-semibold text-white mt-1 block truncate">
-                    {locationPath}
-                  </span>
-                </div>
-
-                <div
-                  onClick={handleEdit}
-                  className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
-                  title={isHu ? 'Kattints az állapot szerkesztéséhez' : 'Click to edit condition'}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                      <Tag className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Állapot' : 'Condition'}
-                    </span>
-                    <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
-                  </div>
-                  <span className="text-sm font-bold text-white mt-1 block">
-                    {item.condition}
-                  </span>
-                </div>
-              </div>
-
-              {/* WARRANTY CARD (Section 11) */}
-              <div
-                onClick={handleEdit}
-                className="group/war p-4 rounded-2xl border border-slate-800 bg-slate-950/80 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer space-y-3 relative"
-                title={isHu ? 'Kattints a garancia szerkesztéséhez' : 'Click to edit warranty'}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                    {isHu ? 'Garancia információk' : 'Warranty Info'}
-                  </h3>
-
-                  {warrantyStatus === 'active' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/60">
-                      {isHu ? 'Garancia aktív' : 'Warranty Active'}
-                    </span>
-                  )}
-                  {warrantyStatus === 'expiring' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800/60 flex items-center gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      {isHu ? `Hamarosan lejár (${daysRemaining} nap)` : `Expiring Soon (${daysRemaining} days left)`}
-                    </span>
-                  )}
-                  {warrantyStatus === 'expired' && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-950 text-rose-300 border border-rose-800/60">
-                      {isHu ? 'Garancia lejárt' : 'Warranty Expired'}
-                    </span>
-                  )}
-                  {warrantyStatus === 'none' && (
-                    <span className="text-xs text-slate-500">
-                      {isHu ? 'Nincs megadva garanciális dátum' : 'No warranty dates set'}
-                    </span>
-                  )}
-                </div>
-
-                {item.warranty_end && (
-                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-800/80 text-xs">
-                    <div>
-                      <span className="text-slate-400 block">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</span>
-                      <span className="font-semibold text-white">
-                        {item.warranty_start ? new Date(item.warranty_start).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
-                      </span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="date"
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        autoFocus
+                      />
+                      <button onClick={(e) => saveInlineField(e, 'purchase_date')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <div>
-                      <span className="text-slate-400 block">{isHu ? 'Lejárat' : 'Expires'}</span>
-                      <span className="font-semibold text-white">
-                        {new Date(item.warranty_end).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')}
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'purchase_date', item.purchase_date || '')}
+                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    title={isHu ? 'Kattints a vásárlási dátum szerkesztéséhez' : 'Click to edit purchase date'}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
                       </span>
+                      <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
+                    <span className="text-sm font-bold text-white mt-1 block">
+                      {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Purchase Price */}
+                {editingField === 'purchase_price' ? (
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Vételár (€)' : 'Purchase Price (€)'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveInlineField(e, 'purchase_price');
+                          if (e.key === 'Escape') cancelInlineEdit(e);
+                        }}
+                      />
+                      <button onClick={(e) => saveInlineField(e, 'purchase_price')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'purchase_price', item.purchase_price ?? '')}
+                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    title={isHu ? 'Kattints a vételár szerkesztéséhez' : 'Click to edit purchase price'}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                        <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
+                      </span>
+                      <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-sm font-bold text-white mt-1 block">
+                      {item.purchase_price ? `€${item.purchase_price}` : 'N/A'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Current Value */}
+                {editingField === 'current_value' ? (
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Jelenlegi érték (€)' : 'Current Value (€)'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveInlineField(e, 'current_value');
+                          if (e.key === 'Escape') cancelInlineEdit(e);
+                        }}
+                      />
+                      <button onClick={(e) => saveInlineField(e, 'current_value')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'current_value', item.current_value ?? '')}
+                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    title={isHu ? 'Kattints a jelenlegi érték szerkesztéséhez' : 'Click to edit current value'}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                        <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
+                      </span>
+                      <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-sm font-bold text-emerald-400 mt-1 block">
+                      {item.current_value ? `€${item.current_value}` : 'N/A'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Store Seller */}
+                {editingField === 'store_seller' ? (
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <Store className="h-3.5 w-3.5" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        placeholder={isHu ? 'pl. MediaMarkt' : 'e.g. MediaMarkt'}
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveInlineField(e, 'store_seller');
+                          if (e.key === 'Escape') cancelInlineEdit(e);
+                        }}
+                      />
+                      <button onClick={(e) => saveInlineField(e, 'store_seller')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'store_seller', item.store_seller || '')}
+                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    title={isHu ? 'Kattints az üzlet szerkesztéséhez' : 'Click to edit store'}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                        <Store className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
+                      </span>
+                      <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-sm font-semibold text-white mt-1 block truncate">
+                      {item.store_seller || (isHu ? 'Nincs megadva' : 'Unspecified')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Location Path */}
+                {editingField === 'location_id' ? (
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" /> {isHu ? 'Helyszín' : 'Location'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <select
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        autoFocus
+                      >
+                        {locations.map(loc => (
+                          <option key={loc.id} value={loc.id}>{getLocationPath(loc.id)}</option>
+                        ))}
+                      </select>
+                      <button onClick={(e) => saveInlineField(e, 'location_id')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'location_id', item.location_id)}
+                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    title={isHu ? 'Kattints a helyszín szerkesztéséhez' : 'Click to edit location'}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Helyszín' : 'Location'}
+                      </span>
+                      <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-xs font-semibold text-white mt-1 block truncate">
+                      {locationPath}
+                    </span>
+                  </div>
+                )}
+
+                {/* Condition */}
+                {editingField === 'condition' ? (
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <Tag className="h-3.5 w-3.5" /> {isHu ? 'Állapot' : 'Condition'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <select
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        autoFocus
+                      >
+                        <option value="New">{isHu ? 'Új' : 'New'}</option>
+                        <option value="Excellent">{isHu ? 'Kiváló' : 'Excellent'}</option>
+                        <option value="Good">{isHu ? 'Jó' : 'Good'}</option>
+                        <option value="Fair">{isHu ? 'Elfogadható' : 'Fair'}</option>
+                        <option value="Poor">{isHu ? 'Gyenge' : 'Poor'}</option>
+                        <option value="Broken">{isHu ? 'Hibás' : 'Broken'}</option>
+                      </select>
+                      <button onClick={(e) => saveInlineField(e, 'condition')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={(e) => startInlineEdit(e, 'condition', item.condition)}
+                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    title={isHu ? 'Kattints az állapot szerkesztéséhez' : 'Click to edit condition'}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                        <Tag className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Állapot' : 'Condition'}
+                      </span>
+                      <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-sm font-bold text-white mt-1 block">
+                      {item.condition}
+                    </span>
                   </div>
                 )}
               </div>
+
+              {/* WARRANTY CARD (Section 11) */}
+              {editingField === 'warranty' ? (
+                <div className="p-4 rounded-2xl border border-emerald-500 bg-slate-950 space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4" />
+                      {isHu ? 'Garanciális Dátumok Szerkesztése' : 'Edit Warranty Dates'}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <button onClick={cancelInlineEdit} className="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">
+                        {isHu ? 'Mégse' : 'Cancel'}
+                      </button>
+                      <button onClick={(e) => saveInlineField(e, 'warranty')} className="px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> {isHu ? 'Mentés' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-slate-400 mb-1">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</label>
+                      <input
+                        type="date"
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 mb-1">{isHu ? 'Garancia lejárata' : 'Warranty End'}</label>
+                      <input
+                        type="date"
+                        value={inlineSecondValue}
+                        onChange={(e) => setInlineSecondValue(e.target.value)}
+                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={(e) => startInlineEdit(e, 'warranty', item.warranty_start || '', item.warranty_end || '')}
+                  className="group/war p-4 rounded-2xl border border-slate-800 bg-slate-950/80 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer space-y-3 relative"
+                  title={isHu ? 'Kattints a garancia szerkesztéséhez' : 'Click to edit warranty'}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                      {isHu ? 'Garancia információk' : 'Warranty Info'}
+                    </h3>
+
+                    {warrantyStatus === 'active' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/60">
+                        {isHu ? 'Garancia aktív' : 'Warranty Active'}
+                      </span>
+                    )}
+                    {warrantyStatus === 'expiring' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800/60 flex items-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {isHu ? `Hamarosan lejár (${daysRemaining} nap)` : `Expiring Soon (${daysRemaining} days left)`}
+                      </span>
+                    )}
+                    {warrantyStatus === 'expired' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-950 text-rose-300 border border-rose-800/60">
+                        {isHu ? 'Garancia lejárt' : 'Warranty Expired'}
+                      </span>
+                    )}
+                    {warrantyStatus === 'none' && (
+                      <span className="text-xs text-slate-500">
+                        {isHu ? 'Nincs megadva garanciális dátum' : 'No warranty dates set'}
+                      </span>
+                    )}
+                  </div>
+
+                  {item.warranty_end && (
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-800/80 text-xs">
+                      <div>
+                        <span className="text-slate-400 block">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</span>
+                        <span className="font-semibold text-white">
+                          {item.warranty_start ? new Date(item.warranty_start).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">{isHu ? 'Lejárat' : 'Expires'}</span>
+                        <span className="font-semibold text-white">
+                          {new Date(item.warranty_end).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* FINANCING CARD */}
               {(() => {
@@ -938,25 +1321,43 @@ export const ItemDetailModal: React.FC = () => {
                   <FileCode className="h-4 w-4 text-emerald-400" />
                   {isHu ? 'Megjegyzések és karbantartási napló' : 'Item Notes & Maintenance Log'}
                 </h3>
-                <button
-                  onClick={handleEdit}
-                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-                >
-                  <Edit3 className="h-3.5 w-3.5" />
-                  {isHu ? 'Szerkesztés' : 'Edit Notes'}
-                </button>
               </div>
 
-              <div
-                onClick={handleEdit}
-                className="group/notes cursor-pointer p-4 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all text-sm text-slate-300 leading-relaxed font-sans whitespace-pre-wrap relative"
-                title={isHu ? 'Kattints a megjegyzések szerkesztéséhez' : 'Click to edit notes'}
-              >
-                <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/notes:opacity-100 transition-opacity absolute top-3 right-3" />
-                {item.notes || (isHu
-                  ? 'Még nincsenek egyedi megjegyzések ehhez a tárgyhoz. Kattints bárhová a megjegyzések rögzítéséhez.'
-                  : 'No custom notes added to this item yet. Click anywhere to add notes.')}
-              </div>
+              {editingField === 'notes' ? (
+                <div className="p-4 rounded-xl border border-emerald-500 bg-slate-950 space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                      {isHu ? 'Megjegyzések szerkesztése:' : 'Edit Notes:'}
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={cancelInlineEdit} className="px-3 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">
+                        {isHu ? 'Mégse' : 'Cancel'}
+                      </button>
+                      <button onClick={(e) => saveInlineField(e, 'notes')} className="px-3.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> {isHu ? 'Mentés' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    rows={5}
+                    value={inlineValue}
+                    onChange={(e) => setInlineValue(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-slate-800 bg-slate-900 text-white text-sm focus:outline-none focus:border-emerald-500"
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <div
+                  onClick={(e) => startInlineEdit(e, 'notes', item.notes || '')}
+                  className="group/notes cursor-pointer p-4 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all text-sm text-slate-300 leading-relaxed font-sans whitespace-pre-wrap relative"
+                  title={isHu ? 'Kattints a megjegyzések inline szerkesztéséhez' : 'Click to edit notes'}
+                >
+                  <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/notes:opacity-100 transition-opacity absolute top-3 right-3" />
+                  {item.notes || (isHu
+                    ? 'Még nincsenek egyedi megjegyzések ehhez a tárgyhoz. Kattints ide megjegyzések rögzítéséhez.'
+                    : 'No custom notes added to this item yet. Click here to add notes.')}
+                </div>
+              )}
             </div>
           )}
 
