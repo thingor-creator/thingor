@@ -7,6 +7,9 @@ import {
   MapPin,
   Tag,
   FileText,
+  Wrench,
+  CreditCard,
+  Users,
   Plus,
   LogOut,
   Menu,
@@ -127,6 +130,42 @@ export const Navbar: React.FC = () => {
               >
                 <FileText className="h-4 w-4 shrink-0 text-slate-400" />
                 <span>{t('documents')}</span>
+              </button>
+
+              <button
+                onClick={() => handleNav('repairs')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  currentView === 'repairs'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <Wrench className="h-4 w-4 shrink-0 text-slate-400" />
+                <span>{t('repairs')}</span>
+              </button>
+
+              <button
+                onClick={() => handleNav('financing')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  currentView === 'financing'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <CreditCard className="h-4 w-4 shrink-0 text-slate-400" />
+                <span>{t('financing')}</span>
+              </button>
+
+              <button
+                onClick={() => handleNav('household')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs 2xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  currentView === 'household'
+                    ? 'bg-slate-800 text-emerald-400 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <Users className="h-4 w-4 shrink-0 text-slate-400" />
+                <span>{t('household')}</span>
               </button>
 
               {isAdmin && (
@@ -346,6 +385,45 @@ export const Navbar: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5" />
                   {t('documents')}
+                </div>
+                <ChevronRight className="h-4 w-4 opacity-60" />
+              </button>
+
+              <button
+                onClick={() => handleNav('repairs')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-medium ${
+                  currentView === 'repairs' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Wrench className="h-5 w-5" />
+                  {t('repairs')}
+                </div>
+                <ChevronRight className="h-4 w-4 opacity-60" />
+              </button>
+
+              <button
+                onClick={() => handleNav('financing')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-medium ${
+                  currentView === 'financing' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5" />
+                  {t('financing')}
+                </div>
+                <ChevronRight className="h-4 w-4 opacity-60" />
+              </button>
+
+              <button
+                onClick={() => handleNav('household')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-medium ${
+                  currentView === 'household' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5" />
+                  {t('household')}
                 </div>
                 <ChevronRight className="h-4 w-4 opacity-60" />
               </button>

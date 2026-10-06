@@ -19,7 +19,11 @@ import {
   Image as ImageIcon,
   Upload,
   Loader2,
-  Share2
+  Share2,
+  CreditCard,
+  Wrench,
+  Users,
+  CheckCircle2
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
 import { ShareModal } from './ShareModal';
@@ -37,6 +41,9 @@ export const ItemDetailModal: React.FC = () => {
     getCategoryName,
     addDocument,
     deleteDocument,
+    repairs,
+    financings,
+    recordInstallmentPayment,
     user,
     language
   } = useApp();
@@ -376,6 +383,104 @@ export const ItemDetailModal: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* FINANCING CARD */}
+              {(() => {
+                const itemFinancing = financings.find(f => f.item_id === item.id);
+                if (!itemFinancing) return null;
+                const progress = Math.min(100, Math.round((itemFinancing.paid_installments / itemFinancing.total_installments) * 100));
+
+                return (
+                  <div className="p-4 rounded-2xl border border-indigo-900/60 bg-indigo-950/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-indigo-400" />
+                        {isHu ? 'Részletfizetés & Finanszírozás' : 'Financing & Installments'}
+                      </h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-900 text-indigo-300 font-semibold border border-indigo-700/50">
+                        {itemFinancing.provider}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between font-semibold text-slate-300">
+                        <span>{isHu ? 'Törlesztés:' : 'Progress:'}</span>
+                        <span className="text-indigo-400">{itemFinancing.paid_installments} / {itemFinancing.total_installments} {isHu ? 'részlet' : 'months'} ({progress}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                        <div className="bg-indigo-500 h-full rounded-full transition-all" style={{ width: `${progress}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
+                      <div>
+                        <span className="text-slate-400 block">{isHu ? 'Havi részlet:' : 'Monthly:'}</span>
+                        <span className="font-bold text-indigo-300 text-sm">{itemFinancing.monthly_installment.toLocaleString()} Ft</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">{isHu ? 'Fennálló tartozás:' : 'Remaining Debt:'}</span>
+                        <span className="font-bold text-rose-400 text-sm">{itemFinancing.remaining_debt.toLocaleString()} Ft</span>
+                      </div>
+                    </div>
+
+                    {itemFinancing.remaining_installments > 0 && (
+                      <div className="pt-2 border-t border-indigo-900/40 flex justify-between items-center">
+                        <span className="text-xs text-slate-400">{isHu ? 'Esedékes:' : 'Due:'} <strong>{itemFinancing.next_payment_date}</strong></span>
+                        <button
+                          onClick={() => recordInstallmentPayment(itemFinancing.id)}
+                          className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg transition"
+                        >
+                          {isHu ? '+1 részlet fizetve' : 'Record 1 payment'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* REPAIRS & MAINTENANCE CARD */}
+              {(() => {
+                const itemRepairsList = repairs.filter(r => r.item_id === item.id);
+                const totalRepairExp = itemRepairsList.reduce((sum, r) => sum + (r.total_cost || 0), 0);
+                const totalInvested = (item.purchase_price || 0) + totalRepairExp;
+
+                return (
+                  <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Wrench className="h-4 w-4 text-amber-400" />
+                        {isHu ? 'Javítások & Ráfordítások' : 'Repairs & Maintenance Logs'}
+                      </h3>
+                      {totalRepairExp > 0 && (
+                        <span className="text-xs font-bold text-amber-400 bg-amber-950/80 border border-amber-800/60 px-2.5 py-0.5 rounded-full">
+                          {isHu ? 'Összes ráfordítás:' : 'Total Cost:'} {totalInvested.toLocaleString()} Ft
+                        </span>
+                      )}
+                    </div>
+
+                    {itemRepairsList.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic">
+                        {isHu ? 'Még nem rögzítettél ehhez a tárgyhoz javítási bejegyzést.' : 'No maintenance logs recorded for this item.'}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {itemRepairsList.map(rep => (
+                          <div key={rep.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between gap-2">
+                            <div>
+                              <p className="font-semibold text-slate-200">{rep.fault_title}</p>
+                              <p className="text-slate-400 text-[11px]">{rep.reported_date} • {rep.repairer_name || (isHu ? 'Ismeretlen szerviz' : 'Service')}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-bold text-amber-400 block">{rep.total_cost > 0 ? `${rep.total_cost.toLocaleString()} Ft` : (isHu ? 'Díjmentes' : 'Free')}</span>
+                              <span className="text-[10px] text-slate-400 uppercase font-semibold">{rep.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
             </div>
           )}

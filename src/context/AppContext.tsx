@@ -20,6 +20,13 @@ import type {
   LandingBlock,
   FAQItem,
   UserDetailStats,
+  ItemRepair,
+  ItemFinancing,
+  Household,
+  HouseholdMember,
+  HouseholdInvite,
+  HouseholdRole,
+  RepairStatus
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
@@ -112,6 +119,29 @@ interface AppContextType {
 
   addDocument: (itemId: string, fileName: string, fileUrl: string, docType: ItemDocument['document_type']) => Promise<ItemDocument>;
   deleteDocument: (docId: string) => Promise<void>;
+
+  // Repairs & Maintenance
+  repairs: ItemRepair[];
+  addRepair: (repair: Omit<ItemRepair, 'id' | 'created_at'>) => Promise<ItemRepair>;
+  updateRepairStatus: (repairId: string, status: RepairStatus, details?: Partial<ItemRepair>) => Promise<void>;
+  deleteRepair: (repairId: string) => Promise<void>;
+
+  // Installments & Financing
+  financings: ItemFinancing[];
+  saveFinancing: (financing: Omit<ItemFinancing, 'id' | 'created_at'>) => Promise<ItemFinancing>;
+  recordInstallmentPayment: (financingId: string) => Promise<void>;
+  deleteFinancing: (financingId: string) => Promise<void>;
+
+  // Household & Family Sharing
+  household: Household | null;
+  householdMembers: HouseholdMember[];
+  householdInvites: HouseholdInvite[];
+  createHousehold: (name: string) => Promise<Household>;
+  inviteHouseholdMember: (email: string, role: HouseholdRole) => Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }>;
+  acceptHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
+  removeHouseholdMember: (memberId: string) => Promise<void>;
+  updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
+  leaveHousehold: () => Promise<void>;
 
   // Helper getters
   getLocationPath: (locationId: string) => string;
@@ -250,6 +280,57 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return [];
   });
+
+  // Module state: Repairs, Financing, Household
+  const [repairs, setRepairs] = useState<ItemRepair[]>(() => {
+    const saved = localStorage.getItem('thingor_repairs');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  const [financings, setFinancings] = useState<ItemFinancing[]>(() => {
+    const saved = localStorage.getItem('thingor_financings');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  const [household, setHousehold] = useState<Household | null>(() => {
+    const saved = localStorage.getItem('thingor_household');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return null;
+  });
+
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(() => {
+    const saved = localStorage.getItem('thingor_household_members');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  const [householdInvites, setHouseholdInvites] = useState<HouseholdInvite[]>(() => {
+    const saved = localStorage.getItem('thingor_household_invites');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  // LocalStorage Sync Effects for new modules
+  useEffect(() => { localStorage.setItem('thingor_repairs', JSON.stringify(repairs)); }, [repairs]);
+  useEffect(() => { localStorage.setItem('thingor_financings', JSON.stringify(financings)); }, [financings]);
+  useEffect(() => {
+    if (household) localStorage.setItem('thingor_household', JSON.stringify(household));
+    else localStorage.removeItem('thingor_household');
+  }, [household]);
+  useEffect(() => { localStorage.setItem('thingor_household_members', JSON.stringify(householdMembers)); }, [householdMembers]);
+  useEffect(() => { localStorage.setItem('thingor_household_invites', JSON.stringify(householdInvites)); }, [householdInvites]);
 
   // UI state
   const [currentView, setCurrentView] = useState<ViewMode>(() => {
@@ -688,6 +769,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
           setDocuments(data as ItemDocument[]);
+        }
+      });
+
+    // Load repairs
+    supabase
+      .from('item_repairs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setRepairs(data as ItemRepair[]);
+        }
+      });
+
+    // Load financings
+    supabase
+      .from('item_financings')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setFinancings(data as ItemFinancing[]);
+        }
+      });
+
+    // Load household data
+    supabase
+      .from('household_members')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(async ({ data: memberData }) => {
+        if (memberData && isMounted) {
+          const { data: hhData } = await supabase.from('households').select('*').eq('id', memberData.household_id).maybeSingle();
+          if (hhData && isMounted) setHousehold(hhData as Household);
+
+          const { data: allMembers } = await supabase.from('household_members').select('*').eq('household_id', memberData.household_id);
+          if (allMembers && isMounted) setHouseholdMembers(allMembers as HouseholdMember[]);
+
+          const { data: allInvites } = await supabase.from('household_invites').select('*').eq('household_id', memberData.household_id);
+          if (allInvites && isMounted) setHouseholdInvites(allInvites as HouseholdInvite[]);
         }
       });
 
@@ -1174,6 +1298,263 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await supabase.from('item_documents').delete().eq('id', docId).eq('user_id', user.id);
     }
     setDocuments(prev => prev.filter(d => d.id !== docId));
+  };
+
+  // CRUD Repairs & Maintenance
+  const addRepair = async (repairData: Omit<ItemRepair, 'id' | 'created_at'>): Promise<ItemRepair> => {
+    const newRepair: ItemRepair = {
+      ...repairData,
+      id: 'repair-' + Date.now(),
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+    };
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase.from('item_repairs').insert([{ ...repairData, user_id: user.id }]).select().single();
+      if (!error && data) {
+        setRepairs(prev => [data as ItemRepair, ...prev]);
+        updateItem(repairData.item_id, { status: repairData.status === 'completed' ? 'Repaired' : 'UnderRepair' });
+        return data as ItemRepair;
+      }
+    }
+    setRepairs(prev => [newRepair, ...prev]);
+    updateItem(repairData.item_id, { status: repairData.status === 'completed' ? 'Repaired' : 'UnderRepair' });
+    return newRepair;
+  };
+
+  const updateRepairStatus = async (repairId: string, status: RepairStatus, details?: Partial<ItemRepair>): Promise<void> => {
+    setRepairs(prev => prev.map(r => r.id === repairId ? { ...r, status, ...details, completed_at: status === 'completed' ? (details?.completed_at || new Date().toISOString().split('T')[0]) : r.completed_at } : r));
+    const targetRepair = repairs.find(r => r.id === repairId);
+    if (targetRepair) {
+      const itemStatus = status === 'completed' ? 'Repaired' : status === 'in_progress' ? 'UnderRepair' : 'Faulty';
+      updateItem(targetRepair.item_id, { status: itemStatus });
+    }
+    if (isSupabaseConfigured && supabase && isUUID(repairId)) {
+      await supabase.from('item_repairs').update({ status, ...details }).eq('id', repairId);
+    }
+  };
+
+  const deleteRepair = async (repairId: string): Promise<void> => {
+    setRepairs(prev => prev.filter(r => r.id !== repairId));
+    if (isSupabaseConfigured && supabase && isUUID(repairId)) {
+      await supabase.from('item_repairs').delete().eq('id', repairId);
+    }
+  };
+
+  // CRUD Installments & Financing
+  const saveFinancing = async (finData: Omit<ItemFinancing, 'id' | 'created_at'>): Promise<ItemFinancing> => {
+    const existing = financings.find(f => f.item_id === finData.item_id);
+    const totalFinanced = finData.original_price - finData.down_payment;
+    const remainingDebt = Math.max(0, totalFinanced - (finData.paid_installments * finData.monthly_installment));
+    const remainingInstallments = Math.max(0, finData.total_installments - finData.paid_installments);
+
+    const payload = {
+      ...finData,
+      financed_amount: totalFinanced,
+      remaining_installments: remainingInstallments,
+      remaining_debt: remainingDebt,
+    };
+
+    if (existing) {
+      setFinancings(prev => prev.map(f => f.id === existing.id ? { ...f, ...payload } : f));
+      if (isSupabaseConfigured && supabase && isUUID(existing.id)) {
+        await supabase.from('item_financings').update(payload).eq('id', existing.id);
+      }
+      return { ...existing, ...payload };
+    } else {
+      const newFin: ItemFinancing = {
+        ...payload,
+        id: 'fin-' + Date.now(),
+        user_id: user?.id,
+        created_at: new Date().toISOString(),
+      };
+      if (isSupabaseConfigured && supabase && user?.id) {
+        const { data, error } = await supabase.from('item_financings').insert([{ ...payload, user_id: user.id }]).select().single();
+        if (!error && data) {
+          setFinancings(prev => [data as ItemFinancing, ...prev]);
+          return data as ItemFinancing;
+        }
+      }
+      setFinancings(prev => [newFin, ...prev]);
+      return newFin;
+    }
+  };
+
+  const recordInstallmentPayment = async (financingId: string): Promise<void> => {
+    setFinancings(prev => prev.map(f => {
+      if (f.id !== financingId) return f;
+      const newPaid = Math.min(f.total_installments, f.paid_installments + 1);
+      const newRemainingInst = Math.max(0, f.total_installments - newPaid);
+      const newRemainingDebt = Math.max(0, f.financed_amount - (newPaid * f.monthly_installment));
+      
+      let nextDate = f.next_payment_date;
+      if (nextDate && newRemainingInst > 0) {
+        const d = new Date(nextDate);
+        d.setMonth(d.getMonth() + 1);
+        nextDate = d.toISOString().split('T')[0];
+      }
+
+      const updated = {
+        ...f,
+        paid_installments: newPaid,
+        remaining_installments: newRemainingInst,
+        remaining_debt: newRemainingDebt,
+        next_payment_date: nextDate,
+      };
+
+      if (isSupabaseConfigured && supabase && isUUID(financingId)) {
+        supabase.from('item_financings').update({
+          paid_installments: newPaid,
+          remaining_installments: newRemainingInst,
+          remaining_debt: newRemainingDebt,
+          next_payment_date: nextDate,
+        }).eq('id', financingId);
+      }
+
+      return updated;
+    }));
+  };
+
+  const deleteFinancing = async (financingId: string): Promise<void> => {
+    setFinancings(prev => prev.filter(f => f.id !== financingId));
+    if (isSupabaseConfigured && supabase && isUUID(financingId)) {
+      await supabase.from('item_financings').delete().eq('id', financingId);
+    }
+  };
+
+  // CRUD Household & Family Sharing
+  const createHousehold = async (name: string): Promise<Household> => {
+    const newHh: Household = {
+      id: 'hh-' + Date.now(),
+      name,
+      owner_id: user?.id || 'guest',
+      created_at: new Date().toISOString(),
+    };
+
+    const newMember: HouseholdMember = {
+      id: 'hm-' + Date.now(),
+      household_id: newHh.id,
+      user_id: user?.id || 'guest',
+      user_email: user?.email || '',
+      user_name: user?.display_name || user?.email || 'Tulajdonos',
+      role: 'owner',
+      joined_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data: hhData, error: hhErr } = await supabase.from('households').insert([{ name, owner_id: user.id }]).select().single();
+      if (!hhErr && hhData) {
+        const { data: mData } = await supabase.from('household_members').insert([{
+          household_id: hhData.id,
+          user_id: user.id,
+          user_email: user.email,
+          user_name: user.display_name,
+          role: 'owner'
+        }]).select().single();
+
+        setHousehold(hhData as Household);
+        if (mData) setHouseholdMembers([mData as HouseholdMember]);
+        return hhData as Household;
+      }
+    }
+
+    setHousehold(newHh);
+    setHouseholdMembers([newMember]);
+    return newHh;
+  };
+
+  const inviteHouseholdMember = async (email: string, role: HouseholdRole): Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }> => {
+    if (!household) return { success: false, error: language === 'hu' ? 'Nincs aktív háztartás' : 'No active household' };
+
+    const newInvite: HouseholdInvite = {
+      id: 'inv-' + Date.now(),
+      household_id: household.id,
+      invited_email: email,
+      role,
+      invited_by: user?.id || 'guest',
+      token: Math.random().toString(36).substring(2, 10),
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase.from('household_invites').insert([{
+        household_id: household.id,
+        invited_email: email,
+        role,
+        invited_by: user.id,
+        token: newInvite.token,
+        status: 'pending'
+      }]).select().single();
+
+      if (error) return { success: false, error: error.message };
+      setHouseholdInvites(prev => [...prev, data as HouseholdInvite]);
+      return { success: true, invite: data as HouseholdInvite };
+    }
+
+    setHouseholdInvites(prev => [...prev, newInvite]);
+    return { success: true, invite: newInvite };
+  };
+
+  const acceptHouseholdInvite = async (token: string): Promise<{ success: boolean; error?: string }> => {
+    const invite = householdInvites.find(i => i.token === token && i.status === 'pending');
+    if (!invite) return { success: false, error: language === 'hu' ? 'Érvénytelen vagy lejárt meghívó' : 'Invalid or expired invite' };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data: memberData, error: mErr } = await supabase.from('household_members').insert([{
+        household_id: invite.household_id,
+        user_id: user.id,
+        user_email: user.email,
+        user_name: user.display_name,
+        role: invite.role,
+      }]).select().single();
+
+      if (mErr) return { success: false, error: mErr.message };
+
+      await supabase.from('household_invites').update({ status: 'accepted' }).eq('id', invite.id);
+
+      const { data: hh } = await supabase.from('households').select('*').eq('id', invite.household_id).single();
+      if (hh) setHousehold(hh as Household);
+
+      setHouseholdInvites(prev => prev.map(i => i.id === invite.id ? { ...i, status: 'accepted' } : i));
+      return { success: true };
+    }
+
+    const newMember: HouseholdMember = {
+      id: 'hm-' + Date.now(),
+      household_id: invite.household_id,
+      user_id: user?.id || 'guest',
+      user_email: user?.email || '',
+      user_name: user?.display_name || user?.email || 'Családtag',
+      role: invite.role,
+      joined_at: new Date().toISOString(),
+    };
+
+    setHouseholdMembers(prev => [...prev, newMember]);
+    setHouseholdInvites(prev => prev.map(i => i.id === invite.id ? { ...i, status: 'accepted' } : i));
+    return { success: true };
+  };
+
+  const removeHouseholdMember = async (memberId: string): Promise<void> => {
+    setHouseholdMembers(prev => prev.filter(m => m.id !== memberId));
+    if (isSupabaseConfigured && supabase && isUUID(memberId)) {
+      await supabase.from('household_members').delete().eq('id', memberId);
+    }
+  };
+
+  const updateMemberRole = async (memberId: string, role: HouseholdRole): Promise<void> => {
+    setHouseholdMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m));
+    if (isSupabaseConfigured && supabase && isUUID(memberId)) {
+      await supabase.from('household_members').update({ role }).eq('id', memberId);
+    }
+  };
+
+  const leaveHousehold = async (): Promise<void> => {
+    if (!household || !user?.id) return;
+    setHouseholdMembers(prev => prev.filter(m => m.user_id !== user.id));
+    setHousehold(null);
+    if (isSupabaseConfigured && supabase && isUUID(household.id)) {
+      await supabase.from('household_members').delete().eq('user_id', user.id).eq('household_id', household.id);
+    }
   };
 
   // Admin Audit Log logger
@@ -1842,6 +2223,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteLocation,
         addDocument,
         deleteDocument,
+
+        repairs,
+        addRepair,
+        updateRepairStatus,
+        deleteRepair,
+
+        financings,
+        saveFinancing,
+        recordInstallmentPayment,
+        deleteFinancing,
+
+        household,
+        householdMembers,
+        householdInvites,
+        createHousehold,
+        inviteHouseholdMember,
+        acceptHouseholdInvite,
+        removeHouseholdMember,
+        updateMemberRole,
+        leaveHousehold,
 
         getLocationPath,
         getCategoryName,

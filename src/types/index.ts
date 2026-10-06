@@ -28,6 +28,83 @@ export interface ItemDocument {
   size_bytes?: number;
 }
 
+export type ItemStatus = 'Working' | 'Faulty' | 'UnderRepair' | 'Repaired' | 'Scrapped';
+export type ItemOwnershipScope = 'private' | 'household';
+
+export type RepairUrgency = 'low' | 'normal' | 'high' | 'urgent';
+export type RepairStatus = 'pending' | 'in_progress' | 'repaired' | 'scrapped';
+
+export interface ItemRepair {
+  id: string;
+  item_id: string;
+  user_id?: string;
+  title: string;
+  description: string;
+  reported_at: string;
+  urgency: RepairUrgency;
+  usable: boolean;
+  photo_url?: string;
+  status: RepairStatus;
+  repair_shop?: string;
+  estimated_completion?: string;
+  parts_cost?: number;
+  labor_cost?: number;
+  total_cost?: number;
+  is_warranty_repair?: boolean;
+  notes?: string;
+  completed_at?: string;
+  created_at: string;
+}
+
+export interface ItemFinancing {
+  id: string;
+  item_id: string;
+  user_id?: string;
+  provider: string;
+  original_price: number;
+  down_payment: number;
+  financed_amount: number;
+  monthly_installment: number;
+  total_installments: number;
+  paid_installments: number;
+  first_payment_date: string;
+  next_payment_date: string;
+  end_date: string;
+  notes?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type HouseholdRole = 'owner' | 'admin' | 'member' | 'viewer';
+
+export interface Household {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface HouseholdMember {
+  id: string;
+  household_id: string;
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: HouseholdRole;
+  joined_at: string;
+}
+
+export interface HouseholdInvite {
+  id: string;
+  household_id: string;
+  email: string;
+  role: HouseholdRole;
+  token: string;
+  invited_by: string;
+  expires_at: string;
+  created_at: string;
+}
+
 export interface Item {
   id: string;
   user_id?: string;
@@ -42,6 +119,9 @@ export interface Item {
   current_value?: number;
   store_seller?: string;
   condition: ItemCondition;
+  status?: ItemStatus;
+  ownership_scope?: ItemOwnershipScope;
+  household_id?: string;
   warranty_start?: string;
   warranty_end?: string;
   notes?: string;
@@ -188,7 +268,7 @@ export interface AdminAuditLog {
   created_at: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'admin' | 'guest_share' | 'legal';
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'admin' | 'guest_share' | 'legal';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';

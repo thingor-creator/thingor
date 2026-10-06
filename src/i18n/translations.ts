@@ -13,6 +13,9 @@ export interface TranslationKeys {
   locations: string;
   categories: string;
   documents: string;
+  repairs: string;
+  financing: string;
+  household: string;
   admin_panel: string;
   add_thing: string;
   browse_things: string;
@@ -92,6 +95,9 @@ export const translations: Record<Language, TranslationKeys> = {
     locations: 'Helyszínek',
     categories: 'Kategóriák',
     documents: 'Dokumentumok',
+    repairs: 'Javítások',
+    financing: 'Finanszírozás',
+    household: 'Család / Háztartás',
     admin_panel: 'Adminisztráció',
     add_thing: 'Tárgy hozzáadása',
     browse_things: 'Tárgyak böngészése',
@@ -164,6 +170,9 @@ export const translations: Record<Language, TranslationKeys> = {
     locations: 'Locations',
     categories: 'Categories',
     documents: 'Documents',
+    repairs: 'Repairs',
+    financing: 'Financing',
+    household: 'Household & Family',
     admin_panel: 'Admin Panel',
     add_thing: 'Add Thing',
     browse_things: 'Browse things',

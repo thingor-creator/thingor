@@ -42,6 +42,8 @@ export const ItemFormModal: React.FC = () => {
   const [currentValue, setCurrentValue] = useState<string>('');
   const [storeSeller, setStoreSeller] = useState('');
   const [condition, setCondition] = useState<ItemCondition>('Good');
+  const [status, setStatus] = useState<ItemStatus>('Working');
+  const [ownershipScope, setOwnershipScope] = useState<ItemOwnershipScope>('private');
   const [warrantyStart, setWarrantyStart] = useState('');
   const [warrantyEnd, setWarrantyEnd] = useState('');
   const [notes, setNotes] = useState('');
@@ -62,6 +64,8 @@ export const ItemFormModal: React.FC = () => {
       setCurrentValue(editingItem.current_value ? String(editingItem.current_value) : '');
       setStoreSeller(editingItem.store_seller || '');
       setCondition(editingItem.condition || 'Good');
+      setStatus(editingItem.status || 'Working');
+      setOwnershipScope(editingItem.ownership_scope || 'private');
       setWarrantyStart(editingItem.warranty_start || '');
       setWarrantyEnd(editingItem.warranty_end || '');
       setNotes(editingItem.notes || '');
@@ -77,6 +81,8 @@ export const ItemFormModal: React.FC = () => {
       setCurrentValue('');
       setStoreSeller('');
       setCondition('Good');
+      setStatus('Working');
+      setOwnershipScope('private');
       setWarrantyStart('');
       setWarrantyEnd('');
       setNotes('');
@@ -112,6 +118,8 @@ export const ItemFormModal: React.FC = () => {
       current_value: currentValue ? parseFloat(currentValue) : (purchasePrice ? parseFloat(purchasePrice) : undefined),
       store_seller: storeSeller.trim() || undefined,
       condition,
+      status,
+      ownership_scope: ownershipScope,
       warranty_start: warrantyStart || undefined,
       warranty_end: warrantyEnd || undefined,
       notes: notes.trim() || undefined,
@@ -260,6 +268,40 @@ export const ItemFormModal: React.FC = () => {
                     ))}
                   </select>
                 )}
+              </div>
+            </div>
+
+            {/* Status & Ownership Scope Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {isHu ? 'Működési Állapot' : 'Operating Status'}
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500 focus:outline-none"
+                >
+                  <option value="Working">{isHu ? '○ Működik' : 'Working'}</option>
+                  <option value="Faulty">{isHu ? '● Hibás' : 'Faulty'}</option>
+                  <option value="UnderRepair">{isHu ? '⚙ Javítás alatt' : 'Under Repair'}</option>
+                  <option value="Repaired">{isHu ? '✓ Javítva' : 'Repaired'}</option>
+                  <option value="Scrapped">{isHu ? '✕ Selejtezve' : 'Scrapped'}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {isHu ? 'Tulajdon / Láthatóság' : 'Ownership / Visibility'}
+                </label>
+                <select
+                  value={ownershipScope}
+                  onChange={(e) => setOwnershipScope(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500 focus:outline-none"
+                >
+                  <option value="private">{isHu ? '🔒 Csak én (Saját tárgy)' : 'Private (Only Me)'}</option>
+                  <option value="household">{isHu ? '👨‍👩‍👧‍👦 Család (Közös tárgy)' : 'Household (Shared)'}</option>
+                </select>
               </div>
             </div>
 

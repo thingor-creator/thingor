@@ -10,7 +10,12 @@ import {
   ShieldCheck,
   Tag,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  Wrench,
+  CreditCard,
+  Users,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { ItemCard } from './ItemCard';
 
@@ -19,6 +24,10 @@ export const DashboardView: React.FC = () => {
     items,
     locations,
     categories,
+    repairs,
+    financings,
+    household,
+    householdMembers,
     setCurrentView,
     setIsAddEditItemModalOpen,
     setEditingItem,
@@ -37,6 +46,19 @@ export const DashboardView: React.FC = () => {
   }, 0);
 
   const totalLocations = locations.length;
+
+  // New module metrics
+  const totalMonthlyInstallment = financings.reduce((sum, f) => f.remaining_installments > 0 ? sum + f.monthly_installment : sum, 0);
+  const pendingRepairsCount = repairs.filter(r => r.status === 'pending' || r.status === 'in_progress').length;
+
+  const upcomingFinancingPayments = financings
+    .filter(f => f.remaining_installments > 0 && f.next_payment_date)
+    .sort((a, b) => new Date(a.next_payment_date!).getTime() - new Date(b.next_payment_date!).getTime())
+    .slice(0, 3);
+
+  const pendingRepairsList = repairs
+    .filter(r => r.status === 'pending' || r.status === 'in_progress')
+    .slice(0, 3);
 
   // Calculate expiring/active warranties
   const now = new Date();
@@ -60,6 +82,14 @@ export const DashboardView: React.FC = () => {
     setIsAddEditItemModalOpen(true);
   };
 
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat(language === 'hu' ? 'hu-HU' : 'en-US', {
+      style: 'currency',
+      currency: 'HUF',
+      maximumFractionDigits: 0
+    }).format(val);
+  };
+
   return (
     <div className="space-y-8 pb-16">
       
@@ -70,12 +100,12 @@ export const DashboardView: React.FC = () => {
         </h1>
         <p className="text-sm text-slate-400 mt-1">
           {language === 'hu'
-            ? 'Áttekintés a vagyontárgyaidról, teljes leltári értékről és garancia állapotokról.'
-            : 'Overview of your personal assets, total inventory value, and warranty statuses.'}
+            ? 'Személyes és családi vagyontárgyaid, javítások és részletfizetések áttekintése.'
+            : 'Overview of personal & household assets, maintenance tasks, and financing plans.'}
         </p>
       </div>
 
-      {/* DASHBOARD CARDS */}
+      {/* DASHBOARD CARDS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         
         {/* Card 1: Total Items */}
@@ -107,49 +137,49 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-black text-emerald-400 tracking-tight">
-              €{totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            <span className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">
+              {formatCurrency(totalValue)}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-2">{language === 'hu' ? 'Összesített becsült leltári érték' : 'Combined estimated valuation'}</p>
         </div>
 
-        {/* Card 3: Locations */}
+        {/* Card 3: Monthly Installments */}
         <div 
-          onClick={() => setCurrentView('locations')}
-          className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-slate-700 transition-all cursor-pointer group"
+          onClick={() => setCurrentView('financing')}
+          className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-indigo-500/50 transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('locations')}</span>
-            <div className="p-2.5 rounded-xl bg-slate-800 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
-              <MapPin className="h-5 w-5" />
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{language === 'hu' ? 'Havi részletek' : 'Monthly Installments'}</span>
+            <div className="p-2.5 rounded-xl bg-indigo-950 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+              <CreditCard className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-black text-white tracking-tight">{totalLocations}</span>
-            <span className="text-xs text-slate-400 ml-2">{t('storage_spots')}</span>
+            <span className="text-2xl font-black text-indigo-300 tracking-tight">{formatCurrency(totalMonthlyInstallment)}</span>
           </div>
-          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 group-hover:text-emerald-400 transition-colors">
-            {language === 'hu' ? 'Helyszínek kelezése' : 'Manage location tree'} <ChevronRight className="h-3.5 w-3.5" />
+          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 group-hover:text-indigo-400 transition-colors">
+            {language === 'hu' ? 'Részletfizetések kezelése' : 'Manage financing'} <ChevronRight className="h-3.5 w-3.5" />
           </p>
         </div>
 
-        {/* Card 4: Warranty */}
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90">
+        {/* Card 4: Repairs Pending */}
+        <div 
+          onClick={() => setCurrentView('repairs')}
+          className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-amber-500/50 transition-all cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('warranty_expiring')}</span>
-            <div className={`p-2.5 rounded-xl ${expiringWarranties.length > 0 ? 'bg-amber-950 text-amber-400' : 'bg-slate-800 text-emerald-400'}`}>
-              <ShieldAlert className="h-5 w-5" />
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{language === 'hu' ? 'Javításra vár' : 'Awaiting Repair'}</span>
+            <div className="p-2.5 rounded-xl bg-amber-950 text-amber-400 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+              <Wrench className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-white tracking-tight">
-              {expiringWarranties.length}
-            </span>
-            <span className="text-xs text-slate-400">{t('expiring_soon')}</span>
+            <span className="text-3xl font-black text-white tracking-tight">{pendingRepairsCount}</span>
+            <span className="text-xs text-slate-400">{language === 'hu' ? 'hibás/szervizben' : 'faulty/in service'}</span>
           </div>
-          <p className="text-xs text-slate-400 mt-2">
-            {activeWarranties.length} {t('active_warranties')}
+          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 group-hover:text-amber-400 transition-colors">
+            {language === 'hu' ? 'Javítások megtekintése' : 'View repairs'} <ChevronRight className="h-3.5 w-3.5" />
           </p>
         </div>
 
