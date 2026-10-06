@@ -24,6 +24,7 @@ export const DashboardView: React.FC = () => {
     setEditingItem,
     setSelectedItemId,
     getLocationPath,
+    getCategoryName,
     t,
     language,
   } = useApp();
@@ -281,7 +282,7 @@ export const DashboardView: React.FC = () => {
                     onClick={() => setCurrentView('categories')}
                     className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/50 cursor-pointer transition-colors text-xs"
                   >
-                    <span className="font-medium text-slate-200">{cat.name}</span>
+                    <span className="font-medium text-slate-200">{getCategoryName(cat.id)}</span>
                     <div className="flex items-center gap-3 text-slate-400">
                       <span>{count} {language === 'hu' ? 'tárgy' : 'items'}</span>
                       <span className="font-semibold text-emerald-400">€{value}</span>

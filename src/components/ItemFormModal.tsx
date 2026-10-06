@@ -21,6 +21,7 @@ export const ItemFormModal: React.FC = () => {
     locations,
     addLocation,
     getLocationPath,
+    getCategoryName,
     user,
     language
   } = useApp();
@@ -210,7 +211,7 @@ export const ItemFormModal: React.FC = () => {
                   className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500 focus:outline-none"
                 >
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option key={cat.id} value={cat.id}>{getCategoryName(cat.id)}</option>
                   ))}
                 </select>
               </div>
