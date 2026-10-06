@@ -148,7 +148,7 @@ export const CategoriesView: React.FC = () => {
                 <span className="text-slate-400">
                   {totalCount} {language === 'hu' ? 'tárgy rögzítve' : 'items logged'}
                 </span>
-                <span className="font-bold text-white">€{totalVal.toLocaleString()}</span>
+                <span className="font-bold text-white">{language === 'hu' ? `${totalVal.toLocaleString('hu-HU')} Ft` : `€${totalVal.toLocaleString('en-US')}`}</span>
               </div>
             </div>
           );

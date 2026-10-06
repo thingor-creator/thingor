@@ -8,7 +8,7 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
-  const { setSelectedItemId, setIsAddEditItemModalOpen, setEditingItem, getLocationPath, getCategoryName, t } = useApp();
+  const { setSelectedItemId, setIsAddEditItemModalOpen, setEditingItem, getLocationPath, getCategoryName, t, language } = useApp();
 
   const locationPath = getLocationPath(item.location_id);
   const categoryName = getCategoryName(item.category_id);
@@ -53,15 +53,15 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
   return (
     <div
       onClick={() => setSelectedItemId(item.id)}
-      className="group relative flex flex-col rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden hover:border-slate-700 hover:shadow-xl hover:shadow-emerald-950/20 transition-all duration-200 cursor-pointer"
+      className="group relative flex flex-col rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden hover:border-slate-700 hover:shadow-xl hover:shadow-emerald-950/20 transition-all duration-200 cursor-pointer isolate"
     >
       {/* Thumbnail Image Header */}
-      <div className="relative h-44 w-full bg-slate-950 overflow-hidden flex items-center justify-center">
+      <div className="relative h-44 w-full shrink-0 bg-slate-950 overflow-hidden flex items-center justify-center rounded-t-2xl">
         {item.photo_url ? (
           <img
             src={item.photo_url}
             alt={item.name}
-            className="h-full w-full object-cover max-w-full max-h-full block group-hover:scale-105 transition-transform duration-300"
+            className="h-full w-full object-cover object-center block group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none rounded-t-2xl"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';
             }}
@@ -122,7 +122,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
           <div>
             <span className="text-[10px] uppercase font-semibold text-slate-400 block">{t('current_value')}</span>
             <span className="text-base font-extrabold text-white">
-              €{displayValue.toLocaleString()}
+              {language === 'hu' ? `${displayValue.toLocaleString('hu-HU')} Ft` : `€${displayValue.toLocaleString('en-US')}`}
             </span>
           </div>
 

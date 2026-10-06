@@ -85,7 +85,7 @@ export const DashboardView: React.FC = () => {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat(language === 'hu' ? 'hu-HU' : 'en-US', {
       style: 'currency',
-      currency: 'HUF',
+      currency: language === 'hu' ? 'HUF' : 'EUR',
       maximumFractionDigits: 0
     }).format(val);
   };
@@ -315,7 +315,7 @@ export const DashboardView: React.FC = () => {
                     <span className="font-medium text-slate-200">{getCategoryName(cat.id)}</span>
                     <div className="flex items-center gap-3 text-slate-400">
                       <span>{count} {language === 'hu' ? 'tárgy' : 'items'}</span>
-                      <span className="font-semibold text-emerald-400">€{value}</span>
+                      <span className="font-semibold text-emerald-400">{formatCurrency(value)}</span>
                     </div>
                   </div>
                 );

@@ -509,7 +509,7 @@ export const ItemFormModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  {isHu ? 'Vételár (€ / Ft)' : 'Purchase Price (€)'}
+                  {isHu ? 'Vételár (Ft)' : 'Purchase Price (€)'}
                 </label>
                 <input
                   type="number"
@@ -523,7 +523,7 @@ export const ItemFormModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  {isHu ? 'Jelenlegi Becsült Érték (€ / Ft)' : 'Current Value (€)'}
+                  {isHu ? 'Jelenlegi Becsült Érték (Ft)' : 'Current Value (€)'}
                 </label>
                 <input
                   type="number"

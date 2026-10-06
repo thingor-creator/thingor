@@ -219,7 +219,7 @@ export const ItemsView: React.FC = () => {
               >
                 <option value="created_at">{language === 'hu' ? 'Hozzáadás dátuma' : 'Date Added'}</option>
                 <option value="name">{language === 'hu' ? 'Név' : 'Name'}</option>
-                <option value="current_value">{language === 'hu' ? 'Érték (€)' : 'Value (€)'}</option>
+                <option value="current_value">{language === 'hu' ? 'Érték (Ft)' : 'Value (€)'}</option>
                 <option value="purchase_date">{language === 'hu' ? 'Vásárlás dátuma' : 'Purchase Date'}</option>
                 <option value="category">{t('category')}</option>
                 <option value="location">{t('location')}</option>

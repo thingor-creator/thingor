@@ -104,7 +104,7 @@ export const LocationsView: React.FC = () => {
               <span className="text-xs font-bold text-white block">
                 {totalItemCount} {isHu ? 'tárgy' : 'items'}
               </span>
-              <span className="text-[11px] text-emerald-400 font-medium">€{totalVal}</span>
+              <span className="text-[11px] text-emerald-400 font-medium">{isHu ? `${totalVal.toLocaleString('hu-HU')} Ft` : `€${totalVal.toLocaleString('en-US')}`}</span>
             </div>
 
             <button

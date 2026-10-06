@@ -542,7 +542,7 @@ export const ItemDetailModal: React.FC = () => {
                 {editingField === 'purchase_price' ? (
                   <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
-                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Vételár (€)' : 'Purchase Price (€)'}
+                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Vételár (Ft)' : 'Purchase Price (€)'}
                     </span>
                     <div className="flex items-center gap-1">
                       <input
@@ -579,7 +579,7 @@ export const ItemDetailModal: React.FC = () => {
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
                     <span className="text-sm font-bold text-white mt-1 block">
-                      {item.purchase_price ? `€${item.purchase_price}` : 'N/A'}
+                      {item.purchase_price ? (isHu ? `${Number(item.purchase_price).toLocaleString('hu-HU')} Ft` : `€${item.purchase_price}`) : 'N/A'}
                     </span>
                   </div>
                 )}
@@ -588,7 +588,7 @@ export const ItemDetailModal: React.FC = () => {
                 {editingField === 'current_value' ? (
                   <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
-                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Jelenlegi érték (€)' : 'Current Value (€)'}
+                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Jelenlegi érték (Ft)' : 'Current Value (€)'}
                     </span>
                     <div className="flex items-center gap-1">
                       <input
@@ -625,7 +625,7 @@ export const ItemDetailModal: React.FC = () => {
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
                     <span className="text-sm font-bold text-emerald-400 mt-1 block">
-                      {item.current_value ? `€${item.current_value}` : 'N/A'}
+                      {item.current_value ? (isHu ? `${Number(item.current_value).toLocaleString('hu-HU')} Ft` : `€${item.current_value}`) : 'N/A'}
                     </span>
                   </div>
                 )}

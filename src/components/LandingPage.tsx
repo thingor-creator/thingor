@@ -140,7 +140,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                   <p className="text-[11px] text-slate-400">{language === 'hu' ? 'Helyszín' : 'Location'}: Otthon → Garázs → Műhely</p>
                   <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
-                    <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-emerald-400 font-semibold">€180</strong></span>
+                    <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-emerald-400 font-semibold">{language === 'hu' ? '65.000 Ft' : '€180'}</strong></span>
                     <span className="text-emerald-400 flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> {language === 'hu' ? 'Garancia 2028-ig' : 'Warranty 2028'}</span>
                   </div>
                 </div>
@@ -152,7 +152,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                   <p className="text-[11px] text-slate-400">{language === 'hu' ? 'Helyszín' : 'Location'}: Otthon → Dolgozó → Íróasztal</p>
                   <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
-                    <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-emerald-400 font-semibold">€3,200</strong></span>
+                    <span>{language === 'hu' ? 'Érték' : 'Value'}: <strong className="text-emerald-400 font-semibold">{language === 'hu' ? '1.150.000 Ft' : '€3,200'}</strong></span>
                     <span className="text-emerald-400 flex items-center gap-1"><FileText className="h-3 w-3" /> {language === 'hu' ? '2 dokumentum' : '2 Docs'}</span>
                   </div>
                 </div>
@@ -251,11 +251,11 @@ export const LandingPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800">
                 <p className="text-[11px] text-slate-400">{language === 'hu' ? 'Vételár' : 'Purchase Price'}</p>
-                <p className="text-sm font-semibold text-emerald-400">€720.00</p>
+                <p className="text-sm font-semibold text-emerald-400">{language === 'hu' ? '260.000 Ft' : '€720.00'}</p>
               </div>
               <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800">
                 <p className="text-[11px] text-slate-400">{language === 'hu' ? 'Jelenlegi érték' : 'Current Value'}</p>
-                <p className="text-sm font-semibold text-white">€580.00</p>
+                <p className="text-sm font-semibold text-white">{language === 'hu' ? '210.000 Ft' : '€580.00'}</p>
               </div>
             </div>
 
