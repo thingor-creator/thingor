@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, CheckCircle, Package, LogOut, MapPin, FolderCheck } from 'lucide-react';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck } from 'lucide-react';
 import type { HouseholdRole } from '../types';
 
 export const HouseholdView: React.FC = () => {
