@@ -202,3 +202,18 @@ BEGIN
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.get_shared_item(TEXT) TO anon, authenticated;
+
+-- Allow guest users to read items associated with active valid share links
+DROP POLICY IF EXISTS "Anyone can view shared items" ON public.items;
+CREATE POLICY "Anyone can view shared items"
+  ON public.items FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.item_shares
+      WHERE item_shares.item_id = items.id
+        AND item_shares.revoked_at IS NULL
+        AND (item_shares.expires_at IS NULL OR item_shares.expires_at > NOW())
+    )
+  );

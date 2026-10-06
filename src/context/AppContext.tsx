@@ -1649,43 +1649,64 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return { success: true, data: data as SharedItemViewData };
         }
       } catch (e) {
-        console.warn('RPC get_shared_item fallback:', e);
+        // Fallback silently if RPC function is missing on Supabase
       }
 
       // Manual fallback query
-      const { data: shareData } = await supabase
-        .from('item_shares')
-        .select('*, items(*)')
-        .eq('token', token)
-        .is('revoked_at', null)
-        .maybeSingle();
+      try {
+        const { data: shareData } = await supabase
+          .from('item_shares')
+          .select('*, items(*)')
+          .eq('token', token)
+          .is('revoked_at', null)
+          .maybeSingle();
 
-      if (shareData && shareData.items) {
-        const item = shareData.items;
-        const perms: SharePermissions = shareData.permissions || {};
-        if (shareData.expires_at && new Date(shareData.expires_at).getTime() < Date.now()) {
-          return { success: false, error: 'Ez a megosztási link lejárt.' };
+        if (shareData) {
+          if (shareData.expires_at && new Date(shareData.expires_at).getTime() < Date.now()) {
+            return { success: false, error: 'Ez a megosztási link lejárt.' };
+          }
+
+          let item = shareData.items;
+
+          // If items join returned null due to RLS, fetch item directly or check local items
+          if (!item && shareData.item_id) {
+            const { data: directItem } = await supabase
+              .from('items')
+              .select('*')
+              .eq('id', shareData.item_id)
+              .maybeSingle();
+            item = directItem;
+          }
+
+          if (!item && shareData.item_id) {
+            item = items.find(i => i.id === shareData.item_id) || null;
+          }
+
+          if (item) {
+            const perms: SharePermissions = shareData.permissions || {};
+            const sharedPayload: SharedItemViewData = {
+              share_id: shareData.id,
+              purpose: shareData.purpose,
+              expires_at: shareData.expires_at,
+              permissions: perms,
+              created_at: shareData.created_at,
+              item_id: item.id,
+              name: item.name,
+              description: item.description,
+              condition: item.condition,
+              photo_url: item.photo_url,
+              additional_photos: perms.include_additional_images ? item.additional_photos : undefined,
+              purchase_date: perms.include_purchase_date ? item.purchase_date : undefined,
+              warranty_start: perms.include_warranty ? item.warranty_start : undefined,
+              warranty_end: perms.include_warranty ? item.warranty_end : undefined,
+              current_value: perms.include_value ? item.current_value : undefined,
+              purchase_price: perms.include_purchase_price ? item.purchase_price : undefined,
+            };
+            return { success: true, data: sharedPayload };
+          }
         }
-
-        const sharedPayload: SharedItemViewData = {
-          share_id: shareData.id,
-          purpose: shareData.purpose,
-          expires_at: shareData.expires_at,
-          permissions: perms,
-          created_at: shareData.created_at,
-          item_id: item.id,
-          name: item.name,
-          description: item.description,
-          condition: item.condition,
-          photo_url: item.photo_url,
-          additional_photos: perms.include_additional_images ? item.additional_photos : undefined,
-          purchase_date: perms.include_purchase_date ? item.purchase_date : undefined,
-          warranty_start: perms.include_warranty ? item.warranty_start : undefined,
-          warranty_end: perms.include_warranty ? item.warranty_end : undefined,
-          current_value: perms.include_value ? item.current_value : undefined,
-          purchase_price: perms.include_purchase_price ? item.purchase_price : undefined,
-        };
-        return { success: true, data: sharedPayload };
+      } catch (err) {
+        console.warn('Fallback query error:', err);
       }
     }
 
