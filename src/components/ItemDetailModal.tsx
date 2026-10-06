@@ -139,7 +139,7 @@ export const ItemDetailModal: React.FC = () => {
               ) : (
                 <div className="h-full w-full flex flex-col items-center justify-center text-slate-600">
                   <ImageIcon className="h-8 w-8 mb-1" />
-                  <span className="text-xs">No photo</span>
+                  <span className="text-xs">{isHu ? 'Nincs kép' : 'No photo'}</span>
                 </div>
               )}
             </div>
@@ -154,7 +154,7 @@ export const ItemDetailModal: React.FC = () => {
                   </span>
 
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
-                    {item.condition} condition
+                    {isHu ? `${item.condition} állapot` : `${item.condition} condition`}
                   </span>
                 </div>
 
@@ -173,7 +173,7 @@ export const ItemDetailModal: React.FC = () => {
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow transition-all"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
-                  Edit
+                  {isHu ? 'Szerkesztés' : 'Edit'}
                 </button>
 
                 <button
@@ -181,7 +181,7 @@ export const ItemDetailModal: React.FC = () => {
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition-all"
                 >
                   <Share2 className="h-3.5 w-3.5" />
-                  Megosztás
+                  {isHu ? 'Megosztás' : 'Share'}
                 </button>
 
                 {isDeleting ? (
@@ -190,13 +190,13 @@ export const ItemDetailModal: React.FC = () => {
                       onClick={handleDelete}
                       className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
                     >
-                      Confirm Delete
+                      {isHu ? 'Törlés megerősítése' : 'Confirm Delete'}
                     </button>
                     <button
                       onClick={() => setIsDeleting(false)}
                       className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs"
                     >
-                      Cancel
+                      {isHu ? 'Mégse' : 'Cancel'}
                     </button>
                   </div>
                 ) : (
@@ -205,7 +205,7 @@ export const ItemDetailModal: React.FC = () => {
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-rose-950 hover:text-rose-300 hover:border-rose-800/60 text-slate-400 text-xs transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Delete
+                    {isHu ? 'Törlés' : 'Delete'}
                   </button>
                 )}
               </div>
@@ -222,7 +222,7 @@ export const ItemDetailModal: React.FC = () => {
                   : 'border-transparent text-slate-400 hover:text-white'
                 }`}
             >
-              Overview
+              {isHu ? 'Áttekintés' : 'Overview'}
             </button>
             <button
               onClick={() => setActiveTab('documents')}
@@ -240,7 +240,7 @@ export const ItemDetailModal: React.FC = () => {
                   : 'border-transparent text-slate-400 hover:text-white'
                 }`}
             >
-              Photos ({(item.additional_photos?.length || 0) + (item.photo_url ? 1 : 0)})
+              {isHu ? 'Fényképek' : 'Photos'} ({(item.additional_photos?.length || 0) + (item.photo_url ? 1 : 0)})
             </button>
             <button
               onClick={() => setActiveTab('notes')}
@@ -249,7 +249,7 @@ export const ItemDetailModal: React.FC = () => {
                   : 'border-transparent text-slate-400 hover:text-white'
                 }`}
             >
-              Notes
+              {isHu ? 'Megjegyzések' : 'Notes'}
             </button>
           </div>
         </div>
@@ -264,7 +264,9 @@ export const ItemDetailModal: React.FC = () => {
               {/* Description */}
               {item.description && (
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</h3>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    {isHu ? 'Leírás' : 'Description'}
+                  </h3>
                   <p className="text-sm text-slate-300 leading-relaxed">{item.description}</p>
                 </div>
               )}
@@ -273,16 +275,16 @@ export const ItemDetailModal: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
                   <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-emerald-400" /> Purchase Date
+                    <Calendar className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
                   </span>
                   <span className="text-sm font-bold text-white mt-1 block">
-                    {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : 'N/A'}
+                    {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
                   <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> Purchase Price
+                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
                   </span>
                   <span className="text-sm font-bold text-white mt-1 block">
                     {item.purchase_price ? `€${item.purchase_price}` : 'N/A'}
@@ -291,7 +293,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
                   <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> Current Value
+                    <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
                   </span>
                   <span className="text-sm font-bold text-emerald-400 mt-1 block">
                     {item.current_value ? `€${item.current_value}` : 'N/A'}
@@ -300,16 +302,16 @@ export const ItemDetailModal: React.FC = () => {
 
                 <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
                   <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Store className="h-3.5 w-3.5 text-emerald-400" /> Store / Seller
+                    <Store className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
                   </span>
                   <span className="text-sm font-semibold text-white mt-1 block truncate">
-                    {item.store_seller || 'Unspecified'}
+                    {item.store_seller || (isHu ? 'Nincs megadva' : 'Unspecified')}
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
                   <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-emerald-400" /> Location
+                    <MapPin className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Helyszín' : 'Location'}
                   </span>
                   <span className="text-xs font-semibold text-white mt-1 block truncate">
                     {locationPath}
@@ -318,7 +320,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60">
                   <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                    <Tag className="h-3.5 w-3.5 text-emerald-400" /> Condition
+                    <Tag className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Állapot' : 'Condition'}
                   </span>
                   <span className="text-sm font-bold text-white mt-1 block">
                     {item.condition}
@@ -331,41 +333,44 @@ export const ItemDetailModal: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                    Warranty Info
+                    {isHu ? 'Garancia információk' : 'Warranty Info'}
                   </h3>
 
                   {warrantyStatus === 'active' && (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/60">
-                      Warranty Active
+                      {isHu ? 'Garancia aktív' : 'Warranty Active'}
                     </span>
                   )}
                   {warrantyStatus === 'expiring' && (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800/60 flex items-center gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5" /> Expiring Soon ({daysRemaining} days left)
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      {isHu ? `Hamarosan lejár (${daysRemaining} nap)` : `Expiring Soon (${daysRemaining} days left)`}
                     </span>
                   )}
                   {warrantyStatus === 'expired' && (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-950 text-rose-300 border border-rose-800/60">
-                      Warranty Expired
+                      {isHu ? 'Garancia lejárt' : 'Warranty Expired'}
                     </span>
                   )}
                   {warrantyStatus === 'none' && (
-                    <span className="text-xs text-slate-500">No warranty dates set</span>
+                    <span className="text-xs text-slate-500">
+                      {isHu ? 'Nincs megadva garanciális dátum' : 'No warranty dates set'}
+                    </span>
                   )}
                 </div>
 
                 {item.warranty_end && (
                   <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-800/80 text-xs">
                     <div>
-                      <span className="text-slate-400 block">Warranty Start</span>
+                      <span className="text-slate-400 block">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</span>
                       <span className="font-semibold text-white">
-                        {item.warranty_start ? new Date(item.warranty_start).toLocaleDateString() : 'N/A'}
+                        {item.warranty_start ? new Date(item.warranty_start).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block">Expires</span>
+                      <span className="text-slate-400 block">{isHu ? 'Lejárat' : 'Expires'}</span>
                       <span className="font-semibold text-white">
-                        {new Date(item.warranty_end).toLocaleDateString()}
+                        {new Date(item.warranty_end).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')}
                       </span>
                     </div>
                   </div>
@@ -555,14 +560,16 @@ export const ItemDetailModal: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-emerald-400" />
-                Photo Gallery
+                {isHu ? 'Fénykép galéria' : 'Photo Gallery'}
               </h3>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {item.photo_url && (
                   <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative group">
                     <img src={item.photo_url} alt="Primary" className="w-full h-full object-cover" />
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-bold text-emerald-400">Primary Photo</span>
+                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-bold text-emerald-400">
+                      {isHu ? 'Fő kép' : 'Primary Photo'}
+                    </span>
                   </div>
                 )}
 
@@ -580,11 +587,13 @@ export const ItemDetailModal: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <FileCode className="h-4 w-4 text-emerald-400" />
-                Item Notes & Maintenance Log
+                {isHu ? 'Megjegyzések és karbantartási napló' : 'Item Notes & Maintenance Log'}
               </h3>
 
               <div className="p-4 rounded-xl border border-slate-800 bg-slate-950 text-sm text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
-                {item.notes || 'No custom notes added to this item yet. Click "Edit Thing" to add serial numbers, maintenance notes, or accessories.'}
+                {item.notes || (isHu
+                  ? 'Még nincsenek egyedi megjegyzések ehhez a tárgyhoz. Kattints a "Szerkesztés" gombra gyári számok, megjegyzések vagy tartozékok rögzítéséhez.'
+                  : 'No custom notes added to this item yet. Click "Edit Thing" to add serial numbers, maintenance notes, or accessories.')}
               </div>
             </div>
           )}
