@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, CheckCircle, Package, LogOut } from 'lucide-react';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, CheckCircle, Package, LogOut, MapPin, FolderCheck } from 'lucide-react';
 import type { HouseholdRole } from '../types';
 
 export const HouseholdView: React.FC = () => {
@@ -13,6 +13,8 @@ export const HouseholdView: React.FC = () => {
     removeHouseholdMember,
     updateMemberRole,
     leaveHousehold,
+    updateHouseholdSharedLocations,
+    locations,
     items,
     user,
     setSelectedItemId,
@@ -310,6 +312,59 @@ export const HouseholdView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Shared Folders / Locations Management */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <FolderCheck className="w-5 h-5 text-emerald-600" />
+            {language === 'hu' ? 'Megosztott Mappák & Helyszínek' : 'Shared Folders & Locations'}
+          </h2>
+        </div>
+        <p className="text-xs text-slate-500">
+          {language === 'hu'
+            ? 'Válaszd ki, mely tárolási helyszíneket és mappákat osztod meg a családtagokkal.'
+            : 'Select which storage locations and folders are shared with household members.'}
+        </p>
+
+        {locations.length === 0 ? (
+          <p className="text-sm text-slate-400 italic">{language === 'hu' ? 'Még nincs rögzített helyszín.' : 'No locations created yet.'}</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {locations.map(loc => {
+              const sharedLocs = household?.shared_location_ids || [];
+              const isLocShared = sharedLocs.includes(loc.id);
+
+              const toggleLoc = () => {
+                let updated = isLocShared
+                  ? sharedLocs.filter(id => id !== loc.id)
+                  : [...sharedLocs, loc.id];
+                updateHouseholdSharedLocations(updated);
+              };
+
+              return (
+                <label
+                  key={loc.id}
+                  className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                    isLocShared ? 'bg-emerald-50/60 border-emerald-300 text-emerald-900 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-sm truncate">{loc.name}</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isLocShared}
+                    onChange={toggleLoc}
+                    className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                  />
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Shared Household Items Overview */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">

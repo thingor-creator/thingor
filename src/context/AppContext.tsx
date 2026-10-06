@@ -145,6 +145,7 @@ interface AppContextType {
   removeHouseholdMember: (memberId: string) => Promise<void>;
   updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
   leaveHousehold: () => Promise<void>;
+  updateHouseholdSharedLocations: (locationIds: string[]) => Promise<void>;
 
   // Item Relationships
   itemRelations: ItemRelation[];
@@ -832,13 +833,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       });
 
-    // Load household data
+    // Load household data & members (syncing across devices by user_id or email)
     supabase
       .from('household_members')
       .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(async ({ data: memberData }) => {
+      .or(`user_id.eq.${user.id},user_email.eq.${user.email},email.eq.${user.email}`)
+      .then(async ({ data: memberList }) => {
+        const memberData = memberList?.[0];
         if (memberData && isMounted) {
           const { data: hhData } = await supabase.from('households').select('*').eq('id', memberData.household_id).maybeSingle();
           if (hhData && isMounted) setHousehold(hhData as Household);
@@ -848,6 +849,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
           const { data: allInvites } = await supabase.from('household_invites').select('*').eq('household_id', memberData.household_id);
           if (allInvites && isMounted) setHouseholdInvites(allInvites as HouseholdInvite[]);
+
+          // Fetch shared household items for all members
+          const { data: sharedItems } = await supabase
+            .from('items')
+            .select('*')
+            .eq('ownership_scope', 'household')
+            .order('created_at', { ascending: false });
+
+          if (sharedItems && isMounted) {
+            setItems(prev => {
+              const existingIds = new Set(prev.map(i => i.id));
+              const newShared = (sharedItems as Item[]).filter(i => !existingIds.has(i.id));
+              return [...prev, ...newShared];
+            });
+          }
         }
       });
 
@@ -1181,6 +1197,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         user_id: user.id,
         category_id: safeCategoryId,
         location_id: safeLocationId,
+        household_id: itemData.ownership_scope === 'household' ? household?.id : null,
       };
 
       const { data, error } = await supabase
@@ -1613,6 +1630,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHousehold(null);
     if (isSupabaseConfigured && supabase && isUUID(household.id)) {
       await supabase.from('household_members').delete().eq('user_id', user.id).eq('household_id', household.id);
+    }
+  };
+
+  const updateHouseholdSharedLocations = async (locationIds: string[]): Promise<void> => {
+    if (!household) return;
+    setHousehold(prev => prev ? { ...prev, shared_location_ids: locationIds } : null);
+    if (isSupabaseConfigured && supabase && isUUID(household.id)) {
+      await supabase.from('households').update({ shared_location_ids: locationIds }).eq('id', household.id);
     }
   };
 
@@ -2404,6 +2429,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         removeHouseholdMember,
         updateMemberRole,
         leaveHousehold,
+        updateHouseholdSharedLocations,
 
         itemRelations,
         addItemRelation,

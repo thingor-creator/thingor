@@ -92,6 +92,7 @@ export interface Household {
   name: string;
   owner_id?: string;
   created_by?: string;
+  shared_location_ids?: string[];
   created_at: string;
 }
 

@@ -231,7 +231,7 @@ export const Navbar: React.FC = () => {
                   </button>
 
                   {openDropdown === 'share' && (
-                    <div className="absolute left-0 mt-2 w-48 rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="absolute left-0 mt-2 w-60 rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
                       <button
                         onClick={() => handleNav('household')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
@@ -239,7 +239,23 @@ export const Navbar: React.FC = () => {
                         }`}
                       >
                         <Users className="h-4 w-4 text-emerald-400" />
-                        <span>{t('household')}</span>
+                        <span>{isHu ? 'Családi megosztás' : 'Household Sharing'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleNav('items')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-slate-300 hover:bg-slate-800/60`}
+                      >
+                        <Tag className="h-4 w-4 text-blue-400" />
+                        <span>{isHu ? 'Hirdetés / Eladás megosztás' : 'Listing / Sale Share'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleNav('items')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-slate-300 hover:bg-slate-800/60`}
+                      >
+                        <Share2 className="h-4 w-4 text-amber-400" />
+                        <span>{isHu ? 'Egyedi / Vendég megosztás' : 'One-time Guest Share'}</span>
                       </button>
                     </div>
                   )}
@@ -278,17 +294,6 @@ export const Navbar: React.FC = () => {
 
           {/* Right Action controls */}
           <div className="flex items-center gap-3 shrink-0">
-            
-            {/* Quick Add Button (Desktop) */}
-            {isAuthenticated && (
-              <button
-                onClick={handleOpenAddModal}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-950/30 transition-all shrink-0"
-              >
-                <Plus className="h-4 w-4 stroke-[2.5]" />
-                <span>{t('add_thing')}</span>
-              </button>
-            )}
 
             {/* Language Selector */}
             <div className="relative shrink-0">
