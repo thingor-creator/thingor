@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import type { ItemCondition } from '../types';
+import type { ItemCondition, ItemStatus, ItemOwnershipScope } from '../types';
 import {
   X,
   Package,
@@ -8,8 +8,6 @@ import {
   Upload,
   Loader2,
   Trash2,
-  Plus,
-  Image as ImageIcon,
   Star
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
