@@ -75,14 +75,14 @@ export const ItemDetailModal: React.FC = () => {
     }
   };
 
-  const cancelInlineEdit = (e?: React.MouseEvent) => {
+  const cancelInlineEdit = (e?: React.SyntheticEvent) => {
     if (e) e.stopPropagation();
     setEditingField(null);
     setInlineValue('');
     setInlineSecondValue('');
   };
 
-  const saveInlineField = async (e?: React.MouseEvent | React.FormEvent, fieldName?: string) => {
+  const saveInlineField = async (e?: React.SyntheticEvent, fieldName?: string) => {
     if (e) e.stopPropagation();
     const fieldToSave = fieldName || editingField;
     if (!fieldToSave || !item) return;
