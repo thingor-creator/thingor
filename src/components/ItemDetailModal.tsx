@@ -191,12 +191,12 @@ export const ItemDetailModal: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-6 p-6">
 
             {/* Main Photo */}
-            <div className="h-40 w-full md:w-48 rounded-xl bg-slate-900 overflow-hidden flex-shrink-0 border border-slate-800 relative">
+            <div className="h-40 w-full md:w-48 rounded-xl bg-slate-950 overflow-hidden flex-shrink-0 border border-slate-800 relative flex items-center justify-center p-2">
               {item.photo_url ? (
                 <img
                   src={item.photo_url}
                   alt={item.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain object-center block"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';
                   }}
@@ -1292,8 +1292,8 @@ export const ItemDetailModal: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {item.photo_url && (
-                    <div className="rounded-xl overflow-hidden border border-emerald-500/60 bg-slate-950 aspect-video relative group shadow-md">
-                      <img src={item.photo_url} alt="Primary" className="w-full h-full object-cover max-w-full max-h-full block group-hover:scale-105 transition-transform duration-300" />
+                    <div className="rounded-xl overflow-hidden border border-emerald-500/60 bg-slate-950 aspect-video relative group shadow-md p-2 flex items-center justify-center">
+                      <img src={item.photo_url} alt="Primary" className="w-full h-full object-contain object-center block group-hover:scale-105 transition-transform duration-300" />
                       <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-emerald-950/90 text-[10px] font-bold text-emerald-400 border border-emerald-800/60">
                         {isHu ? 'Fő kép' : 'Primary Photo'}
                       </span>
@@ -1301,8 +1301,8 @@ export const ItemDetailModal: React.FC = () => {
                   )}
 
                   {item.additional_photos?.map((url, idx) => (
-                    <div key={idx} className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative group shadow-md">
-                      <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover max-w-full max-h-full block group-hover:scale-105 transition-transform duration-300" />
+                    <div key={idx} className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative group shadow-md p-2 flex items-center justify-center">
+                      <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-contain object-center block group-hover:scale-105 transition-transform duration-300" />
                       <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-bold text-slate-300">
                         {idx + 2}. {isHu ? 'kép' : 'photo'}
                       </span>

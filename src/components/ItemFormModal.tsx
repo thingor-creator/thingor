@@ -421,8 +421,8 @@ export const ItemFormModal: React.FC = () => {
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                     {/* Primary Photo Thumbnail */}
                     {photoUrl && (
-                      <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-emerald-500 bg-slate-900 group">
-                        <img src={photoUrl} alt="Primary" className="w-full h-full object-cover max-w-full max-h-full block" />
+                      <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-emerald-500 bg-slate-950 group p-1 flex items-center justify-center">
+                        <img src={photoUrl} alt="Primary" className="w-full h-full object-contain block" />
                         <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-950/90 text-[9px] font-extrabold text-emerald-400 border border-emerald-800/60">
                           {isHu ? 'Fő Kép' : 'Primary'}
                         </span>
@@ -439,8 +439,8 @@ export const ItemFormModal: React.FC = () => {
 
                     {/* Additional Photos Thumbnails */}
                     {additionalPhotos.map((url, idx) => (
-                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-900 group">
-                        <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover max-w-full max-h-full block" />
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-950 group p-1 flex items-center justify-center">
+                        <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-contain block" />
                         <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             type="button"

@@ -56,12 +56,12 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
       className="group relative flex flex-col rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden hover:border-slate-700 hover:shadow-xl hover:shadow-emerald-950/20 transition-all duration-200 cursor-pointer isolate"
     >
       {/* Thumbnail Image Header */}
-      <div className="relative h-44 w-full shrink-0 bg-slate-950 overflow-hidden flex items-center justify-center rounded-t-2xl">
+      <div className="relative h-44 w-full shrink-0 bg-slate-950/90 overflow-hidden flex items-center justify-center rounded-t-2xl p-2">
         {item.photo_url ? (
           <img
             src={item.photo_url}
             alt={item.name}
-            className="h-full w-full object-cover object-center block group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none rounded-t-2xl"
+            className="h-full w-full object-contain object-center block group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';
             }}
