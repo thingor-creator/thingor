@@ -3,8 +3,6 @@ import { useApp } from '../context/AppContext';
 import {
   Boxes,
   Euro,
-  MapPin,
-  ShieldAlert,
   Plus,
   ArrowRight,
   ShieldCheck,
@@ -13,21 +11,15 @@ import {
   AlertTriangle,
   Wrench,
   CreditCard,
-  Users,
-  Calendar,
-  Clock
 } from 'lucide-react';
 import { ItemCard } from './ItemCard';
 
 export const DashboardView: React.FC = () => {
   const {
     items,
-    locations,
     categories,
     repairs,
     financings,
-    household,
-    householdMembers,
     setCurrentView,
     setIsAddEditItemModalOpen,
     setEditingItem,
@@ -45,31 +37,14 @@ export const DashboardView: React.FC = () => {
     return sum + (item.current_value ?? item.purchase_price ?? 0);
   }, 0);
 
-  const totalLocations = locations.length;
-
   // New module metrics
   const totalMonthlyInstallment = financings.reduce((sum, f) => f.remaining_installments > 0 ? sum + f.monthly_installment : sum, 0);
   const pendingRepairsCount = repairs.filter(r => r.status === 'pending' || r.status === 'in_progress').length;
 
-  const upcomingFinancingPayments = financings
-    .filter(f => f.remaining_installments > 0 && f.next_payment_date)
-    .sort((a, b) => new Date(a.next_payment_date!).getTime() - new Date(b.next_payment_date!).getTime())
-    .slice(0, 3);
-
-  const pendingRepairsList = repairs
-    .filter(r => r.status === 'pending' || r.status === 'in_progress')
-    .slice(0, 3);
-
-  // Calculate expiring/active warranties
+  // Calculate active warranties
   const now = new Date();
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(now.getDate() + 30);
-
-  const expiringWarranties = items.filter(item => {
-    if (!item.warranty_end) return false;
-    const expDate = new Date(item.warranty_end);
-    return expDate >= now && expDate <= thirtyDaysFromNow;
-  });
 
   const activeWarranties = items.filter(item => {
     if (!item.warranty_end) return false;
