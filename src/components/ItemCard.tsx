@@ -56,12 +56,12 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
       className="group relative flex flex-col rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden hover:border-slate-700 hover:shadow-xl hover:shadow-emerald-950/20 transition-all duration-200 cursor-pointer"
     >
       {/* Thumbnail Image Header */}
-      <div className="relative h-44 w-full bg-slate-950 overflow-hidden">
+      <div className="relative h-44 w-full bg-slate-950 overflow-hidden flex items-center justify-center">
         {item.photo_url ? (
           <img
             src={item.photo_url}
             alt={item.name}
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="h-full w-full object-cover max-w-full max-h-full block group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';
             }}
@@ -90,11 +90,18 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
           <Edit3 className="h-3.5 w-3.5" />
         </button>
 
-        {/* Condition Tag Overlay */}
-        <div className="absolute bottom-3 left-3">
-          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border ${getConditionColor(item.condition)}`}>
+        {/* Condition Tag & Photo Count Overlay */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border pointer-events-auto ${getConditionColor(item.condition)}`}>
             {getConditionLabel(item.condition)}
           </span>
+
+          {(item.additional_photos && item.additional_photos.length > 0) && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-950/90 text-emerald-400 border border-slate-800 backdrop-blur pointer-events-auto">
+              <ImageIcon className="h-3 w-3" />
+              {1 + item.additional_photos.length}
+            </span>
+          )}
         </div>
       </div>
 

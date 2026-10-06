@@ -888,27 +888,45 @@ export const ItemDetailModal: React.FC = () => {
           {/* TAB 3: PHOTOS (Section 11) */}
           {activeTab === 'photos' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-emerald-400" />
-                {isHu ? 'Fénykép galéria' : 'Photo Gallery'}
-              </h3>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {item.photo_url && (
-                  <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative group">
-                    <img src={item.photo_url} alt="Primary" className="w-full h-full object-cover" />
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-bold text-emerald-400">
-                      {isHu ? 'Fő kép' : 'Primary Photo'}
-                    </span>
-                  </div>
-                )}
-
-                {item.additional_photos?.map((url, idx) => (
-                  <div key={idx} className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative">
-                    <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover" />
-                  </div>
-                ))}
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-emerald-400" />
+                  {isHu ? 'Fénykép galéria' : 'Photo Gallery'}
+                </h3>
+                <button
+                  onClick={handleEdit}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {isHu ? 'Fényképek kezelése / feltöltése' : 'Manage / Upload Photos'}
+                </button>
               </div>
+
+              {(!item.photo_url && (!item.additional_photos || item.additional_photos.length === 0)) ? (
+                <div className="p-8 text-center rounded-xl border border-slate-800 bg-slate-950/40 text-slate-400 text-xs">
+                  {isHu ? 'Még nincsenek feltöltött képek. Kattints a "Fényképek kezelése" gombra új képek feltöltéséhez.' : 'No photos uploaded yet. Click "Manage Photos" to upload images.'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {item.photo_url && (
+                    <div className="rounded-xl overflow-hidden border border-emerald-500/60 bg-slate-950 aspect-video relative group shadow-md">
+                      <img src={item.photo_url} alt="Primary" className="w-full h-full object-cover max-w-full max-h-full block group-hover:scale-105 transition-transform duration-300" />
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-emerald-950/90 text-[10px] font-bold text-emerald-400 border border-emerald-800/60">
+                        {isHu ? 'Fő kép' : 'Primary Photo'}
+                      </span>
+                    </div>
+                  )}
+
+                  {item.additional_photos?.map((url, idx) => (
+                    <div key={idx} className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative group shadow-md">
+                      <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover max-w-full max-h-full block group-hover:scale-105 transition-transform duration-300" />
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-bold text-slate-300">
+                        {idx + 2}. {isHu ? 'kép' : 'photo'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

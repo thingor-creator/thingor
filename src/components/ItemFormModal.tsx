@@ -6,7 +6,11 @@ import {
   Package,
   Link as LinkIcon,
   Upload,
-  Loader2
+  Loader2,
+  Trash2,
+  Plus,
+  Image as ImageIcon,
+  Star
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
 
@@ -37,6 +41,7 @@ export const ItemFormModal: React.FC = () => {
   const [categoryId, setCategoryId] = useState('');
   const [locationId, setLocationId] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
   const [purchaseDate, setPurchaseDate] = useState('');
   const [purchasePrice, setPurchasePrice] = useState<string>('');
   const [currentValue, setCurrentValue] = useState<string>('');
@@ -59,6 +64,7 @@ export const ItemFormModal: React.FC = () => {
       setCategoryId(editingItem.category_id || (categories[0]?.id || ''));
       setLocationId(editingItem.location_id || (locations[0]?.id || ''));
       setPhotoUrl(editingItem.photo_url || '');
+      setAdditionalPhotos(editingItem.additional_photos || []);
       setPurchaseDate(editingItem.purchase_date || '');
       setPurchasePrice(editingItem.purchase_price ? String(editingItem.purchase_price) : '');
       setCurrentValue(editingItem.current_value ? String(editingItem.current_value) : '');
@@ -76,6 +82,7 @@ export const ItemFormModal: React.FC = () => {
       setCategoryId(categories[0]?.id || '');
       setLocationId(locations[0]?.id || '');
       setPhotoUrl('');
+      setAdditionalPhotos([]);
       setPurchaseDate('');
       setPurchasePrice('');
       setCurrentValue('');
@@ -113,6 +120,7 @@ export const ItemFormModal: React.FC = () => {
       category_id: categoryId || categories[0]?.id || 'cat-11',
       location_id: locationId || locations[0]?.id || 'loc-1',
       photo_url: photoUrl.trim() || undefined,
+      additional_photos: additionalPhotos.length > 0 ? additionalPhotos : undefined,
       purchase_date: purchaseDate || undefined,
       purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
       current_value: currentValue ? parseFloat(currentValue) : (purchasePrice ? parseFloat(purchasePrice) : undefined),
@@ -305,63 +313,89 @@ export const ItemFormModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Photo URL & Storage File Upload */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                {isHu ? 'Kép (URL vagy Fájl feltöltés)' : 'Photo (URL or File Upload)'}
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-
-                <label className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 cursor-pointer transition-colors ${
-                  isUploadingPhoto ? 'opacity-50 pointer-events-none' : ''
-                }`}>
-                  {isUploadingPhoto ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-                  ) : (
-                    <Upload className="h-4 w-4 text-emerald-400" />
-                  )}
-                  <span>
-                    {isUploadingPhoto
-                      ? (isHu ? 'Feltöltés...' : 'Uploading...')
-                      : (isHu ? 'Fájl Feltöltése' : 'Upload File')}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file || !user?.id) return;
-                      setIsUploadingPhoto(true);
-                      setPhotoUploadError(null);
-                      const res = await uploadFileToStorage(file, 'photos', user.id);
-                      setIsUploadingPhoto(false);
-                      if (res.error) {
-                        setPhotoUploadError(res.error);
-                      } else if (res.signedUrl || res.path) {
-                        setPhotoUrl(res.signedUrl || res.path || '');
-                      }
-                    }}
-                  />
+            {/* Multi-Photo Management Section */}
+            <div className="space-y-3 p-4 rounded-xl border border-slate-800 bg-slate-950/60">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold uppercase tracking-wider text-emerald-400">
+                  {isHu ? 'Fényképek (Fő kép és Galéria)' : 'Photos (Primary & Gallery)'}
                 </label>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {isHu ? `${(photoUrl ? 1 : 0) + additionalPhotos.length} fénykép hozzáadva` : `${(photoUrl ? 1 : 0) + additionalPhotos.length} photos added`}
+                </span>
+              </div>
+
+              {/* Fő Kép / Primary Photo Input & Upload */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  {isHu ? 'Elsődleges / Fő Fénykép URL vagy Fájl:' : 'Primary Photo URL or File:'}
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/..."
+                      value={photoUrl}
+                      onChange={(e) => setPhotoUrl(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-xs focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <label className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 cursor-pointer transition-colors ${
+                    isUploadingPhoto ? 'opacity-50 pointer-events-none' : ''
+                  }`}>
+                    {isUploadingPhoto ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                    ) : (
+                      <Upload className="h-4 w-4 text-emerald-400" />
+                    )}
+                    <span>
+                      {isUploadingPhoto
+                        ? (isHu ? 'Feltöltés...' : 'Uploading...')
+                        : (isHu ? '+ Több Fájl Feltöltése' : '+ Upload Files')}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length === 0 || !user?.id) return;
+                        setIsUploadingPhoto(true);
+                        setPhotoUploadError(null);
+
+                        const uploadedUrls: string[] = [];
+                        for (const file of files) {
+                          const res = await uploadFileToStorage(file, 'photos', user.id);
+                          if (res.signedUrl || res.path) {
+                            uploadedUrls.push(res.signedUrl || res.path || '');
+                          } else if (res.error) {
+                            setPhotoUploadError(res.error);
+                          }
+                        }
+                        setIsUploadingPhoto(false);
+
+                        if (uploadedUrls.length > 0) {
+                          if (!photoUrl) {
+                            setPhotoUrl(uploadedUrls[0]);
+                            setAdditionalPhotos(prev => [...prev, ...uploadedUrls.slice(1)]);
+                          } else {
+                            setAdditionalPhotos(prev => [...prev, ...uploadedUrls]);
+                          }
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
 
               {photoUploadError && (
-                <p className="text-[11px] text-rose-400 mt-1 font-medium">{photoUploadError}</p>
+                <p className="text-[11px] text-rose-400 font-medium">{photoUploadError}</p>
               )}
 
               {/* Sample Photo Presets */}
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap pt-1">
                 <span className="text-[10px] text-slate-500 font-semibold">
                   {isHu ? 'Gyors mintakép:' : 'Quick sample photo:'}
                 </span>
@@ -369,13 +403,76 @@ export const ItemFormModal: React.FC = () => {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setPhotoUrl(p.url)}
-                    className="text-[10px] px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-800"
+                    onClick={() => {
+                      if (!photoUrl) setPhotoUrl(p.url);
+                      else setAdditionalPhotos(prev => [...prev, p.url]);
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-800"
                   >
                     {p.label}
                   </button>
                 ))}
               </div>
+
+              {/* Thumbnails Gallery Preview */}
+              {(photoUrl || additionalPhotos.length > 0) && (
+                <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                  <span className="text-[11px] font-semibold text-slate-400 block">
+                    {isHu ? 'Feltöltött Képek Galériája:' : 'Uploaded Photos Gallery:'}
+                  </span>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                    {/* Primary Photo Thumbnail */}
+                    {photoUrl && (
+                      <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-emerald-500 bg-slate-900 group">
+                        <img src={photoUrl} alt="Primary" className="w-full h-full object-cover max-w-full max-h-full block" />
+                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-950/90 text-[9px] font-extrabold text-emerald-400 border border-emerald-800/60">
+                          {isHu ? 'Fő Kép' : 'Primary'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPhotoUrl('')}
+                          className="absolute top-1 right-1 p-1 rounded-lg bg-slate-950/80 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                          title={isHu ? 'Kép eltávolítása' : 'Remove photo'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Additional Photos Thumbnails */}
+                    {additionalPhotos.map((url, idx) => (
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-900 group">
+                        <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover max-w-full max-h-full block" />
+                        <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const oldPrimary = photoUrl;
+                              setPhotoUrl(url);
+                              setAdditionalPhotos(prev => {
+                                const filtered = prev.filter((_, i) => i !== idx);
+                                return oldPrimary ? [...filtered, oldPrimary] : filtered;
+                              });
+                            }}
+                            className="p-1 rounded-lg bg-slate-950/80 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-colors"
+                            title={isHu ? 'Beállítás fő képként' : 'Set as primary photo'}
+                          >
+                            <Star className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAdditionalPhotos(prev => prev.filter((_, i) => i !== idx))}
+                            className="p-1 rounded-lg bg-slate-950/80 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors"
+                            title={isHu ? 'Törlés' : 'Remove'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}
