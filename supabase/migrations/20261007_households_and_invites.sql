@@ -1,0 +1,174 @@
+-- THINGOR HOUSEHOLDS, MEMBERS & INVITES MIGRATION
+-- Run this script in the Supabase SQL Editor if you are using Supabase Cloud!
+
+-- 1. HOUSEHOLDS TABLE
+CREATE TABLE IF NOT EXISTS public.households (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  shared_location_ids TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.households ENABLE ROW LEVEL SECURITY;
+
+-- 2. HOUSEHOLD MEMBERS TABLE
+CREATE TABLE IF NOT EXISTS public.household_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES public.households(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_email TEXT NOT NULL,
+  user_name TEXT,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(household_id, user_email)
+);
+
+ALTER TABLE public.household_members ENABLE ROW LEVEL SECURITY;
+
+-- 3. HOUSEHOLD INVITES TABLE
+CREATE TABLE IF NOT EXISTS public.household_invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES public.households(id) ON DELETE CASCADE,
+  invited_email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+  invited_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'expired')),
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.household_invites ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR HOUSEHOLDS
+DROP POLICY IF EXISTS "Household members can view own household" ON public.households;
+CREATE POLICY "Household members can view own household"
+  ON public.households FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.household_members
+      WHERE household_members.household_id = households.id
+        AND (household_members.user_id = auth.uid() OR LOWER(household_members.user_email) = LOWER(auth.jwt()->>'email'))
+    )
+  );
+
+DROP POLICY IF EXISTS "Authenticated users can create household" ON public.households;
+CREATE POLICY "Authenticated users can create household"
+  ON public.households FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Household owners/admins can update household" ON public.households;
+CREATE POLICY "Household owners/admins can update household"
+  ON public.households FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.household_members
+      WHERE household_members.household_id = households.id
+        AND (household_members.user_id = auth.uid() OR LOWER(household_members.user_email) = LOWER(auth.jwt()->>'email'))
+        AND household_members.role IN ('owner', 'admin')
+    )
+  );
+
+-- RLS POLICIES FOR HOUSEHOLD MEMBERS
+DROP POLICY IF EXISTS "Members can view household member list" ON public.household_members;
+CREATE POLICY "Members can view household member list"
+  ON public.household_members FOR SELECT
+  USING (
+    user_id = auth.uid() OR LOWER(user_email) = LOWER(auth.jwt()->>'email') OR
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_members.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can insert household members" ON public.household_members;
+CREATE POLICY "Users can insert household members"
+  ON public.household_members FOR INSERT
+  WITH CHECK (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_members.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND hm.role IN ('owner', 'admin')
+    )
+  );
+
+DROP POLICY IF EXISTS "Admins can update household members" ON public.household_members;
+CREATE POLICY "Admins can update household members"
+  ON public.household_members FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_members.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND hm.role IN ('owner', 'admin')
+    )
+  );
+
+DROP POLICY IF EXISTS "Members or admins can delete member" ON public.household_members;
+CREATE POLICY "Members or admins can delete member"
+  ON public.household_members FOR DELETE
+  USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_members.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND hm.role IN ('owner', 'admin')
+    )
+  );
+
+-- RLS POLICIES FOR HOUSEHOLD INVITES
+DROP POLICY IF EXISTS "Users can view pending invites sent to their email or by their household" ON public.household_invites;
+CREATE POLICY "Users can view pending invites sent to their email or by their household"
+  ON public.household_invites FOR SELECT
+  USING (
+    LOWER(invited_email) = LOWER(auth.jwt()->>'email') OR
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_invites.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+    )
+  );
+
+DROP POLICY IF EXISTS "Household owners/admins can send invites" ON public.household_invites;
+CREATE POLICY "Household owners/admins can send invites"
+  ON public.household_invites FOR INSERT
+  WITH CHECK (
+    invited_by = auth.uid() AND
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_invites.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND hm.role IN ('owner', 'admin')
+    )
+  );
+
+DROP POLICY IF EXISTS "Invited users or household admins can update invites" ON public.household_invites;
+CREATE POLICY "Invited users or household admins can update invites"
+  ON public.household_invites FOR UPDATE
+  USING (
+    LOWER(invited_email) = LOWER(auth.jwt()->>'email') OR
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_invites.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND hm.role IN ('owner', 'admin')
+    )
+  );
+
+DROP POLICY IF EXISTS "Admins can delete invites" ON public.household_invites;
+CREATE POLICY "Admins can delete invites"
+  ON public.household_invites FOR DELETE
+  USING (
+    invited_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = household_invites.household_id
+        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND hm.role IN ('owner', 'admin')
+    )
+  );
