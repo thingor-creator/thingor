@@ -1636,7 +1636,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!invite) return { success: false, error: language === 'hu' ? 'Érvénytelen vagy lejárt meghívó' : 'Invalid or expired invite' };
 
     if (isSupabaseConfigured && supabase && user?.id) {
-      const { data: memberData, error: mErr } = await supabase.from('household_members').insert([{
+      const { error: mErr } = await supabase.from('household_members').insert([{
         household_id: invite.household_id,
         user_id: user.id,
         user_email: user.email,

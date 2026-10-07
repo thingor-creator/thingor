@@ -119,6 +119,8 @@ export interface HouseholdInvite {
   status?: 'pending' | 'accepted' | 'declined' | 'expired';
   expires_at?: string;
   created_at: string;
+  household_name?: string;
+  households?: { name?: string } | null;
 }
 
 export interface Item {

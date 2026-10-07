@@ -1,14 +1,18 @@
 -- THINGOR HOUSEHOLDS, MEMBERS & INVITES MIGRATION
--- Run this script in the Supabase SQL Editor if you are using Supabase Cloud!
+-- Run this script in the Supabase SQL Editor
 
 -- 1. HOUSEHOLDS TABLE
 CREATE TABLE IF NOT EXISTS public.households (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  shared_location_ids TEXT[] DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  shared_location_ids TEXT[] DEFAULT ARRAY[]::TEXT[],
+  created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE public.households ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.households ADD COLUMN IF NOT EXISTS shared_location_ids TEXT[] DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE public.households ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
 
 ALTER TABLE public.households ENABLE ROW LEVEL SECURITY;
 
@@ -20,9 +24,14 @@ CREATE TABLE IF NOT EXISTS public.household_members (
   user_email TEXT NOT NULL,
   user_name TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
-  joined_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(household_id, user_email)
+  joined_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT household_members_hh_email_key UNIQUE(household_id, user_email)
 );
+
+ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_email TEXT;
+ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_name TEXT;
+ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
+ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS joined_at TIMESTAMPTZ DEFAULT now();
 
 ALTER TABLE public.household_members ENABLE ROW LEVEL SECURITY;
 
@@ -36,8 +45,16 @@ CREATE TABLE IF NOT EXISTS public.household_invites (
   token TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'expired')),
   expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS invited_email TEXT;
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS invited_by UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS token TEXT;
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
 
 ALTER TABLE public.household_invites ENABLE ROW LEVEL SECURITY;
 
@@ -49,7 +66,7 @@ CREATE POLICY "Household members can view own household"
     EXISTS (
       SELECT 1 FROM public.household_members
       WHERE household_members.household_id = households.id
-        AND (household_members.user_id = auth.uid() OR LOWER(household_members.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (household_members.user_id = auth.uid() OR lower(household_members.user_email) = lower(auth.jwt()->>'email'))
     )
   );
 
@@ -65,7 +82,7 @@ CREATE POLICY "Household owners/admins can update household"
     EXISTS (
       SELECT 1 FROM public.household_members
       WHERE household_members.household_id = households.id
-        AND (household_members.user_id = auth.uid() OR LOWER(household_members.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (household_members.user_id = auth.uid() OR lower(household_members.user_email) = lower(auth.jwt()->>'email'))
         AND household_members.role IN ('owner', 'admin')
     )
   );
@@ -75,11 +92,11 @@ DROP POLICY IF EXISTS "Members can view household member list" ON public.househo
 CREATE POLICY "Members can view household member list"
   ON public.household_members FOR SELECT
   USING (
-    user_id = auth.uid() OR LOWER(user_email) = LOWER(auth.jwt()->>'email') OR
+    user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email') OR
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_members.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
     )
   );
 
@@ -91,7 +108,7 @@ CREATE POLICY "Users can insert household members"
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_members.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
         AND hm.role IN ('owner', 'admin')
     )
   );
@@ -103,7 +120,7 @@ CREATE POLICY "Admins can update household members"
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_members.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
         AND hm.role IN ('owner', 'admin')
     )
   );
@@ -116,7 +133,7 @@ CREATE POLICY "Members or admins can delete member"
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_members.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
         AND hm.role IN ('owner', 'admin')
     )
   );
@@ -126,11 +143,11 @@ DROP POLICY IF EXISTS "Users can view pending invites sent to their email or by 
 CREATE POLICY "Users can view pending invites sent to their email or by their household"
   ON public.household_invites FOR SELECT
   USING (
-    LOWER(invited_email) = LOWER(auth.jwt()->>'email') OR
+    lower(invited_email) = lower(auth.jwt()->>'email') OR
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_invites.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
     )
   );
 
@@ -142,7 +159,7 @@ CREATE POLICY "Household owners/admins can send invites"
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_invites.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
         AND hm.role IN ('owner', 'admin')
     )
   );
@@ -151,11 +168,11 @@ DROP POLICY IF EXISTS "Invited users or household admins can update invites" ON 
 CREATE POLICY "Invited users or household admins can update invites"
   ON public.household_invites FOR UPDATE
   USING (
-    LOWER(invited_email) = LOWER(auth.jwt()->>'email') OR
+    lower(invited_email) = lower(auth.jwt()->>'email') OR
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_invites.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
         AND hm.role IN ('owner', 'admin')
     )
   );
@@ -168,7 +185,7 @@ CREATE POLICY "Admins can delete invites"
     EXISTS (
       SELECT 1 FROM public.household_members hm
       WHERE hm.household_id = household_invites.household_id
-        AND (hm.user_id = auth.uid() OR LOWER(hm.user_email) = LOWER(auth.jwt()->>'email'))
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
         AND hm.role IN ('owner', 'admin')
     )
   );
