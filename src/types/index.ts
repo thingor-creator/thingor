@@ -107,6 +107,7 @@ export interface HouseholdMember {
   title?: string;
   role: HouseholdRole;
   joined_at: string;
+  allowed_location_ids?: string[];
 }
 
 export interface HouseholdInvite {

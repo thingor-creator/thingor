@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock } from 'lucide-react';
-import type { HouseholdRole } from '../types';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Settings, CheckSquare } from 'lucide-react';
+import type { HouseholdRole, HouseholdMember } from '../types';
 
 export const HouseholdView: React.FC = () => {
   const {
@@ -15,6 +15,8 @@ export const HouseholdView: React.FC = () => {
     declineHouseholdInvite,
     cancelHouseholdInvite,
     removeHouseholdMember,
+    updateHouseholdMember,
+    updateMemberAllowedLocations,
     leaveHousehold,
     updateHouseholdSharedLocations,
     locations,
@@ -24,12 +26,48 @@ export const HouseholdView: React.FC = () => {
     language
   } = useApp();
 
-  const PRESET_TITLES = ['Apa', 'Anya', 'Tesó', 'Gyerek', 'Feleség', 'Férj', 'Nagyszülő'];
+  const PRESET_TITLES = ['Apa', 'Anya', 'Tesó', 'Nagyszülő', 'Gyerek', 'Unoka', 'Dédszülő', 'Dédunoka', 'Egyéb'];
 
   const [newHouseholdName, setNewHouseholdName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteTitle, setInviteTitle] = useState('');
   const [inviteMessage, setInviteMessage] = useState<{ text: string; success: boolean } | null>(null);
+
+  // Member editing modal state
+  const [editingMember, setEditingMember] = useState<HouseholdMember | null>(null);
+  const [editNameInput, setEditNameInput] = useState('');
+  const [editTitleInput, setEditTitleInput] = useState('');
+
+  // Per-member sharing modal state
+  const [sharingMember, setSharingMember] = useState<HouseholdMember | null>(null);
+  const [memberAllowedLocs, setMemberAllowedLocs] = useState<string[]>([]);
+
+  const handleOpenEditMember = (m: HouseholdMember) => {
+    setEditingMember(m);
+    setEditNameInput(m.user_name || m.user_email || '');
+    setEditTitleInput(m.title || '');
+  };
+
+  const handleSaveMemberEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    await updateHouseholdMember(editingMember.id, {
+      user_name: editNameInput.trim() || editingMember.user_email,
+      title: editTitleInput.trim() || undefined
+    });
+    setEditingMember(null);
+  };
+
+  const handleOpenSharingMember = (m: HouseholdMember) => {
+    setSharingMember(m);
+    setMemberAllowedLocs(m.allowed_location_ids || household?.shared_location_ids || []);
+  };
+
+  const handleSaveMemberLocations = async () => {
+    if (!sharingMember) return;
+    await updateMemberAllowedLocations(sharingMember.id, memberAllowedLocs);
+    setSharingMember(null);
+  };
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat(language === 'hu' ? 'hu-HU' : 'en-US', {
@@ -334,17 +372,23 @@ export const HouseholdView: React.FC = () => {
 
         <div className="divide-y divide-slate-100">
           {householdMembers.map((member) => (
-            <div key={member.id} className="py-3 flex items-center justify-between gap-4">
+            <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-sm border border-slate-200">
+                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-sm border border-slate-200 shrink-0">
                   {(member.user_name || member.user_email || 'U')[0].toUpperCase()}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-slate-800 text-sm">{member.user_name || member.user_email}</p>
                     {member.title && (
                       <span className="px-2 py-0.5 text-xs rounded-md bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
                         {member.title}
+                      </span>
+                    )}
+                    {member.allowed_location_ids && member.allowed_location_ids.length > 0 && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                        <SlidersHorizontal className="w-3 h-3 text-indigo-500" />
+                        {language === 'hu' ? 'Egyedi helyszínek' : 'Custom locations'} ({member.allowed_location_ids.length})
                       </span>
                     )}
                   </div>
@@ -352,18 +396,38 @@ export const HouseholdView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {getRoleBadge(member.role)}
 
-                {isOwnerOrAdmin && member.role !== 'owner' && member.user_id !== user?.id && (
-                  <div className="flex items-center gap-2">
+                {isOwnerOrAdmin && (
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => removeHouseholdMember(member.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title={language === 'hu' ? 'Tag eltávolítása' : 'Remove Member'}
+                      onClick={() => handleOpenEditMember(member)}
+                      className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg transition flex items-center gap-1"
+                      title={language === 'hu' ? 'Családtag szerkesztése' : 'Edit Member'}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{language === 'hu' ? 'Szerkesztés' : 'Edit'}</span>
                     </button>
+
+                    <button
+                      onClick={() => handleOpenSharingMember(member)}
+                      className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition flex items-center gap-1"
+                      title={language === 'hu' ? 'Megosztási helyszínek beállítása' : 'Configure Sharing'}
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{language === 'hu' ? 'Megosztás' : 'Sharing'}</span>
+                    </button>
+
+                    {member.role !== 'owner' && member.user_id !== user?.id && (
+                      <button
+                        onClick={() => removeHouseholdMember(member.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title={language === 'hu' ? 'Tag eltávolítása' : 'Remove Member'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -564,6 +628,203 @@ export const HouseholdView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 1. MEMBER EDIT MODAL */}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-5 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {language === 'hu' ? 'Családtag Szerkesztése' : 'Edit Family Member'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingMember(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMemberEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  {language === 'hu' ? 'Megjelenítendő név' : 'Display Name'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editNameInput}
+                  onChange={(e) => setEditNameInput(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  {language === 'hu' ? 'Titulus / Megnevezés (pl. Apa, Anya, Tesó)' : 'Title / Role'}
+                </label>
+                <input
+                  type="text"
+                  value={editTitleInput}
+                  onChange={(e) => setEditTitleInput(e.target.value)}
+                  placeholder={language === 'hu' ? 'pl. Nagyszülő, Gyerek' : 'e.g. Grandparent'}
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              {/* Quick Title Selection Chips */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-slate-500">
+                  {language === 'hu' ? 'Gyors választás:' : 'Quick select:'}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRESET_TITLES.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setEditTitleInput(t)}
+                      className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition ${
+                        editTitleInput === t
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border-slate-200'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingMember(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                >
+                  {language === 'hu' ? 'Mégse' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl transition shadow-sm"
+                >
+                  {language === 'hu' ? 'Mentés' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. MEMBER LOCATION SHARING MODAL */}
+      {sharingMember && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="max-w-lg w-full bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-5 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {language === 'hu' ? 'Családtagonkénti Megosztás' : 'Member Location Sharing'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {sharingMember.user_name || sharingMember.user_email}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSharingMember(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {language === 'hu'
+                ? 'Jelöld ki azokat a helyszíneket és mappákat, amelyeket ez a családtag megtekinthet a háztartási leltárban.'
+                : 'Select specific locations and folders this family member is allowed to view.'}
+            </p>
+
+            <div className="flex items-center justify-between py-1">
+              <button
+                type="button"
+                onClick={() => setMemberAllowedLocs(locations.map(l => l.id))}
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+              >
+                {language === 'hu' ? 'Összes kijelölése' : 'Select All'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMemberAllowedLocs([])}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+              >
+                {language === 'hu' ? 'Kijelölés törlése' : 'Clear All'}
+              </button>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+              {locations.length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-2">{language === 'hu' ? 'Nincsenek létrehozott helyszínek.' : 'No locations created.'}</p>
+              ) : (
+                locations.map((loc) => {
+                  const isChecked = memberAllowedLocs.includes(loc.id);
+                  const toggle = () => {
+                    setMemberAllowedLocs(prev =>
+                      isChecked ? prev.filter(id => id !== loc.id) : [...prev, loc.id]
+                    );
+                  };
+                  return (
+                    <label
+                      key={loc.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition text-sm ${
+                        isChecked
+                          ? 'bg-indigo-50/60 border-indigo-300 text-indigo-900 font-semibold'
+                          : 'bg-slate-50 border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span className="truncate">{loc.name}</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={toggle}
+                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                      />
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSharingMember(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
+              >
+                {language === 'hu' ? 'Mégse' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveMemberLocations}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition shadow-sm flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                {language === 'hu' ? 'Beállítások Mentése' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -146,6 +146,8 @@ interface AppContextType {
   declineHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
   cancelHouseholdInvite: (inviteId: string) => Promise<void>;
   removeHouseholdMember: (memberId: string) => Promise<void>;
+  updateHouseholdMember: (memberId: string, updates: Partial<HouseholdMember>) => Promise<void>;
+  updateMemberAllowedLocations: (memberId: string, allowedLocationIds: string[]) => Promise<void>;
   updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
   leaveHousehold: () => Promise<void>;
   updateHouseholdSharedLocations: (locationIds: string[]) => Promise<void>;
@@ -1817,6 +1819,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHouseholdMembers(prev => prev.filter(m => m.id !== memberId));
     if (isSupabaseConfigured && supabase && isUUID(memberId)) {
       await supabase.from('household_members').delete().eq('id', memberId);
+    }
+  };
+
+  const updateHouseholdMember = async (memberId: string, updates: Partial<HouseholdMember>): Promise<void> => {
+    setHouseholdMembers(prev => prev.map(m => m.id === memberId ? { ...m, ...updates } : m));
+    if (isSupabaseConfigured && supabase && isUUID(memberId)) {
+      let { error } = await supabase.from('household_members').update(updates).eq('id', memberId);
+      if (error && error.message && error.message.includes('title') && updates.title !== undefined) {
+        const { title, ...fallbackUpdates } = updates;
+        await supabase.from('household_members').update(fallbackUpdates).eq('id', memberId);
+      }
+    }
+  };
+
+  const updateMemberAllowedLocations = async (memberId: string, allowedLocationIds: string[]): Promise<void> => {
+    setHouseholdMembers(prev => prev.map(m => m.id === memberId ? { ...m, allowed_location_ids: allowedLocationIds } : m));
+    if (isSupabaseConfigured && supabase && isUUID(memberId)) {
+      await supabase.from('household_members').update({ allowed_location_ids: allowedLocationIds }).eq('id', memberId);
     }
   };
 

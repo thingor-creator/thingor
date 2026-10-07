@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.household_members (
   user_name TEXT,
   title TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+  allowed_location_ids TEXT[] DEFAULT NULL,
   joined_at TIMESTAMPTZ DEFAULT now(),
   CONSTRAINT household_members_hh_email_key UNIQUE(household_id, user_email)
 );
@@ -31,6 +32,7 @@ ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_email TEXT;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_name TEXT;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS title TEXT;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
+ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS allowed_location_ids TEXT[] DEFAULT NULL;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS joined_at TIMESTAMPTZ DEFAULT now();
 
 -- 3. HOUSEHOLD INVITES TABLE
