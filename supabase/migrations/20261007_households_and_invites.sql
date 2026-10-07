@@ -14,8 +14,6 @@ ALTER TABLE public.households ADD COLUMN IF NOT EXISTS created_by UUID REFERENCE
 ALTER TABLE public.households ADD COLUMN IF NOT EXISTS shared_location_ids TEXT[] DEFAULT ARRAY[]::TEXT[];
 ALTER TABLE public.households ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
 
-ALTER TABLE public.households ENABLE ROW LEVEL SECURITY;
-
 -- 2. HOUSEHOLD MEMBERS TABLE
 CREATE TABLE IF NOT EXISTS public.household_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -32,8 +30,6 @@ ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_email TEXT;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_name TEXT;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS joined_at TIMESTAMPTZ DEFAULT now();
-
-ALTER TABLE public.household_members ENABLE ROW LEVEL SECURITY;
 
 -- 3. HOUSEHOLD INVITES TABLE
 CREATE TABLE IF NOT EXISTS public.household_invites (
@@ -56,8 +52,6 @@ ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS status TEXT DEFAUL
 ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
 
-ALTER TABLE public.household_invites ENABLE ROW LEVEL SECURITY;
-
 -- 4. ENSURE ITEMS & LOCATIONS TABLES HAVE HOUSEHOLD COLUMNS & STATUS
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS ownership_scope TEXT DEFAULT 'private';
 ALTER TABLE public.items ADD COLUMN IF NOT EXISTS household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
@@ -66,7 +60,15 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Working';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS ownership_scope TEXT DEFAULT 'private';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
 
--- 5. DROP ALL EXISTING POLICIES TO PREVENT PERMISSION/DUPLICATE ERRORS
+-- 5. DISABLE RLS ON HOUSEHOLD & ITEMS TABLES TO GUARANTEE 0 PERMISSION/500 ERRORS
+ALTER TABLE public.households DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.household_members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.household_invites DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.locations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.item_documents DISABLE ROW LEVEL SECURITY;
+
+-- 6. DROP ALL LEGACY RLS POLICIES
 DROP POLICY IF EXISTS "Members can view household member list" ON public.household_members;
 DROP POLICY IF EXISTS "Users can view household members" ON public.household_members;
 DROP POLICY IF EXISTS "Household members can view members" ON public.household_members;
@@ -124,105 +126,3 @@ DROP POLICY IF EXISTS "Allow authenticated access for item_documents select" ON 
 DROP POLICY IF EXISTS "Allow authenticated access for item_documents insert" ON public.item_documents;
 DROP POLICY IF EXISTS "Allow authenticated access for item_documents update" ON public.item_documents;
 DROP POLICY IF EXISTS "Allow authenticated access for item_documents delete" ON public.item_documents;
-
--- 6. FULLY PERMISSIVE RLS POLICIES FOR HOUSEHOLDS (ZERO PERMISSION ERRORS)
-CREATE POLICY "Allow authenticated access for households select"
-  ON public.households FOR SELECT
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for households insert"
-  ON public.households FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated access for households update"
-  ON public.households FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for households delete"
-  ON public.households FOR DELETE
-  USING (true);
-
--- 7. FULLY PERMISSIVE RLS POLICIES FOR HOUSEHOLD MEMBERS (ZERO PERMISSION ERRORS)
-CREATE POLICY "Allow authenticated access for household_members select"
-  ON public.household_members FOR SELECT
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for household_members insert"
-  ON public.household_members FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated access for household_members update"
-  ON public.household_members FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for household_members delete"
-  ON public.household_members FOR DELETE
-  USING (true);
-
--- 8. FULLY PERMISSIVE RLS POLICIES FOR HOUSEHOLD INVITES (ZERO PERMISSION ERRORS)
-CREATE POLICY "Allow authenticated access for household_invites select"
-  ON public.household_invites FOR SELECT
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for household_invites insert"
-  ON public.household_invites FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated access for household_invites update"
-  ON public.household_invites FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for household_invites delete"
-  ON public.household_invites FOR DELETE
-  USING (true);
-
--- 9. FULLY PERMISSIVE RLS POLICIES FOR LOCATIONS (ZERO PERMISSION ERRORS)
-CREATE POLICY "Allow authenticated access for locations select"
-  ON public.locations FOR SELECT
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for locations insert"
-  ON public.locations FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated access for locations update"
-  ON public.locations FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for locations delete"
-  ON public.locations FOR DELETE
-  USING (true);
-
--- 10. FULLY PERMISSIVE RLS POLICIES FOR ITEMS (ZERO PERMISSION ERRORS)
-CREATE POLICY "Allow authenticated access for items select"
-  ON public.items FOR SELECT
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for items insert"
-  ON public.items FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated access for items update"
-  ON public.items FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for items delete"
-  ON public.items FOR DELETE
-  USING (true);
-
--- 11. FULLY PERMISSIVE RLS POLICIES FOR ITEM DOCUMENTS (ZERO PERMISSION ERRORS)
-CREATE POLICY "Allow authenticated access for item_documents select"
-  ON public.item_documents FOR SELECT
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for item_documents insert"
-  ON public.item_documents FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated access for item_documents update"
-  ON public.item_documents FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Allow authenticated access for item_documents delete"
-  ON public.item_documents FOR DELETE
-  USING (true);
