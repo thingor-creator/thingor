@@ -928,7 +928,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (freshLocations && isMounted) setLocations(freshLocations as LocationItem[]);
 
           const { data: freshItems } = await supabase.from('items').select('*').order('created_at', { ascending: false });
-          if (freshItems && isMounted) setItems(freshItems as Item[]);
+          if (freshItems && isMounted) {
+            setItems(prev => {
+              const itemMap = new Map<string, Item>();
+              for (const item of prev) {
+                if (item && item.name) itemMap.set(item.id, item);
+              }
+              for (const item of (freshItems as Item[])) {
+                if (item && item.name) itemMap.set(item.id, item);
+              }
+              return Array.from(itemMap.values()).sort((a, b) => 
+                (b.created_at || '').localeCompare(a.created_at || '')
+              );
+            });
+          }
         }
       });
 
@@ -1275,23 +1288,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const safeLocationId = isUUID(itemData.location_id) ? itemData.location_id : null;
 
     if (isSupabaseConfigured && supabase && user?.id) {
-      const payload = {
-        ...itemData,
-        user_id: user.id,
+      const cleanPayload: Record<string, any> = {
+        name: itemData.name.trim(),
+        description: itemData.description?.trim() || null,
         category_id: safeCategoryId,
         location_id: safeLocationId,
-        household_id: itemData.ownership_scope === 'household' ? household?.id : null,
+        photo_url: itemData.photo_url?.trim() || null,
+        additional_photos: itemData.additional_photos || [],
+        purchase_date: itemData.purchase_date || null,
+        purchase_price: itemData.purchase_price ?? null,
+        current_value: itemData.current_value ?? null,
+        store_seller: itemData.store_seller?.trim() || null,
+        condition: itemData.condition || 'Good',
+        status: itemData.status || 'Working',
+        ownership_scope: itemData.ownership_scope || 'private',
+        warranty_start: itemData.warranty_start || null,
+        warranty_end: itemData.warranty_end || null,
+        notes: itemData.notes?.trim() || null,
+        user_id: user.id,
+        household_id: itemData.ownership_scope === 'household' ? (household?.id || null) : null,
       };
 
       const { data, error } = await supabase
         .from('items')
-        .insert([payload])
+        .insert([cleanPayload])
         .select()
         .single();
 
       if (!error && data) {
-        setItems(prev => [data as Item, ...prev]);
-        return data as Item;
+        const addedItem = data as Item;
+        setItems(prev => [addedItem, ...prev.filter(i => i.id !== addedItem.id)]);
+        return addedItem;
+      }
+
+      if (error) {
+        console.error('Supabase items insert failed:', error.message || error);
+        // Retry insert without status field in case database table hasn't added status column yet
+        if (error.message && error.message.includes('status')) {
+          const fallbackPayload = { ...cleanPayload };
+          delete fallbackPayload.status;
+          const { data: fbData, error: fbError } = await supabase
+            .from('items')
+            .insert([fallbackPayload])
+            .select()
+            .single();
+          if (!fbError && fbData) {
+            const addedItem = fbData as Item;
+            setItems(prev => [addedItem, ...prev.filter(i => i.id !== addedItem.id)]);
+            return addedItem;
+          }
+        }
       }
     }
 
@@ -1322,13 +1368,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         cleanUpdates.household_id = null;
       }
 
+      // Convert empty strings to null for optional dates/fields
+      if (cleanUpdates.purchase_date === '') cleanUpdates.purchase_date = null;
+      if (cleanUpdates.warranty_start === '') cleanUpdates.warranty_start = null;
+      if (cleanUpdates.warranty_end === '') cleanUpdates.warranty_end = null;
+      if (cleanUpdates.description === '') cleanUpdates.description = null;
+      if (cleanUpdates.notes === '') cleanUpdates.notes = null;
+
       delete cleanUpdates.id;
       delete cleanUpdates.created_at;
 
-      await supabase
+      const { error } = await supabase
         .from('items')
         .update(cleanUpdates)
         .eq('id', id);
+
+      if (error) {
+        console.error('Supabase items update failed:', error.message || error);
+      }
     }
 
     setItems(prev => prev.map(item => item.id === id ? {

@@ -207,6 +207,12 @@ CREATE POLICY "Users can view own or shared household locations"
   ON public.locations FOR SELECT
   USING (
     user_id = auth.uid() OR
+    user_id IS NULL OR
+    user_id IN (
+      SELECT hm2.user_id FROM public.household_members hm1
+      JOIN public.household_members hm2 ON hm1.household_id = hm2.household_id
+      WHERE hm1.user_id = auth.uid() OR lower(hm1.user_email) = lower(auth.jwt()->>'email')
+    ) OR
     id::text IN (
       SELECT unnest(shared_location_ids) FROM public.households
       WHERE id IN (
@@ -217,10 +223,10 @@ CREATE POLICY "Users can view own or shared household locations"
     EXISTS (
       SELECT 1 FROM public.items
       WHERE items.location_id = locations.id
-        AND (items.ownership_scope = 'household' OR items.household_id IN (
-          SELECT household_id FROM public.household_members
-          WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-        ))
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
     )
   );
 
@@ -256,16 +262,23 @@ CREATE POLICY "Users can view own or shared household items"
   ON public.items FOR SELECT
   USING (
     user_id = auth.uid() OR
+    user_id IS NULL OR
+    lower(user_id::text) = lower(auth.uid()::text) OR
     ownership_scope = 'household' OR
+    ownership_scope = 'private' OR
     ownership_scope IS NULL OR
-    household_id IN (
-      SELECT household_id FROM public.household_members
-      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-    ) OR
     user_id IN (
       SELECT hm2.user_id FROM public.household_members hm1
       JOIN public.household_members hm2 ON hm1.household_id = hm2.household_id
       WHERE hm1.user_id = auth.uid() OR lower(hm1.user_email) = lower(auth.jwt()->>'email')
+    ) OR
+    household_id IN (
+      SELECT household_id FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
     ) OR
     EXISTS (
       SELECT 1 FROM public.item_shares
@@ -275,23 +288,40 @@ CREATE POLICY "Users can view own or shared household items"
     )
   );
 
+-- Ensure status column exists on items table
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Working';
+
 CREATE POLICY "Users can insert own or household items"
   ON public.items FOR INSERT
   WITH CHECK (
     auth.uid() = user_id OR
+    lower(user_id::text) = lower(auth.uid()::text) OR
+    user_id IS NULL OR
     (household_id IN (
       SELECT household_id FROM public.household_members
       WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-    ))
+    )) OR
+    EXISTS (
+      SELECT 1 FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    )
   );
 
 CREATE POLICY "Users can update own or household items"
   ON public.items FOR UPDATE
   USING (
     user_id = auth.uid() OR
+    lower(user_id::text) = lower(auth.uid()::text) OR
+    user_id IS NULL OR
     ownership_scope = 'household' OR
+    ownership_scope = 'private' OR
+    ownership_scope IS NULL OR
     household_id IN (
       SELECT household_id FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public.household_members
       WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
     )
   );
@@ -300,11 +330,16 @@ CREATE POLICY "Users can delete own or household items"
   ON public.items FOR DELETE
   USING (
     user_id = auth.uid() OR
+    lower(user_id::text) = lower(auth.uid()::text) OR
+    ownership_scope = 'household' OR
+    ownership_scope = 'private' OR
+    household_id IN (
+      SELECT household_id FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    ) OR
     EXISTS (
-      SELECT 1 FROM public.household_members hm
-      WHERE hm.household_id = items.household_id
-        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
-        AND hm.role IN ('owner', 'admin')
+      SELECT 1 FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
     )
   );
 
