@@ -805,6 +805,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
           setLocations(data as LocationItem[]);
+        } else if (error) {
+          console.warn('Full locations fetch failed, falling back to user_id:', error.message);
+          supabase.from('locations').select('*').eq('user_id', user.id).then(({ data: fbLocs }) => {
+            if (fbLocs && isMounted) setLocations(fbLocs as LocationItem[]);
+          });
         }
       });
 
@@ -816,6 +821,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
           setItems(data as Item[]);
+        } else if (error) {
+          console.warn('Full items fetch failed, falling back to user_id:', error.message);
+          supabase.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data: fbItems }) => {
+            if (fbItems && isMounted) setItems(fbItems as Item[]);
+          });
         }
       });
 
