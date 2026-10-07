@@ -66,7 +66,7 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Working';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS ownership_scope TEXT DEFAULT 'private';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
 
--- 5. SECURITY DEFINER HELPER FUNCTION TO PREVENT RLS INFINITE RECURSION
+-- 5. SECURITY DEFINER HELPER FUNCTIONS TO PREVENT RLS INFINITE RECURSION
 CREATE OR REPLACE FUNCTION public.is_household_member(check_household_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -83,10 +83,58 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.is_any_household_member()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.household_members
+    WHERE user_id = auth.uid()
+       OR (auth.jwt()->>'email' IS NOT NULL AND lower(user_email) = lower(auth.jwt()->>'email'))
+  );
+$$;
+
 GRANT EXECUTE ON FUNCTION public.is_household_member(UUID) TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.is_any_household_member() TO authenticated, anon, service_role;
+
+-- 6. DROP ALL EXISTING POLICIES TO CLEAR RECURSION
+DROP POLICY IF EXISTS "Members can view household member list" ON public.household_members;
+DROP POLICY IF EXISTS "Users can view household members" ON public.household_members;
+DROP POLICY IF EXISTS "Household members can view members" ON public.household_members;
+DROP POLICY IF EXISTS "Users can insert household members" ON public.household_members;
+DROP POLICY IF EXISTS "Admins can update household members" ON public.household_members;
+DROP POLICY IF EXISTS "Members or admins can delete member" ON public.household_members;
+DROP POLICY IF EXISTS "Users can manage own household members" ON public.household_members;
+
+DROP POLICY IF EXISTS "Household members can view own household" ON public.households;
+DROP POLICY IF EXISTS "Authenticated users can create household" ON public.households;
+DROP POLICY IF EXISTS "Household owners/admins can update household" ON public.households;
+
+DROP POLICY IF EXISTS "Users can view pending invites sent to their email or by their household" ON public.household_invites;
+DROP POLICY IF EXISTS "Household owners/admins can send invites" ON public.household_invites;
+DROP POLICY IF EXISTS "Invited users or household admins can update invites" ON public.household_invites;
+DROP POLICY IF EXISTS "Admins can delete invites" ON public.household_invites;
+
+DROP POLICY IF EXISTS "Users can manage own locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can view own or shared household locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can insert own locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can update own locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can delete own locations" ON public.locations;
+
+DROP POLICY IF EXISTS "Users can manage own items" ON public.items;
+DROP POLICY IF EXISTS "Users can view own or shared household items" ON public.items;
+DROP POLICY IF EXISTS "Users can insert own or household items" ON public.items;
+DROP POLICY IF EXISTS "Users can update own or household items" ON public.items;
+DROP POLICY IF EXISTS "Users can delete own or household items" ON public.items;
+DROP POLICY IF EXISTS "Anyone can view shared items" ON public.items;
+
+DROP POLICY IF EXISTS "Users can manage own item documents" ON public.item_documents;
+DROP POLICY IF EXISTS "Users can view own or household item documents" ON public.item_documents;
+DROP POLICY IF EXISTS "Users can insert own or household item documents" ON public.item_documents;
 
 -- RLS POLICIES FOR HOUSEHOLDS
-DROP POLICY IF EXISTS "Household members can view own household" ON public.households;
 CREATE POLICY "Household members can view own household"
   ON public.households FOR SELECT
   USING (
@@ -94,12 +142,10 @@ CREATE POLICY "Household members can view own household"
     public.is_household_member(id)
   );
 
-DROP POLICY IF EXISTS "Authenticated users can create household" ON public.households;
 CREATE POLICY "Authenticated users can create household"
   ON public.households FOR INSERT
   WITH CHECK (auth.uid() = created_by OR created_by IS NULL);
 
-DROP POLICY IF EXISTS "Household owners/admins can update household" ON public.households;
 CREATE POLICY "Household owners/admins can update household"
   ON public.households FOR UPDATE
   USING (
@@ -108,7 +154,6 @@ CREATE POLICY "Household owners/admins can update household"
   );
 
 -- RLS POLICIES FOR HOUSEHOLD MEMBERS
-DROP POLICY IF EXISTS "Members can view household member list" ON public.household_members;
 CREATE POLICY "Members can view household member list"
   ON public.household_members FOR SELECT
   USING (
@@ -117,7 +162,6 @@ CREATE POLICY "Members can view household member list"
     public.is_household_member(household_id)
   );
 
-DROP POLICY IF EXISTS "Users can insert household members" ON public.household_members;
 CREATE POLICY "Users can insert household members"
   ON public.household_members FOR INSERT
   WITH CHECK (
@@ -127,7 +171,6 @@ CREATE POLICY "Users can insert household members"
     auth.uid() IS NOT NULL
   );
 
-DROP POLICY IF EXISTS "Admins can update household members" ON public.household_members;
 CREATE POLICY "Admins can update household members"
   ON public.household_members FOR UPDATE
   USING (
@@ -136,7 +179,6 @@ CREATE POLICY "Admins can update household members"
     public.is_household_member(household_id)
   );
 
-DROP POLICY IF EXISTS "Members or admins can delete member" ON public.household_members;
 CREATE POLICY "Members or admins can delete member"
   ON public.household_members FOR DELETE
   USING (
@@ -146,7 +188,6 @@ CREATE POLICY "Members or admins can delete member"
   );
 
 -- RLS POLICIES FOR HOUSEHOLD INVITES
-DROP POLICY IF EXISTS "Users can view pending invites sent to their email or by their household" ON public.household_invites;
 CREATE POLICY "Users can view pending invites sent to their email or by their household"
   ON public.household_invites FOR SELECT
   USING (
@@ -155,7 +196,6 @@ CREATE POLICY "Users can view pending invites sent to their email or by their ho
     public.is_household_member(household_id)
   );
 
-DROP POLICY IF EXISTS "Household owners/admins can send invites" ON public.household_invites;
 CREATE POLICY "Household owners/admins can send invites"
   ON public.household_invites FOR INSERT
   WITH CHECK (
@@ -163,7 +203,6 @@ CREATE POLICY "Household owners/admins can send invites"
     public.is_household_member(household_id)
   );
 
-DROP POLICY IF EXISTS "Invited users or household admins can update invites" ON public.household_invites;
 CREATE POLICY "Invited users or household admins can update invites"
   ON public.household_invites FOR UPDATE
   USING (
@@ -172,7 +211,6 @@ CREATE POLICY "Invited users or household admins can update invites"
     public.is_household_member(household_id)
   );
 
-DROP POLICY IF EXISTS "Admins can delete invites" ON public.household_invites;
 CREATE POLICY "Admins can delete invites"
   ON public.household_invites FOR DELETE
   USING (
@@ -181,12 +219,6 @@ CREATE POLICY "Admins can delete invites"
   );
 
 -- RLS POLICIES FOR LOCATIONS
-DROP POLICY IF EXISTS "Users can manage own locations" ON public.locations;
-DROP POLICY IF EXISTS "Users can view own or shared household locations" ON public.locations;
-DROP POLICY IF EXISTS "Users can insert own locations" ON public.locations;
-DROP POLICY IF EXISTS "Users can update own locations" ON public.locations;
-DROP POLICY IF EXISTS "Users can delete own locations" ON public.locations;
-
 CREATE POLICY "Users can view own or shared household locations"
   ON public.locations FOR SELECT
   USING (
@@ -195,13 +227,7 @@ CREATE POLICY "Users can view own or shared household locations"
     lower(user_id::text) = lower(auth.uid()::text) OR
     ownership_scope = 'household' OR
     public.is_household_member(household_id) OR
-    id::text IN (
-      SELECT unnest(shared_location_ids) FROM public.households
-    ) OR
-    EXISTS (
-      SELECT 1 FROM public.household_members
-      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-    )
+    public.is_any_household_member()
   );
 
 CREATE POLICY "Users can insert own locations"
@@ -231,12 +257,6 @@ CREATE POLICY "Users can delete own locations"
   );
 
 -- RLS POLICIES FOR ITEMS
-DROP POLICY IF EXISTS "Users can manage own items" ON public.items;
-DROP POLICY IF EXISTS "Users can view own or shared household items" ON public.items;
-DROP POLICY IF EXISTS "Users can insert own or household items" ON public.items;
-DROP POLICY IF EXISTS "Users can update own or household items" ON public.items;
-DROP POLICY IF EXISTS "Users can delete own or household items" ON public.items;
-
 CREATE POLICY "Users can view own or shared household items"
   ON public.items FOR SELECT
   USING (
@@ -247,10 +267,7 @@ CREATE POLICY "Users can view own or shared household items"
     ownership_scope = 'private' OR
     ownership_scope IS NULL OR
     public.is_household_member(household_id) OR
-    EXISTS (
-      SELECT 1 FROM public.household_members
-      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-    ) OR
+    public.is_any_household_member() OR
     EXISTS (
       SELECT 1 FROM public.item_shares
       WHERE item_shares.item_id = items.id
@@ -266,10 +283,7 @@ CREATE POLICY "Users can insert own or household items"
     lower(user_id::text) = lower(auth.uid()::text) OR
     user_id IS NULL OR
     public.is_household_member(household_id) OR
-    EXISTS (
-      SELECT 1 FROM public.household_members
-      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-    )
+    public.is_any_household_member()
   );
 
 CREATE POLICY "Users can update own or household items"
@@ -282,10 +296,7 @@ CREATE POLICY "Users can update own or household items"
     ownership_scope = 'private' OR
     ownership_scope IS NULL OR
     public.is_household_member(household_id) OR
-    EXISTS (
-      SELECT 1 FROM public.household_members
-      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-    )
+    public.is_any_household_member()
   );
 
 CREATE POLICY "Users can delete own or household items"
@@ -296,17 +307,10 @@ CREATE POLICY "Users can delete own or household items"
     ownership_scope = 'household' OR
     ownership_scope = 'private' OR
     public.is_household_member(household_id) OR
-    EXISTS (
-      SELECT 1 FROM public.household_members
-      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
-    )
+    public.is_any_household_member()
   );
 
 -- RLS POLICIES FOR ITEM DOCUMENTS
-DROP POLICY IF EXISTS "Users can manage own item documents" ON public.item_documents;
-DROP POLICY IF EXISTS "Users can view own or household item documents" ON public.item_documents;
-DROP POLICY IF EXISTS "Users can insert own or household item documents" ON public.item_documents;
-
 CREATE POLICY "Users can view own or household item documents"
   ON public.item_documents FOR SELECT
   USING (
