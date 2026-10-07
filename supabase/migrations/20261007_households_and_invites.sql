@@ -130,3 +130,7 @@ DROP POLICY IF EXISTS "Allow authenticated access for item_documents select" ON 
 DROP POLICY IF EXISTS "Allow authenticated access for item_documents insert" ON public.item_documents;
 DROP POLICY IF EXISTS "Allow authenticated access for item_documents update" ON public.item_documents;
 DROP POLICY IF EXISTS "Allow authenticated access for item_documents delete" ON public.item_documents;
+
+-- 7. RELOAD POSTGREST SCHEMA CACHE
+NOTIFY pgrst, 'reload schema';
+

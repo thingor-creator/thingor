@@ -56,7 +56,7 @@ export const HouseholdView: React.FC = () => {
 
     if (res.success) {
       setInviteMessage({
-        text: language === 'hu' ? `Meghívó elküldve a következő címre: ${inviteEmail}` : `Invite sent to ${inviteEmail}`,
+        text: res.message || (language === 'hu' ? `Meghívó elküldve a következő címre: ${inviteEmail}` : `Invite sent to ${inviteEmail}`),
         success: true
       });
       setInviteEmail('');

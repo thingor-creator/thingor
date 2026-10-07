@@ -18,6 +18,7 @@ import { ItemFormModal } from './components/ItemFormModal';
 import { AuthModal } from './components/AuthModal';
 import { SupabaseSetupModal } from './components/SupabaseSetupModal';
 import { LegalViewModal } from './components/LegalViewModal';
+import { PendingInviteModal } from './components/PendingInviteModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Wrench, ShieldCheck } from 'lucide-react';
 
@@ -157,6 +158,7 @@ const AppContent: React.FC = () => {
       <ItemFormModal />
       <AuthModal />
       <SupabaseSetupModal />
+      <PendingInviteModal />
       <LegalViewModal
         slug={activeLegalSlug}
         isOpen={isLegalModalOpen}

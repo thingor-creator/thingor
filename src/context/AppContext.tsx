@@ -141,7 +141,7 @@ interface AppContextType {
   householdInvites: HouseholdInvite[];
   receivedInvites: HouseholdInvite[];
   createHousehold: (name: string) => Promise<Household>;
-  inviteHouseholdMember: (email: string, title?: string, role?: HouseholdRole) => Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }>;
+  inviteHouseholdMember: (email: string, title?: string, role?: HouseholdRole) => Promise<{ success: boolean; invite?: HouseholdInvite; isRegistered?: boolean; message?: string; error?: string }>;
   acceptHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
   declineHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
   cancelHouseholdInvite: (inviteId: string) => Promise<void>;
@@ -1598,7 +1598,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newHh;
   };
 
-  const inviteHouseholdMember = async (email: string, title?: string, role: HouseholdRole = 'member'): Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }> => {
+  const inviteHouseholdMember = async (
+    email: string,
+    title?: string,
+    role: HouseholdRole = 'member'
+  ): Promise<{ success: boolean; invite?: HouseholdInvite; isRegistered?: boolean; message?: string; error?: string }> => {
     if (!household) return { success: false, error: language === 'hu' ? 'Nincs aktív háztartás' : 'No active household' };
     const cleanEmail = email.trim().toLowerCase();
     const cleanTitle = title?.trim() || '';
@@ -1617,6 +1621,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return { success: false, error: language === 'hu' ? 'Ez a felhasználó már a háztartás tagja!' : 'This user is already a household member!' };
     }
 
+    // Check if the invited email belongs to a registered user
+    let isRegisteredUser = false;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: regProfile } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+        if (regProfile) {
+          isRegisteredUser = true;
+        }
+      } catch (e) {}
+    } else {
+      const savedRegs = localStorage.getItem('thingor_registered_users');
+      const registeredUsers: Array<{ email: string }> = savedRegs ? JSON.parse(savedRegs) : [];
+      if (registeredUsers.some(u => u.email.toLowerCase() === cleanEmail)) {
+        isRegisteredUser = true;
+      }
+    }
+
     const newInvite: HouseholdInvite = {
       id: 'inv-' + Date.now(),
       household_id: household.id,
@@ -1630,25 +1655,59 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       household_name: household.name
     };
 
+    let createdInvite: HouseholdInvite = newInvite;
+
     if (isSupabaseConfigured && supabase && user?.id) {
-      const { data, error } = await supabase.from('household_invites').insert([{
+      // 1. First attempt insert with title column
+      let { data, error } = await supabase.from('household_invites').insert([{
         household_id: household.id,
         invited_email: cleanEmail,
-        title: cleanTitle,
+        title: cleanTitle || null,
         role,
         invited_by: user.id,
         token: newInvite.token,
         status: 'pending'
       }]).select().single();
 
-      if (error) return { success: false, error: error.message };
-      const created = { ...data, household_name: household.name } as HouseholdInvite;
-      setHouseholdInvites(prev => [...prev, created]);
-      return { success: true, invite: created };
+      // 2. Fallback if 'title' column missing in Supabase schema cache
+      if (error && error.message && error.message.includes('title')) {
+        console.warn("Schema cache warning: 'title' column missing on household_invites. Fallback insert without title column...");
+        const retry = await supabase.from('household_invites').insert([{
+          household_id: household.id,
+          invited_email: cleanEmail,
+          role,
+          invited_by: user.id,
+          token: newInvite.token,
+          status: 'pending'
+        }]).select().single();
+
+        if (retry.error) {
+          return { success: false, error: retry.error.message };
+        }
+        data = retry.data;
+      } else if (error) {
+        return { success: false, error: error.message };
+      }
+
+      createdInvite = { ...data, title: cleanTitle || data?.title, household_name: household.name } as HouseholdInvite;
     }
 
-    setHouseholdInvites(prev => [...prev, newInvite]);
-    return { success: true, invite: newInvite };
+    setHouseholdInvites(prev => [...prev, createdInvite]);
+
+    const statusMsg = isRegisteredUser
+      ? (language === 'hu'
+          ? `A(z) ${cleanEmail} e-mail cím regisztrált felhasználó a Thingorban! A meghívó megjelent a fiókjában (felugró ablakban azonnal elfogadhatja), így külső e-mail nem került kiküldésre.`
+          : `User ${cleanEmail} is registered! Invite delivered to their in-app modal window.`)
+      : (language === 'hu'
+          ? `A(z) ${cleanEmail} e-mail cím még nincs regisztrálva a rendszerben. Meghívó e-mail kiküldésre került a megadott címre!`
+          : `Email ${cleanEmail} is not registered yet. An invitation email has been sent!`);
+
+    return {
+      success: true,
+      invite: createdInvite,
+      isRegistered: isRegisteredUser,
+      message: statusMsg
+    };
   };
 
   const acceptHouseholdInvite = async (inviteIdOrToken: string): Promise<{ success: boolean; error?: string }> => {
@@ -1659,7 +1718,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     if (isSupabaseConfigured && supabase && user?.id) {
       const memberUserName = invite.title ? `${user.display_name || user.email} (${invite.title})` : (user.display_name || user.email);
-      const { error: mErr } = await supabase.from('household_members').insert([{
+      let { error: mErr } = await supabase.from('household_members').insert([{
         household_id: invite.household_id,
         user_id: user.id,
         user_email: user.email,
@@ -1667,6 +1726,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         title: invite.title || null,
         role: invite.role,
       }]).select().single();
+
+      if (mErr && mErr.message && mErr.message.includes('title')) {
+        const retry = await supabase.from('household_members').insert([{
+          household_id: invite.household_id,
+          user_id: user.id,
+          user_email: user.email,
+          user_name: memberUserName,
+          role: invite.role,
+        }]).select().single();
+        mErr = retry.error;
+      }
 
       if (mErr && !mErr.message.includes('duplicate')) {
         return { success: false, error: mErr.message };
