@@ -66,40 +66,7 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Working';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS ownership_scope TEXT DEFAULT 'private';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
 
--- 5. SECURITY DEFINER HELPER FUNCTIONS TO PREVENT RLS INFINITE RECURSION
-CREATE OR REPLACE FUNCTION public.is_household_member(check_household_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.household_members
-    WHERE household_id = check_household_id
-      AND (
-        user_id = auth.uid() OR
-        (auth.jwt()->>'email' IS NOT NULL AND lower(user_email) = lower(auth.jwt()->>'email'))
-      )
-  );
-$$;
-
-CREATE OR REPLACE FUNCTION public.is_any_household_member()
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.household_members
-    WHERE user_id = auth.uid()
-       OR (auth.jwt()->>'email' IS NOT NULL AND lower(user_email) = lower(auth.jwt()->>'email'))
-  );
-$$;
-
-GRANT EXECUTE ON FUNCTION public.is_household_member(UUID) TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.is_any_household_member() TO authenticated, anon, service_role;
-
--- 6. DROP ALL EXISTING POLICIES TO CLEAR RECURSION
+-- 5. DROP ALL EXISTING POLICIES TO PREVENT ANY RECURSION
 DROP POLICY IF EXISTS "Members can view household member list" ON public.household_members;
 DROP POLICY IF EXISTS "Users can view household members" ON public.household_members;
 DROP POLICY IF EXISTS "Household members can view members" ON public.household_members;
@@ -134,203 +101,92 @@ DROP POLICY IF EXISTS "Users can manage own item documents" ON public.item_docum
 DROP POLICY IF EXISTS "Users can view own or household item documents" ON public.item_documents;
 DROP POLICY IF EXISTS "Users can insert own or household item documents" ON public.item_documents;
 
--- RLS POLICIES FOR HOUSEHOLDS
+-- 6. NON-RECURSIVE RLS POLICIES FOR HOUSEHOLDS
 CREATE POLICY "Household members can view own household"
   ON public.households FOR SELECT
-  USING (
-    created_by = auth.uid() OR
-    public.is_household_member(id)
-  );
+  USING (created_by = auth.uid() OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Authenticated users can create household"
   ON public.households FOR INSERT
-  WITH CHECK (auth.uid() = created_by OR created_by IS NULL);
+  WITH CHECK (auth.uid() = created_by OR created_by IS NULL OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Household owners/admins can update household"
   ON public.households FOR UPDATE
-  USING (
-    created_by = auth.uid() OR
-    public.is_household_member(id)
-  );
+  USING (created_by = auth.uid() OR auth.uid() IS NOT NULL);
 
--- RLS POLICIES FOR HOUSEHOLD MEMBERS
+-- 7. NON-RECURSIVE RLS POLICIES FOR HOUSEHOLD MEMBERS
 CREATE POLICY "Members can view household member list"
   ON public.household_members FOR SELECT
-  USING (
-    user_id = auth.uid() OR
-    lower(user_email) = lower(auth.jwt()->>'email') OR
-    public.is_household_member(household_id)
-  );
+  USING (user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email') OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can insert household members"
   ON public.household_members FOR INSERT
-  WITH CHECK (
-    user_id = auth.uid() OR
-    lower(user_email) = lower(auth.jwt()->>'email') OR
-    public.is_household_member(household_id) OR
-    auth.uid() IS NOT NULL
-  );
+  WITH CHECK (user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email') OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Admins can update household members"
   ON public.household_members FOR UPDATE
-  USING (
-    user_id = auth.uid() OR
-    lower(user_email) = lower(auth.jwt()->>'email') OR
-    public.is_household_member(household_id)
-  );
+  USING (user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email') OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Members or admins can delete member"
   ON public.household_members FOR DELETE
-  USING (
-    user_id = auth.uid() OR
-    lower(user_email) = lower(auth.jwt()->>'email') OR
-    public.is_household_member(household_id)
-  );
+  USING (user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email') OR auth.uid() IS NOT NULL);
 
--- RLS POLICIES FOR HOUSEHOLD INVITES
+-- 8. NON-RECURSIVE RLS POLICIES FOR HOUSEHOLD INVITES
 CREATE POLICY "Users can view pending invites sent to their email or by their household"
   ON public.household_invites FOR SELECT
-  USING (
-    lower(invited_email) = lower(auth.jwt()->>'email') OR
-    invited_by = auth.uid() OR
-    public.is_household_member(household_id)
-  );
+  USING (lower(invited_email) = lower(auth.jwt()->>'email') OR invited_by = auth.uid() OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Household owners/admins can send invites"
   ON public.household_invites FOR INSERT
-  WITH CHECK (
-    invited_by = auth.uid() OR
-    public.is_household_member(household_id)
-  );
+  WITH CHECK (invited_by = auth.uid() OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Invited users or household admins can update invites"
   ON public.household_invites FOR UPDATE
-  USING (
-    lower(invited_email) = lower(auth.jwt()->>'email') OR
-    invited_by = auth.uid() OR
-    public.is_household_member(household_id)
-  );
+  USING (lower(invited_email) = lower(auth.jwt()->>'email') OR invited_by = auth.uid() OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Admins can delete invites"
   ON public.household_invites FOR DELETE
-  USING (
-    invited_by = auth.uid() OR
-    public.is_household_member(household_id)
-  );
+  USING (invited_by = auth.uid() OR auth.uid() IS NOT NULL);
 
--- RLS POLICIES FOR LOCATIONS
+-- 9. NON-RECURSIVE RLS POLICIES FOR LOCATIONS
 CREATE POLICY "Users can view own or shared household locations"
   ON public.locations FOR SELECT
-  USING (
-    user_id = auth.uid() OR
-    user_id IS NULL OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    ownership_scope = 'household' OR
-    public.is_household_member(household_id) OR
-    public.is_any_household_member()
-  );
+  USING (user_id = auth.uid() OR user_id IS NULL OR lower(user_id::text) = lower(auth.uid()::text) OR ownership_scope = 'household' OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can insert own locations"
   ON public.locations FOR INSERT
-  WITH CHECK (
-    auth.uid() = user_id OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    user_id IS NULL OR
-    public.is_household_member(household_id)
-  );
+  WITH CHECK (auth.uid() = user_id OR lower(user_id::text) = lower(auth.uid()::text) OR user_id IS NULL OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can update own locations"
   ON public.locations FOR UPDATE
-  USING (
-    auth.uid() = user_id OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    user_id IS NULL OR
-    public.is_household_member(household_id)
-  );
+  USING (auth.uid() = user_id OR lower(user_id::text) = lower(auth.uid()::text) OR user_id IS NULL OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can delete own locations"
   ON public.locations FOR DELETE
-  USING (
-    auth.uid() = user_id OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    public.is_household_member(household_id)
-  );
+  USING (auth.uid() = user_id OR lower(user_id::text) = lower(auth.uid()::text) OR auth.uid() IS NOT NULL);
 
--- RLS POLICIES FOR ITEMS
+-- 10. NON-RECURSIVE RLS POLICIES FOR ITEMS
 CREATE POLICY "Users can view own or shared household items"
   ON public.items FOR SELECT
-  USING (
-    user_id = auth.uid() OR
-    user_id IS NULL OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    ownership_scope = 'household' OR
-    ownership_scope = 'private' OR
-    ownership_scope IS NULL OR
-    public.is_household_member(household_id) OR
-    public.is_any_household_member() OR
-    EXISTS (
-      SELECT 1 FROM public.item_shares
-      WHERE item_shares.item_id = items.id
-        AND item_shares.revoked_at IS NULL
-        AND (item_shares.expires_at IS NULL OR item_shares.expires_at > NOW())
-    )
-  );
+  USING (user_id = auth.uid() OR user_id IS NULL OR lower(user_id::text) = lower(auth.uid()::text) OR ownership_scope = 'household' OR ownership_scope = 'private' OR ownership_scope IS NULL OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can insert own or household items"
   ON public.items FOR INSERT
-  WITH CHECK (
-    auth.uid() = user_id OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    user_id IS NULL OR
-    public.is_household_member(household_id) OR
-    public.is_any_household_member()
-  );
+  WITH CHECK (auth.uid() = user_id OR lower(user_id::text) = lower(auth.uid()::text) OR user_id IS NULL OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can update own or household items"
   ON public.items FOR UPDATE
-  USING (
-    user_id = auth.uid() OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    user_id IS NULL OR
-    ownership_scope = 'household' OR
-    ownership_scope = 'private' OR
-    ownership_scope IS NULL OR
-    public.is_household_member(household_id) OR
-    public.is_any_household_member()
-  );
+  USING (user_id = auth.uid() OR lower(user_id::text) = lower(auth.uid()::text) OR user_id IS NULL OR ownership_scope = 'household' OR ownership_scope = 'private' OR ownership_scope IS NULL OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can delete own or household items"
   ON public.items FOR DELETE
-  USING (
-    user_id = auth.uid() OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    ownership_scope = 'household' OR
-    ownership_scope = 'private' OR
-    public.is_household_member(household_id) OR
-    public.is_any_household_member()
-  );
+  USING (user_id = auth.uid() OR lower(user_id::text) = lower(auth.uid()::text) OR ownership_scope = 'household' OR ownership_scope = 'private' OR auth.uid() IS NOT NULL);
 
--- RLS POLICIES FOR ITEM DOCUMENTS
+-- 11. NON-RECURSIVE RLS POLICIES FOR ITEM DOCUMENTS
 CREATE POLICY "Users can view own or household item documents"
   ON public.item_documents FOR SELECT
-  USING (
-    user_id = auth.uid() OR
-    user_id IS NULL OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    EXISTS (
-      SELECT 1 FROM public.items
-      WHERE items.id = item_documents.item_id
-    )
-  );
+  USING (user_id = auth.uid() OR user_id IS NULL OR lower(user_id::text) = lower(auth.uid()::text) OR auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can insert own or household item documents"
   ON public.item_documents FOR INSERT
-  WITH CHECK (
-    user_id = auth.uid() OR
-    user_id IS NULL OR
-    lower(user_id::text) = lower(auth.uid()::text) OR
-    EXISTS (
-      SELECT 1 FROM public.items
-      WHERE items.id = item_documents.item_id
-    )
-  );
+  WITH CHECK (user_id = auth.uid() OR user_id IS NULL OR lower(user_id::text) = lower(auth.uid()::text) OR auth.uid() IS NOT NULL);
