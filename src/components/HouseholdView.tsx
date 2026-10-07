@@ -175,7 +175,7 @@ export const HouseholdView: React.FC = () => {
                 placeholder={language === 'hu' ? 'Pl. Kovács Család Háztartása' : 'e.g. Smith Household'}
                 value={newHouseholdName}
                 onChange={(e) => setNewHouseholdName(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 p-3 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                className="w-full rounded-xl border border-slate-300 p-3 text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
               />
             </div>
 
@@ -268,7 +268,7 @@ export const HouseholdView: React.FC = () => {
                 placeholder={language === 'hu' ? 'Családtag e-mail címe' : 'Member email address'}
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
 
@@ -276,7 +276,7 @@ export const HouseholdView: React.FC = () => {
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as HouseholdRole)}
-                className="w-full rounded-xl border border-slate-300 p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
               >
                 <option value="member">{language === 'hu' ? 'Családtag (Member)' : 'Family Member'}</option>
                 <option value="admin">{language === 'hu' ? 'Adminisztrátor (Admin)' : 'Family Admin'}</option>

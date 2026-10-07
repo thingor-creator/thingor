@@ -13,6 +13,15 @@
     margin: 0;
     overflow-x: hidden;
   }
+
+  input, select, textarea {
+    color: #0f172a !important;
+    background-color: #ffffff;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #94a3b8 !important;
+  }
 }
 
 /* Custom scrollbar */
