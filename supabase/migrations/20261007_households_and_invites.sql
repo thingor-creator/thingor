@@ -58,6 +58,10 @@ ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS created_at TIMESTA
 
 ALTER TABLE public.household_invites ENABLE ROW LEVEL SECURITY;
 
+-- 4. ENSURE ITEMS TABLE HAS HOUSEHOLD COLUMNS
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS ownership_scope TEXT DEFAULT 'private';
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
+
 -- RLS POLICIES FOR HOUSEHOLDS
 DROP POLICY IF EXISTS "Household members can view own household" ON public.households;
 CREATE POLICY "Household members can view own household"
