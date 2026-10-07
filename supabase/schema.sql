@@ -126,10 +126,53 @@ CREATE TABLE IF NOT EXISTS public.locations (
 -- Enable RLS on Locations
 ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own locations"
-  ON public.locations FOR ALL
-  USING (auth.uid() = user_id)
+DROP POLICY IF EXISTS "Users can manage own locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can view own or shared household locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can insert own locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can update own locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can delete own locations" ON public.locations;
+
+CREATE POLICY "Users can view own or shared household locations"
+  ON public.locations FOR SELECT
+  USING (
+    user_id = auth.uid() OR
+    id IN (
+      SELECT unnest(shared_location_ids) FROM public.households
+      WHERE id IN (
+        SELECT household_id FROM public.household_members
+        WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+      )
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public.items
+      WHERE items.location_id = locations.id
+        AND (items.ownership_scope = 'household' OR items.household_id IN (
+          SELECT household_id FROM public.household_members
+          WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+        ))
+    )
+  );
+
+CREATE POLICY "Users can insert own locations"
+  ON public.locations FOR INSERT
   WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own locations"
+  ON public.locations FOR UPDATE
+  USING (
+    auth.uid() = user_id OR
+    id IN (
+      SELECT unnest(shared_location_ids) FROM public.households
+      WHERE id IN (
+        SELECT household_id FROM public.household_members
+        WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+      )
+    )
+  );
+
+CREATE POLICY "Users can delete own locations"
+  ON public.locations FOR DELETE
+  USING (auth.uid() = user_id);
 
 
 -- 4. ITEMS TABLE
@@ -147,6 +190,8 @@ CREATE TABLE IF NOT EXISTS public.items (
   current_value NUMERIC(10, 2),
   store_seller TEXT,
   condition TEXT NOT NULL DEFAULT 'Good',
+  ownership_scope TEXT DEFAULT 'private',
+  household_id UUID REFERENCES public.households(id) ON DELETE SET NULL,
   warranty_start DATE,
   warranty_end DATE,
   notes TEXT,
@@ -157,10 +202,61 @@ CREATE TABLE IF NOT EXISTS public.items (
 -- Enable RLS on Items
 ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own items"
-  ON public.items FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can manage own items" ON public.items;
+DROP POLICY IF EXISTS "Users can view own or shared household items" ON public.items;
+DROP POLICY IF EXISTS "Users can insert own or household items" ON public.items;
+DROP POLICY IF EXISTS "Users can update own or household items" ON public.items;
+DROP POLICY IF EXISTS "Users can delete own or household items" ON public.items;
+
+CREATE POLICY "Users can view own or shared household items"
+  ON public.items FOR SELECT
+  USING (
+    user_id = auth.uid() OR
+    ownership_scope = 'household' OR
+    household_id IN (
+      SELECT household_id FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public.item_shares
+      WHERE item_shares.item_id = items.id
+        AND item_shares.revoked_at IS NULL
+        AND (item_shares.expires_at IS NULL OR item_shares.expires_at > NOW())
+    )
+  );
+
+CREATE POLICY "Users can insert own or household items"
+  ON public.items FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id OR
+    (household_id IN (
+      SELECT household_id FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    ))
+  );
+
+CREATE POLICY "Users can update own or household items"
+  ON public.items FOR UPDATE
+  USING (
+    user_id = auth.uid() OR
+    ownership_scope = 'household' OR
+    household_id IN (
+      SELECT household_id FROM public.household_members
+      WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    )
+  );
+
+CREATE POLICY "Users can delete own or household items"
+  ON public.items FOR DELETE
+  USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.household_members hm
+      WHERE hm.household_id = items.household_id
+        AND (hm.user_id = auth.uid() OR lower(hm.user_email) = lower(auth.jwt()->>'email'))
+        AND hm.role IN ('owner', 'admin')
+    )
+  );
 
 
 -- 5. ITEM DOCUMENTS TABLE
@@ -177,10 +273,37 @@ CREATE TABLE IF NOT EXISTS public.item_documents (
 -- Enable RLS on Item Documents
 ALTER TABLE public.item_documents ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own item documents"
-  ON public.item_documents FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can manage own item documents" ON public.item_documents;
+DROP POLICY IF EXISTS "Users can view own or household item documents" ON public.item_documents;
+DROP POLICY IF EXISTS "Users can insert own or household item documents" ON public.item_documents;
+
+CREATE POLICY "Users can view own or household item documents"
+  ON public.item_documents FOR SELECT
+  USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.items
+      WHERE items.id = item_documents.item_id
+        AND (items.ownership_scope = 'household' OR items.household_id IN (
+          SELECT household_id FROM public.household_members
+          WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+        ))
+    )
+  );
+
+CREATE POLICY "Users can insert own or household item documents"
+  ON public.item_documents FOR INSERT
+  WITH CHECK (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM public.items
+      WHERE items.id = item_documents.item_id
+        AND (items.ownership_scope = 'household' OR items.household_id IN (
+          SELECT household_id FROM public.household_members
+          WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+        ))
+    )
+  );
 
 
 -- 6. STORAGE BUCKET CONFIGURATION & SECURITY

@@ -798,22 +798,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       });
 
-    // Load user locations
+    // Load user locations (own + shared household locations)
     supabase
       .from('locations')
       .select('*')
-      .eq('user_id', user.id)
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
           setLocations(data as LocationItem[]);
         }
       });
 
-    // Load user items (M8)
+    // Load user items & household shared items (M8)
     supabase
       .from('items')
       .select('*')
-      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
@@ -821,11 +819,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       });
 
-    // Load user item documents (M9)
+    // Load item documents (own + household)
     supabase
       .from('item_documents')
       .select('*')
-      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
@@ -837,7 +834,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     supabase
       .from('item_repairs')
       .select('*')
-      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
@@ -849,7 +845,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     supabase
       .from('item_financings')
       .select('*')
-      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
@@ -874,20 +869,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const { data: allInvites } = await supabase.from('household_invites').select('*').eq('household_id', memberData.household_id);
           if (allInvites && isMounted) setHouseholdInvites(allInvites as HouseholdInvite[]);
 
-          // Fetch shared household items for all members
-          const { data: sharedItems } = await supabase
-            .from('items')
-            .select('*')
-            .eq('ownership_scope', 'household')
-            .order('created_at', { ascending: false });
+          // Re-sync locations and items once household context is established
+          const { data: freshLocations } = await supabase.from('locations').select('*');
+          if (freshLocations && isMounted) setLocations(freshLocations as LocationItem[]);
 
-          if (sharedItems && isMounted) {
-            setItems(prev => {
-              const existingIds = new Set(prev.map(i => i.id));
-              const newShared = (sharedItems as Item[]).filter(i => !existingIds.has(i.id));
-              return [...prev, ...newShared];
-            });
-          }
+          const { data: freshItems } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+          if (freshItems && isMounted) setItems(freshItems as Item[]);
         }
       });
 
@@ -1275,14 +1262,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if ('location_id' in cleanUpdates && !isUUID(cleanUpdates.location_id)) {
         cleanUpdates.location_id = null;
       }
+      if (cleanUpdates.ownership_scope === 'household' && household?.id) {
+        cleanUpdates.household_id = household.id;
+      } else if (cleanUpdates.ownership_scope === 'private') {
+        cleanUpdates.household_id = null;
+      }
+
       delete cleanUpdates.id;
       delete cleanUpdates.created_at;
 
       await supabase
         .from('items')
         .update(cleanUpdates)
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
     }
 
     setItems(prev => prev.map(item => item.id === id ? {
@@ -1294,7 +1286,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const deleteItem = async (id: string): Promise<void> => {
     if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
-      await supabase.from('items').delete().eq('id', id).eq('user_id', user.id);
+      await supabase.from('items').delete().eq('id', id);
     }
 
     setItems(prev => prev.filter(item => item.id !== id));
@@ -1656,19 +1648,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const { data: allMembers } = await supabase.from('household_members').select('*').eq('household_id', invite.household_id);
       if (allMembers) setHouseholdMembers(allMembers as HouseholdMember[]);
 
-      // Fetch shared household items
-      const { data: sharedItems } = await supabase
-        .from('items')
-        .select('*')
-        .eq('ownership_scope', 'household');
+      // Re-fetch locations & items for newly joined household member
+      const { data: freshLocations } = await supabase.from('locations').select('*');
+      if (freshLocations) setLocations(freshLocations as LocationItem[]);
 
-      if (sharedItems) {
-        setItems(prev => {
-          const existingIds = new Set(prev.map(i => i.id));
-          const newShared = (sharedItems as Item[]).filter(i => !existingIds.has(i.id));
-          return [...prev, ...newShared];
-        });
-      }
+      const { data: freshItems } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+      if (freshItems) setItems(freshItems as Item[]);
 
       setHouseholdInvites(prev => prev.map(i => i.id === invite.id ? { ...i, status: 'accepted' } : i));
       setReceivedInvites(prev => prev.filter(i => i.id !== invite.id));
@@ -1752,6 +1737,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHousehold(prev => prev ? { ...prev, shared_location_ids: locationIds } : null);
     if (isSupabaseConfigured && supabase && isUUID(household.id)) {
       await supabase.from('households').update({ shared_location_ids: locationIds }).eq('id', household.id);
+      const { data: locData } = await supabase.from('locations').select('*');
+      if (locData) setLocations(locData as LocationItem[]);
     }
   };
 
