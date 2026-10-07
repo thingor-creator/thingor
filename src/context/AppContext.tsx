@@ -910,7 +910,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     supabase
       .from('household_members')
       .select('*')
-      .or(`user_id.eq.${user.id},user_email.eq.${user.email},email.eq.${user.email}`)
+      .or(`user_id.eq.${user.id},user_email.ilike.${user.email}`)
       .then(async ({ data: memberList }) => {
         const memberData = memberList?.[0];
         if (memberData && isMounted) {
@@ -950,7 +950,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       supabase
         .from('household_invites')
         .select('*, households(name)')
-        .or(`invited_email.ilike.${user.email},email.ilike.${user.email}`)
+        .ilike('invited_email', user.email)
         .eq('status', 'pending')
         .then(({ data: rData }) => {
           if (rData && isMounted) {
