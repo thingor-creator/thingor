@@ -748,53 +748,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     let isMounted = true;
 
-    // Controlled LocalStorage Migration to Supabase Cloud
-    async function runControlledMigration() {
-      if (!supabase || !user?.id) return;
-
-      try {
-        const savedItemsStr = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
-        if (savedItemsStr) {
-          const parsed: Item[] = JSON.parse(savedItemsStr);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            localStorage.setItem('thingor_items_backup', JSON.stringify(parsed));
-
-            const { data: existingCloudItems } = await supabase.from('items').select('name').eq('user_id', user.id);
-            const existingNames = new Set((existingCloudItems || []).map(i => i.name.toLowerCase().trim()));
-
-            const itemsToInsert = parsed
-              .filter(i => i.name && i.name.trim() && !existingNames.has(i.name.toLowerCase().trim()))
-              .map(i => ({
-                name: i.name.trim(),
-                description: i.description || null,
-                photo_url: i.photo_url || null,
-                additional_photos: i.additional_photos || [],
-                purchase_date: i.purchase_date || null,
-                purchase_price: i.purchase_price || null,
-                current_value: i.current_value || null,
-                store_seller: i.store_seller || null,
-                condition: i.condition || 'Good',
-                ownership_scope: i.ownership_scope || 'private',
-                warranty_start: i.warranty_start || null,
-                warranty_end: i.warranty_end || null,
-                notes: i.notes || null,
-                user_id: user.id,
-                category_id: isUUID(i.category_id) ? i.category_id : null,
-                location_id: isUUID(i.location_id) ? i.location_id : null,
-              }));
-
-            if (itemsToInsert.length > 0) {
-              await supabase.from('items').insert(itemsToInsert);
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Migration error:', e);
-      }
-    }
-
-    runControlledMigration();
-
     // Load categories
     supabase
       .from('categories')
@@ -825,50 +778,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .from('items')
       .select('*')
       .order('created_at', { ascending: false })
-      .then(async ({ data, error }) => {
-        const savedStr = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
-        let localItems: Item[] = [];
-        if (savedStr) {
-          try {
-            const parsed = JSON.parse(savedStr);
-            if (Array.isArray(parsed)) localItems = parsed;
-          } catch (e) {}
-        }
-
+      .then(({ data, error }) => {
         if (!error && data && isMounted) {
-          const itemMap = new Map<string, Item>();
-          for (const item of localItems) {
-            if (item && item.name) itemMap.set(item.id, item);
-          }
-          for (const item of (data as Item[])) {
-            if (item && item.name) itemMap.set(item.id, item);
-          }
-          const combined = Array.from(itemMap.values()).sort((a, b) => 
-            (b.created_at || '').localeCompare(a.created_at || '')
-          );
-
-          if (combined.length > 0) {
-            setItems(combined);
-          } else {
-            await runControlledMigration();
-            const { data: reData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
-            if (reData && isMounted && reData.length > 0) {
-              setItems(reData as Item[]);
-            }
-          }
+          setItems(data as Item[]);
         } else if (error) {
-          console.warn('Full items fetch failed, falling back to user_id/local:', error.message);
+          console.warn('Full items fetch failed, falling back to user_id:', error.message);
           supabase.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data: fbItems }) => {
-            const cloudFb = fbItems || [];
-            const itemMap = new Map<string, Item>();
-            for (const item of localItems) {
-              if (item && item.name) itemMap.set(item.id, item);
-            }
-            for (const item of (cloudFb as Item[])) {
-              if (item && item.name) itemMap.set(item.id, item);
-            }
-            const combined = Array.from(itemMap.values());
-            if (combined.length > 0 && isMounted) setItems(combined);
+            if (fbItems && isMounted) setItems(fbItems as Item[]);
           });
         }
       });
