@@ -748,8 +748,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     let isMounted = true;
 
-    // Controlled LocalStorage One-Time Migration to Supabase Cloud (M16)
-    const migrationKey = `thingor_migrated_${user.id}`;
     // Controlled LocalStorage Migration to Supabase Cloud
     async function runControlledMigration() {
       if (!supabase || !user?.id) return;
