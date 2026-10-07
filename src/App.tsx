@@ -24,6 +24,7 @@ import { Wrench, ShieldCheck } from 'lucide-react';
 const AppContent: React.FC = () => {
   const {
     currentView,
+    selectedItemId,
     siteSettings,
     isAdmin,
     setIsAuthModalOpen,
