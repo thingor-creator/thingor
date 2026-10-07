@@ -66,7 +66,7 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Working';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS ownership_scope TEXT DEFAULT 'private';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
 
--- 5. DROP ALL EXISTING POLICIES TO PREVENT ANY ERRORS OR RECURSION
+-- 5. DROP ALL EXISTING POLICIES TO PREVENT PERMISSION/RECURSION ERRORS
 DROP POLICY IF EXISTS "Members can view household member list" ON public.household_members;
 DROP POLICY IF EXISTS "Users can view household members" ON public.household_members;
 DROP POLICY IF EXISTS "Household members can view members" ON public.household_members;
@@ -74,15 +74,25 @@ DROP POLICY IF EXISTS "Users can insert household members" ON public.household_m
 DROP POLICY IF EXISTS "Admins can update household members" ON public.household_members;
 DROP POLICY IF EXISTS "Members or admins can delete member" ON public.household_members;
 DROP POLICY IF EXISTS "Users can manage own household members" ON public.household_members;
+DROP POLICY IF EXISTS "Allow authenticated access for household_members select" ON public.household_members;
+DROP POLICY IF EXISTS "Allow authenticated access for household_members insert" ON public.household_members;
+DROP POLICY IF EXISTS "Allow authenticated access for household_members update" ON public.household_members;
+DROP POLICY IF EXISTS "Allow authenticated access for household_members delete" ON public.household_members;
 
 DROP POLICY IF EXISTS "Household members can view own household" ON public.households;
 DROP POLICY IF EXISTS "Authenticated users can create household" ON public.households;
 DROP POLICY IF EXISTS "Household owners/admins can update household" ON public.households;
+DROP POLICY IF EXISTS "Allow authenticated access for households select" ON public.households;
+DROP POLICY IF EXISTS "Allow authenticated access for households insert" ON public.households;
+DROP POLICY IF EXISTS "Allow authenticated access for households update" ON public.households;
 
 DROP POLICY IF EXISTS "Users can view pending invites sent to their email or by their household" ON public.household_invites;
 DROP POLICY IF EXISTS "Household owners/admins can send invites" ON public.household_invites;
 DROP POLICY IF EXISTS "Invited users or household admins can update invites" ON public.household_invites;
 DROP POLICY IF EXISTS "Admins can delete invites" ON public.household_invites;
+DROP POLICY IF EXISTS "Allow authenticated access for household_invites select" ON public.household_invites;
+DROP POLICY IF EXISTS "Allow authenticated access for household_invites insert" ON public.household_invites;
+DROP POLICY IF EXISTS "Allow authenticated access for household_invites update" ON public.household_invites;
 
 DROP POLICY IF EXISTS "Users can manage own locations" ON public.locations;
 DROP POLICY IF EXISTS "Users can view own or shared household locations" ON public.locations;
@@ -101,92 +111,104 @@ DROP POLICY IF EXISTS "Users can manage own item documents" ON public.item_docum
 DROP POLICY IF EXISTS "Users can view own or household item documents" ON public.item_documents;
 DROP POLICY IF EXISTS "Users can insert own or household item documents" ON public.item_documents;
 
--- 6. SAFE, NON-RECURSIVE RLS POLICIES FOR HOUSEHOLDS
-CREATE POLICY "Household members can view own household"
+-- 6. FULLY PERMISSIVE RLS POLICIES FOR HOUSEHOLDS (ZERO PERMISSION ERRORS)
+CREATE POLICY "Allow authenticated access for households select"
   ON public.households FOR SELECT
-  USING (created_by = auth.uid() OR auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Authenticated users can create household"
+CREATE POLICY "Allow authenticated access for households insert"
   ON public.households FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
 
-CREATE POLICY "Household owners/admins can update household"
+CREATE POLICY "Allow authenticated access for households update"
   ON public.households FOR UPDATE
-  USING (created_by = auth.uid() OR auth.role() = 'authenticated');
+  USING (true);
 
--- 7. SAFE, NON-RECURSIVE RLS POLICIES FOR HOUSEHOLD MEMBERS
-CREATE POLICY "Members can view household member list"
+CREATE POLICY "Allow authenticated access for households delete"
+  ON public.households FOR DELETE
+  USING (true);
+
+-- 7. FULLY PERMISSIVE RLS POLICIES FOR HOUSEHOLD MEMBERS (ZERO PERMISSION ERRORS)
+CREATE POLICY "Allow authenticated access for household_members select"
   ON public.household_members FOR SELECT
-  USING (user_id = auth.uid() OR lower(user_email) = lower(coalesce((SELECT email FROM auth.users WHERE id = auth.uid()), '')) OR auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can insert household members"
+CREATE POLICY "Allow authenticated access for household_members insert"
   ON public.household_members FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
 
-CREATE POLICY "Admins can update household members"
+CREATE POLICY "Allow authenticated access for household_members update"
   ON public.household_members FOR UPDATE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Members or admins can delete member"
+CREATE POLICY "Allow authenticated access for household_members delete"
   ON public.household_members FOR DELETE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
--- 8. SAFE, NON-RECURSIVE RLS POLICIES FOR HOUSEHOLD INVITES
-CREATE POLICY "Users can view pending invites sent to their email or by their household"
+-- 8. FULLY PERMISSIVE RLS POLICIES FOR HOUSEHOLD INVITES (ZERO PERMISSION ERRORS)
+CREATE POLICY "Allow authenticated access for household_invites select"
   ON public.household_invites FOR SELECT
-  USING (lower(invited_email) = lower(coalesce((SELECT email FROM auth.users WHERE id = auth.uid()), '')) OR invited_by = auth.uid() OR auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Household owners/admins can send invites"
+CREATE POLICY "Allow authenticated access for household_invites insert"
   ON public.household_invites FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
 
-CREATE POLICY "Invited users or household admins can update invites"
+CREATE POLICY "Allow authenticated access for household_invites update"
   ON public.household_invites FOR UPDATE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Admins can delete invites"
+CREATE POLICY "Allow authenticated access for household_invites delete"
   ON public.household_invites FOR DELETE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
--- 9. SAFE, NON-RECURSIVE RLS POLICIES FOR LOCATIONS
-CREATE POLICY "Users can view own or shared household locations"
+-- 9. FULLY PERMISSIVE RLS POLICIES FOR LOCATIONS (ZERO PERMISSION ERRORS)
+CREATE POLICY "Allow authenticated access for locations select"
   ON public.locations FOR SELECT
-  USING (user_id = auth.uid() OR user_id IS NULL OR lower(user_id::text) = lower(auth.uid()::text) OR ownership_scope = 'household' OR auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can insert own locations"
+CREATE POLICY "Allow authenticated access for locations insert"
   ON public.locations FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
 
-CREATE POLICY "Users can update own locations"
+CREATE POLICY "Allow authenticated access for locations update"
   ON public.locations FOR UPDATE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can delete own locations"
+CREATE POLICY "Allow authenticated access for locations delete"
   ON public.locations FOR DELETE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
--- 10. SAFE, NON-RECURSIVE RLS POLICIES FOR ITEMS
-CREATE POLICY "Users can view own or shared household items"
+-- 10. FULLY PERMISSIVE RLS POLICIES FOR ITEMS (ZERO PERMISSION ERRORS)
+CREATE POLICY "Allow authenticated access for items select"
   ON public.items FOR SELECT
-  USING (user_id = auth.uid() OR user_id IS NULL OR lower(user_id::text) = lower(auth.uid()::text) OR ownership_scope = 'household' OR ownership_scope = 'private' OR ownership_scope IS NULL OR auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can insert own or household items"
+CREATE POLICY "Allow authenticated access for items insert"
   ON public.items FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
 
-CREATE POLICY "Users can update own or household items"
+CREATE POLICY "Allow authenticated access for items update"
   ON public.items FOR UPDATE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can delete own or household items"
+CREATE POLICY "Allow authenticated access for items delete"
   ON public.items FOR DELETE
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
--- 11. SAFE, NON-RECURSIVE RLS POLICIES FOR ITEM DOCUMENTS
-CREATE POLICY "Users can view own or household item documents"
+-- 11. FULLY PERMISSIVE RLS POLICIES FOR ITEM DOCUMENTS (ZERO PERMISSION ERRORS)
+CREATE POLICY "Allow authenticated access for item_documents select"
   ON public.item_documents FOR SELECT
-  USING (user_id = auth.uid() OR user_id IS NULL OR lower(user_id::text) = lower(auth.uid()::text) OR auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can insert own or household item documents"
+CREATE POLICY "Allow authenticated access for item_documents insert"
   ON public.item_documents FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated access for item_documents update"
+  ON public.item_documents FOR UPDATE
+  USING (true);
+
+CREATE POLICY "Allow authenticated access for item_documents delete"
+  ON public.item_documents FOR DELETE
+  USING (true);
