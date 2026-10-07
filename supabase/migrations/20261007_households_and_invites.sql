@@ -66,7 +66,7 @@ ALTER TABLE public.items ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Working';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS ownership_scope TEXT DEFAULT 'private';
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
 
--- 5. DROP ALL EXISTING POLICIES TO PREVENT PERMISSION/RECURSION ERRORS
+-- 5. DROP ALL EXISTING POLICIES TO PREVENT PERMISSION/DUPLICATE ERRORS
 DROP POLICY IF EXISTS "Members can view household member list" ON public.household_members;
 DROP POLICY IF EXISTS "Users can view household members" ON public.household_members;
 DROP POLICY IF EXISTS "Household members can view members" ON public.household_members;
@@ -85,6 +85,7 @@ DROP POLICY IF EXISTS "Household owners/admins can update household" ON public.h
 DROP POLICY IF EXISTS "Allow authenticated access for households select" ON public.households;
 DROP POLICY IF EXISTS "Allow authenticated access for households insert" ON public.households;
 DROP POLICY IF EXISTS "Allow authenticated access for households update" ON public.households;
+DROP POLICY IF EXISTS "Allow authenticated access for households delete" ON public.households;
 
 DROP POLICY IF EXISTS "Users can view pending invites sent to their email or by their household" ON public.household_invites;
 DROP POLICY IF EXISTS "Household owners/admins can send invites" ON public.household_invites;
@@ -93,12 +94,17 @@ DROP POLICY IF EXISTS "Admins can delete invites" ON public.household_invites;
 DROP POLICY IF EXISTS "Allow authenticated access for household_invites select" ON public.household_invites;
 DROP POLICY IF EXISTS "Allow authenticated access for household_invites insert" ON public.household_invites;
 DROP POLICY IF EXISTS "Allow authenticated access for household_invites update" ON public.household_invites;
+DROP POLICY IF EXISTS "Allow authenticated access for household_invites delete" ON public.household_invites;
 
 DROP POLICY IF EXISTS "Users can manage own locations" ON public.locations;
 DROP POLICY IF EXISTS "Users can view own or shared household locations" ON public.locations;
 DROP POLICY IF EXISTS "Users can insert own locations" ON public.locations;
 DROP POLICY IF EXISTS "Users can update own locations" ON public.locations;
 DROP POLICY IF EXISTS "Users can delete own locations" ON public.locations;
+DROP POLICY IF EXISTS "Allow authenticated access for locations select" ON public.locations;
+DROP POLICY IF EXISTS "Allow authenticated access for locations insert" ON public.locations;
+DROP POLICY IF EXISTS "Allow authenticated access for locations update" ON public.locations;
+DROP POLICY IF EXISTS "Allow authenticated access for locations delete" ON public.locations;
 
 DROP POLICY IF EXISTS "Users can manage own items" ON public.items;
 DROP POLICY IF EXISTS "Users can view own or shared household items" ON public.items;
@@ -106,10 +112,18 @@ DROP POLICY IF EXISTS "Users can insert own or household items" ON public.items;
 DROP POLICY IF EXISTS "Users can update own or household items" ON public.items;
 DROP POLICY IF EXISTS "Users can delete own or household items" ON public.items;
 DROP POLICY IF EXISTS "Anyone can view shared items" ON public.items;
+DROP POLICY IF EXISTS "Allow authenticated access for items select" ON public.items;
+DROP POLICY IF EXISTS "Allow authenticated access for items insert" ON public.items;
+DROP POLICY IF EXISTS "Allow authenticated access for items update" ON public.items;
+DROP POLICY IF EXISTS "Allow authenticated access for items delete" ON public.items;
 
 DROP POLICY IF EXISTS "Users can manage own item documents" ON public.item_documents;
 DROP POLICY IF EXISTS "Users can view own or household item documents" ON public.item_documents;
 DROP POLICY IF EXISTS "Users can insert own or household item documents" ON public.item_documents;
+DROP POLICY IF EXISTS "Allow authenticated access for item_documents select" ON public.item_documents;
+DROP POLICY IF EXISTS "Allow authenticated access for item_documents insert" ON public.item_documents;
+DROP POLICY IF EXISTS "Allow authenticated access for item_documents update" ON public.item_documents;
+DROP POLICY IF EXISTS "Allow authenticated access for item_documents delete" ON public.item_documents;
 
 -- 6. FULLY PERMISSIVE RLS POLICIES FOR HOUSEHOLDS (ZERO PERMISSION ERRORS)
 CREATE POLICY "Allow authenticated access for households select"
