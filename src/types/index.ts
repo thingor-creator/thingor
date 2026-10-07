@@ -104,6 +104,7 @@ export interface HouseholdMember {
   user_email?: string;
   display_name?: string;
   user_name?: string;
+  title?: string;
   role: HouseholdRole;
   joined_at: string;
 }
@@ -114,6 +115,7 @@ export interface HouseholdInvite {
   email?: string;
   invited_email?: string;
   role: HouseholdRole;
+  title?: string;
   token: string;
   invited_by: string;
   status?: 'pending' | 'accepted' | 'declined' | 'expired';

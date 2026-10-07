@@ -25,9 +25,11 @@ export const HouseholdView: React.FC = () => {
     language
   } = useApp();
 
+  const PRESET_TITLES = ['Apa', 'Anya', 'Tesó', 'Gyerek', 'Feleség', 'Férj', 'Nagyszülő'];
+
   const [newHouseholdName, setNewHouseholdName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<HouseholdRole>('member');
+  const [inviteTitle, setInviteTitle] = useState('');
   const [inviteMessage, setInviteMessage] = useState<{ text: string; success: boolean } | null>(null);
 
   const formatCurrency = (val: number) => {
@@ -50,7 +52,7 @@ export const HouseholdView: React.FC = () => {
     if (!inviteEmail.trim()) return;
 
     setInviteMessage(null);
-    const res = await inviteHouseholdMember(inviteEmail.trim(), inviteRole);
+    const res = await inviteHouseholdMember(inviteEmail.trim(), inviteTitle.trim() || undefined);
 
     if (res.success) {
       setInviteMessage({
@@ -58,6 +60,7 @@ export const HouseholdView: React.FC = () => {
         success: true
       });
       setInviteEmail('');
+      setInviteTitle('');
     } else {
       setInviteMessage({
         text: res.error || (language === 'hu' ? 'Hiba a meghívó küldésekor' : 'Error sending invite'),
@@ -260,38 +263,59 @@ export const HouseholdView: React.FC = () => {
             {language === 'hu' ? 'Új Családtag Meghívása' : 'Invite Family Member'}
           </h2>
 
-          <form onSubmit={handleSendInvite} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-1">
-              <input
-                type="email"
-                required
-                placeholder={language === 'hu' ? 'Családtag e-mail címe' : 'Member email address'}
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
+          <form onSubmit={handleSendInvite} className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-1">
+                <input
+                  type="email"
+                  required
+                  placeholder={language === 'hu' ? 'Családtag e-mail címe *' : 'Member email address *'}
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  placeholder={language === 'hu' ? 'Nevet / Titulus (pl. Apa, Anya, Tesó)' : 'Title / Role (e.g. Mom, Dad, Brother)'}
+                  value={inviteTitle}
+                  onChange={(e) => setInviteTitle(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  {language === 'hu' ? 'Meghívó Küldése' : 'Send Invitation'}
+                </button>
+              </div>
             </div>
 
-            <div>
-              <select
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value as HouseholdRole)}
-                className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
-              >
-                <option value="member">{language === 'hu' ? 'Családtag (Member)' : 'Family Member'}</option>
-                <option value="admin">{language === 'hu' ? 'Adminisztrátor (Admin)' : 'Family Admin'}</option>
-                <option value="viewer">{language === 'hu' ? 'Megtekintő (Viewer)' : 'Viewer Only'}</option>
-              </select>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2"
-              >
-                <Mail className="w-4 h-4" />
-                {language === 'hu' ? 'Meghívó Küldése' : 'Send Invitation'}
-              </button>
+            {/* Quick Title Selection Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-xs font-medium text-slate-500 mr-1">
+                {language === 'hu' ? 'Gyors választás:' : 'Quick select:'}
+              </span>
+              {PRESET_TITLES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setInviteTitle(t)}
+                  className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition ${
+                    inviteTitle === t
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border-slate-200'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
           </form>
 
@@ -317,7 +341,14 @@ export const HouseholdView: React.FC = () => {
                   {(member.user_name || member.user_email || 'U')[0].toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-800 text-sm">{member.user_name || member.user_email}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-slate-800 text-sm">{member.user_name || member.user_email}</p>
+                    {member.title && (
+                      <span className="px-2 py-0.5 text-xs rounded-md bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                        {member.title}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500">{member.user_email}</p>
                 </div>
               </div>
@@ -327,16 +358,6 @@ export const HouseholdView: React.FC = () => {
 
                 {isOwnerOrAdmin && member.role !== 'owner' && member.user_id !== user?.id && (
                   <div className="flex items-center gap-2">
-                    <select
-                      value={member.role}
-                      onChange={(e) => updateMemberRole(member.id, e.target.value as HouseholdRole)}
-                      className="text-xs rounded-lg border border-slate-300 p-1.5 focus:ring-1 focus:ring-emerald-500 outline-none"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="member">Member</option>
-                      <option value="viewer">Viewer</option>
-                    </select>
-
                     <button
                       onClick={() => removeHouseholdMember(member.id)}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
@@ -379,7 +400,11 @@ export const HouseholdView: React.FC = () => {
                     {inv.household_name || (language === 'hu' ? 'Családi Háztartás' : 'Family Household')}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-emerald-400 font-semibold">{inv.role}</strong>
+                    {inv.title ? (
+                      <>{language === 'hu' ? 'Megnevezés / Titulus:' : 'Title:'} <strong className="text-emerald-400 font-semibold">{inv.title}</strong></>
+                    ) : (
+                      <>{language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-emerald-400 font-semibold">{inv.role}</strong></>
+                    )}
                   </p>
                 </div>
 
@@ -424,9 +449,15 @@ export const HouseholdView: React.FC = () => {
           <div className="divide-y divide-slate-100 text-sm">
             {householdInvites.filter(i => i.status === 'pending').map((inv) => (
               <div key={inv.id} className="py-3 flex items-center justify-between gap-3">
-                <div>
+                <div className="flex items-center gap-2">
                   <span className="font-semibold text-slate-800">{inv.invited_email || inv.email}</span>
-                  <span className="ml-2 text-xs text-slate-500">({inv.role})</span>
+                  {inv.title ? (
+                    <span className="px-2 py-0.5 text-xs rounded-md bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                      {inv.title}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-500">({inv.role})</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium flex items-center gap-1">

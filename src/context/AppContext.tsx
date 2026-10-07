@@ -141,7 +141,7 @@ interface AppContextType {
   householdInvites: HouseholdInvite[];
   receivedInvites: HouseholdInvite[];
   createHousehold: (name: string) => Promise<Household>;
-  inviteHouseholdMember: (email: string, role: HouseholdRole) => Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }>;
+  inviteHouseholdMember: (email: string, title?: string, role?: HouseholdRole) => Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }>;
   acceptHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
   declineHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
   cancelHouseholdInvite: (inviteId: string) => Promise<void>;
@@ -1598,9 +1598,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newHh;
   };
 
-  const inviteHouseholdMember = async (email: string, role: HouseholdRole): Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }> => {
+  const inviteHouseholdMember = async (email: string, title?: string, role: HouseholdRole = 'member'): Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }> => {
     if (!household) return { success: false, error: language === 'hu' ? 'Nincs aktív háztartás' : 'No active household' };
     const cleanEmail = email.trim().toLowerCase();
+    const cleanTitle = title?.trim() || '';
 
     if (user?.email && cleanEmail === user.email.toLowerCase()) {
       return { success: false, error: language === 'hu' ? 'Saját magadat nem hívhatod meg!' : 'You cannot invite yourself!' };
@@ -1620,6 +1621,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: 'inv-' + Date.now(),
       household_id: household.id,
       invited_email: cleanEmail,
+      title: cleanTitle,
       role,
       invited_by: user?.id || 'guest',
       token: Math.random().toString(36).substring(2, 10),
@@ -1632,6 +1634,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const { data, error } = await supabase.from('household_invites').insert([{
         household_id: household.id,
         invited_email: cleanEmail,
+        title: cleanTitle,
         role,
         invited_by: user.id,
         token: newInvite.token,
@@ -1655,11 +1658,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!invite) return { success: false, error: language === 'hu' ? 'Érvénytelen vagy lejárt meghívó' : 'Invalid or expired invite' };
 
     if (isSupabaseConfigured && supabase && user?.id) {
+      const memberUserName = invite.title ? `${user.display_name || user.email} (${invite.title})` : (user.display_name || user.email);
       const { error: mErr } = await supabase.from('household_members').insert([{
         household_id: invite.household_id,
         user_id: user.id,
         user_email: user.email,
-        user_name: user.display_name || user.email,
+        user_name: memberUserName,
+        title: invite.title || null,
         role: invite.role,
       }]).select().single();
 
@@ -1688,12 +1693,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // Offline / Demo mode fallback
+    const memberName = invite.title ? `${user?.display_name || user?.email || 'Családtag'} (${invite.title})` : (user?.display_name || user?.email || 'Családtag');
     const newMember: HouseholdMember = {
       id: 'hm-' + Date.now(),
       household_id: invite.household_id,
       user_id: user?.id || 'guest',
       user_email: user?.email || '',
-      user_name: user?.display_name || user?.email || 'Családtag',
+      user_name: memberName,
+      title: invite.title,
       role: invite.role,
       joined_at: new Date().toISOString(),
     };

@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.household_members (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   user_email TEXT NOT NULL,
   user_name TEXT,
+  title TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
   joined_at TIMESTAMPTZ DEFAULT now(),
   CONSTRAINT household_members_hh_email_key UNIQUE(household_id, user_email)
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS public.household_members (
 
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_email TEXT;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS user_name TEXT;
+ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS title TEXT;
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
 ALTER TABLE public.household_members ADD COLUMN IF NOT EXISTS joined_at TIMESTAMPTZ DEFAULT now();
 
@@ -36,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.household_invites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES public.households(id) ON DELETE CASCADE,
   invited_email TEXT NOT NULL,
+  title TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
   invited_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   token TEXT NOT NULL UNIQUE,
@@ -45,6 +48,7 @@ CREATE TABLE IF NOT EXISTS public.household_invites (
 );
 
 ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS invited_email TEXT;
+ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS title TEXT;
 ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
 ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS invited_by UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 ALTER TABLE public.household_invites ADD COLUMN IF NOT EXISTS token TEXT;
