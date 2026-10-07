@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Settings, CheckSquare } from 'lucide-react';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Settings, CheckSquare, Lock } from 'lucide-react';
 import type { HouseholdRole, HouseholdMember } from '../types';
 
 export const HouseholdView: React.FC = () => {
@@ -23,6 +23,8 @@ export const HouseholdView: React.FC = () => {
     items,
     user,
     setSelectedItemId,
+    setIsAuthModalOpen,
+    setAuthModalMode,
     language
   } = useApp();
 
@@ -123,8 +125,32 @@ export const HouseholdView: React.FC = () => {
   const sharedItems = items.filter(i => i.ownership_scope === 'household');
   const sharedTotalValue = sharedItems.reduce((sum, i) => sum + (i.current_value || i.purchase_price || 0), 0);
 
-  const currentUserMember = householdMembers.find(m => m.user_id === user?.id || m.user_email === user?.email);
-  const isOwnerOrAdmin = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto my-12 p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-4 shadow-xl">
+        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800">
+          {language === 'hu' ? 'Bejelentkezés Szükséges' : 'Login Required'}
+        </h2>
+        <p className="text-sm text-slate-600">
+          {language === 'hu'
+            ? 'A családi és háztartási adatok megtekintéséhez kérjük, jelentkezz be a fiókodba!'
+            : 'Please log in to your account to view family and household access.'}
+        </p>
+        <button
+          onClick={() => {
+            setAuthModalMode('login');
+            setIsAuthModalOpen(true);
+          }}
+          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition"
+        >
+          {language === 'hu' ? 'Bejelentkezés' : 'Log In'}
+        </button>
+      </div>
+    );
+  }
 
   if (!household) {
     return (

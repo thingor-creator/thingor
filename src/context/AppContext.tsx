@@ -732,10 +732,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setItems([]);
         setDocuments([]);
         setLocations([]);
+        setHousehold(null);
+        setHouseholdMembers([]);
+        setHouseholdInvites([]);
+        setReceivedInvites([]);
         localStorage.removeItem('thingor_user');
         localStorage.removeItem('thingor_items');
         localStorage.removeItem('thingor_documents');
         localStorage.removeItem('thingor_locations');
+        localStorage.removeItem('thingor_household');
+        localStorage.removeItem('thingor_household_members');
+        localStorage.removeItem('thingor_household_invites');
         localStorage.removeItem('thingor_current_view');
         setCurrentView('landing');
       }
@@ -955,9 +962,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setItems([]);
     setDocuments([]);
     setLocations([]);
+    setHousehold(null);
+    setHouseholdMembers([]);
+    setHouseholdInvites([]);
+    setReceivedInvites([]);
     localStorage.removeItem('thingor_items');
     localStorage.removeItem('thingor_documents');
     localStorage.removeItem('thingor_locations');
+    localStorage.removeItem('thingor_household');
+    localStorage.removeItem('thingor_household_members');
+    localStorage.removeItem('thingor_household_invites');
 
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
@@ -1014,9 +1028,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setItems([]);
     setDocuments([]);
     setLocations([]);
+    setHousehold(null);
+    setHouseholdMembers([]);
+    setHouseholdInvites([]);
+    setReceivedInvites([]);
     localStorage.removeItem('thingor_items');
     localStorage.removeItem('thingor_documents');
     localStorage.removeItem('thingor_locations');
+    localStorage.removeItem('thingor_household');
+    localStorage.removeItem('thingor_household_members');
+    localStorage.removeItem('thingor_household_invites');
 
     const currentIsAdmin = !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin);
     if (isRegistrationSuspended && !currentIsAdmin) {
@@ -1133,10 +1154,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setItems([]);
     setDocuments([]);
     setLocations([]);
+    setHousehold(null);
+    setHouseholdMembers([]);
+    setHouseholdInvites([]);
+    setReceivedInvites([]);
     localStorage.removeItem('thingor_user');
     localStorage.removeItem('thingor_items');
     localStorage.removeItem('thingor_documents');
     localStorage.removeItem('thingor_locations');
+    localStorage.removeItem('thingor_household');
+    localStorage.removeItem('thingor_household_members');
+    localStorage.removeItem('thingor_household_invites');
     localStorage.removeItem('thingor_current_view');
     setIsAuthModalOpen(false);
     setCurrentView('landing');
