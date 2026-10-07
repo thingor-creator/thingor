@@ -23,7 +23,8 @@ import {
   CreditCard,
   Wrench,
   Link2,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
 import { ShareModal } from './ShareModal';
@@ -175,23 +176,27 @@ export const ItemDetailModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl overflow-hidden">
-
-        {/* Close Button */}
+    <div className="space-y-6 pb-16 w-full text-slate-100 animate-in fade-in duration-200">
+      {/* Top Back Navigation Bar */}
+      <div className="flex items-center justify-between">
         <button
           onClick={() => setSelectedItemId(null)}
-          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800 backdrop-blur transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 hover:text-white hover:bg-slate-800 hover:border-slate-700 font-bold text-xs transition-all shadow-sm group"
         >
-          <X className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
+          <span>{isHu ? '← Vissza a tárgyaimhoz' : '← Back to My Items'}</span>
         </button>
+      </div>
 
-        {/* Modal Header with Hero Banner */}
+      {/* Main Full Page Card Container */}
+      <div className="w-full flex flex-col rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+
+        {/* Header with Hero Banner */}
         <div className="relative border-b border-slate-800 bg-slate-950">
           <div className="flex flex-col md:flex-row gap-6 p-6">
 
             {/* Main Photo */}
-            <div className="h-40 w-full md:w-48 rounded-xl bg-slate-950 overflow-hidden flex-shrink-0 border border-slate-800 relative flex items-center justify-center p-2">
+            <div className="h-52 w-full md:w-64 rounded-2xl bg-slate-950/80 overflow-hidden flex-shrink-0 border border-slate-800/80 relative flex items-center justify-center p-3 shadow-lg">
               {item.photo_url ? (
                 <img
                   src={item.photo_url}

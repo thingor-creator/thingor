@@ -132,22 +132,27 @@ const AppContent: React.FC = () => {
       {currentView === 'landing' ? (
         <LandingPage />
       ) : (
-        <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-8">
-          {currentView === 'dashboard' && <DashboardView />}
-          {currentView === 'items' && <ItemsView />}
-          {currentView === 'locations' && <LocationsView />}
-          {currentView === 'categories' && <CategoriesView />}
-          {currentView === 'documents' && <DocumentsView />}
-          {currentView === 'repairs' && <RepairsView />}
-          {currentView === 'financing' && <FinancingView />}
-          {currentView === 'household' && <HouseholdView />}
-          {currentView === 'notes' && <NotesView />}
-          {currentView === 'admin' && <AdminView />}
+        <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+          {selectedItemId ? (
+            <ItemDetailModal />
+          ) : (
+            <>
+              {currentView === 'dashboard' && <DashboardView />}
+              {currentView === 'items' && <ItemsView />}
+              {currentView === 'locations' && <LocationsView />}
+              {currentView === 'categories' && <CategoriesView />}
+              {currentView === 'documents' && <DocumentsView />}
+              {currentView === 'repairs' && <RepairsView />}
+              {currentView === 'financing' && <FinancingView />}
+              {currentView === 'household' && <HouseholdView />}
+              {currentView === 'notes' && <NotesView />}
+              {currentView === 'admin' && <AdminView />}
+            </>
+          )}
         </main>
       )}
 
       {/* Modals & Overlays */}
-      <ItemDetailModal />
       <ItemFormModal />
       <AuthModal />
       <SupabaseSetupModal />
