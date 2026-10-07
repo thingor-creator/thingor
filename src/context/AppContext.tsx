@@ -139,9 +139,12 @@ interface AppContextType {
   household: Household | null;
   householdMembers: HouseholdMember[];
   householdInvites: HouseholdInvite[];
+  receivedInvites: HouseholdInvite[];
   createHousehold: (name: string) => Promise<Household>;
   inviteHouseholdMember: (email: string, role: HouseholdRole) => Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }>;
   acceptHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
+  declineHouseholdInvite: (token: string) => Promise<{ success: boolean; error?: string }>;
+  cancelHouseholdInvite: (inviteId: string) => Promise<void>;
   removeHouseholdMember: (memberId: string) => Promise<void>;
   updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
   leaveHousehold: () => Promise<void>;
@@ -338,6 +341,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return [];
   });
+
+  const [receivedInvites, setReceivedInvites] = useState<HouseholdInvite[]>([]);
 
   // LocalStorage Sync Effects for new modules
   useEffect(() => { localStorage.setItem('thingor_repairs', JSON.stringify(repairs)); }, [repairs]);
@@ -885,6 +890,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
       });
+
+    // Load pending invites sent to this user's email
+    if (user?.email && isSupabaseConfigured && supabase) {
+      supabase
+        .from('household_invites')
+        .select('*, households(name)')
+        .or(`invited_email.ilike.${user.email},email.ilike.${user.email}`)
+        .eq('status', 'pending')
+        .then(({ data: rData }) => {
+          if (rData && isMounted) {
+            const formatted = rData.map(inv => ({
+              ...inv,
+              household_name: (inv.households as any)?.name || 'Családi Háztartás'
+            })) as HouseholdInvite[];
+            setReceivedInvites(formatted);
+          }
+        });
+    }
 
     // Load item relations
     supabase
@@ -1558,22 +1581,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const inviteHouseholdMember = async (email: string, role: HouseholdRole): Promise<{ success: boolean; invite?: HouseholdInvite; error?: string }> => {
     if (!household) return { success: false, error: language === 'hu' ? 'Nincs aktív háztartás' : 'No active household' };
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (user?.email && cleanEmail === user.email.toLowerCase()) {
+      return { success: false, error: language === 'hu' ? 'Saját magadat nem hívhatod meg!' : 'You cannot invite yourself!' };
+    }
+
+    const existingInvite = householdInvites.find(i => (i.invited_email?.toLowerCase() === cleanEmail || i.email?.toLowerCase() === cleanEmail) && i.status === 'pending');
+    if (existingInvite) {
+      return { success: false, error: language === 'hu' ? 'Ennek az e-mail címnek már küldtél függőben lévő meghívót!' : 'A pending invite already exists for this email address!' };
+    }
+
+    const existingMember = householdMembers.find(m => m.user_email?.toLowerCase() === cleanEmail);
+    if (existingMember) {
+      return { success: false, error: language === 'hu' ? 'Ez a felhasználó már a háztartás tagja!' : 'This user is already a household member!' };
+    }
 
     const newInvite: HouseholdInvite = {
       id: 'inv-' + Date.now(),
       household_id: household.id,
-      invited_email: email,
+      invited_email: cleanEmail,
       role,
       invited_by: user?.id || 'guest',
       token: Math.random().toString(36).substring(2, 10),
       status: 'pending',
       created_at: new Date().toISOString(),
+      household_name: household.name
     };
 
     if (isSupabaseConfigured && supabase && user?.id) {
       const { data, error } = await supabase.from('household_invites').insert([{
         household_id: household.id,
-        invited_email: email,
+        invited_email: cleanEmail,
         role,
         invited_by: user.id,
         token: newInvite.token,
@@ -1581,16 +1620,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }]).select().single();
 
       if (error) return { success: false, error: error.message };
-      setHouseholdInvites(prev => [...prev, data as HouseholdInvite]);
-      return { success: true, invite: data as HouseholdInvite };
+      const created = { ...data, household_name: household.name } as HouseholdInvite;
+      setHouseholdInvites(prev => [...prev, created]);
+      return { success: true, invite: created };
     }
 
     setHouseholdInvites(prev => [...prev, newInvite]);
     return { success: true, invite: newInvite };
   };
 
-  const acceptHouseholdInvite = async (token: string): Promise<{ success: boolean; error?: string }> => {
-    const invite = householdInvites.find(i => i.token === token && i.status === 'pending');
+  const acceptHouseholdInvite = async (inviteIdOrToken: string): Promise<{ success: boolean; error?: string }> => {
+    const invite = [...householdInvites, ...receivedInvites].find(
+      i => (i.id === inviteIdOrToken || i.token === inviteIdOrToken) && i.status === 'pending'
+    );
     if (!invite) return { success: false, error: language === 'hu' ? 'Érvénytelen vagy lejárt meghívó' : 'Invalid or expired invite' };
 
     if (isSupabaseConfigured && supabase && user?.id) {
@@ -1598,22 +1640,42 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         household_id: invite.household_id,
         user_id: user.id,
         user_email: user.email,
-        user_name: user.display_name,
+        user_name: user.display_name || user.email,
         role: invite.role,
       }]).select().single();
 
-      if (mErr) return { success: false, error: mErr.message };
-      if (memberData) setHouseholdMembers(prev => [...prev, memberData as HouseholdMember]);
+      if (mErr && !mErr.message.includes('duplicate')) {
+        return { success: false, error: mErr.message };
+      }
 
       await supabase.from('household_invites').update({ status: 'accepted' }).eq('id', invite.id);
 
       const { data: hh } = await supabase.from('households').select('*').eq('id', invite.household_id).single();
       if (hh) setHousehold(hh as Household);
 
+      const { data: allMembers } = await supabase.from('household_members').select('*').eq('household_id', invite.household_id);
+      if (allMembers) setHouseholdMembers(allMembers as HouseholdMember[]);
+
+      // Fetch shared household items
+      const { data: sharedItems } = await supabase
+        .from('items')
+        .select('*')
+        .eq('ownership_scope', 'household');
+
+      if (sharedItems) {
+        setItems(prev => {
+          const existingIds = new Set(prev.map(i => i.id));
+          const newShared = (sharedItems as Item[]).filter(i => !existingIds.has(i.id));
+          return [...prev, ...newShared];
+        });
+      }
+
       setHouseholdInvites(prev => prev.map(i => i.id === invite.id ? { ...i, status: 'accepted' } : i));
+      setReceivedInvites(prev => prev.filter(i => i.id !== invite.id));
       return { success: true };
     }
 
+    // Offline / Demo mode fallback
     const newMember: HouseholdMember = {
       id: 'hm-' + Date.now(),
       household_id: invite.household_id,
@@ -1626,7 +1688,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setHouseholdMembers(prev => [...prev, newMember]);
     setHouseholdInvites(prev => prev.map(i => i.id === invite.id ? { ...i, status: 'accepted' } : i));
+    setReceivedInvites(prev => prev.filter(i => i.id !== invite.id));
+
+    if (!household) {
+      setHousehold({
+        id: invite.household_id,
+        name: invite.household_name || 'Családi Háztartás',
+        created_by: invite.invited_by,
+        created_at: new Date().toISOString()
+      });
+    }
+
     return { success: true };
+  };
+
+  const declineHouseholdInvite = async (inviteIdOrToken: string): Promise<{ success: boolean; error?: string }> => {
+    const invite = [...householdInvites, ...receivedInvites].find(
+      i => (i.id === inviteIdOrToken || i.token === inviteIdOrToken) && i.status === 'pending'
+    );
+    if (!invite) return { success: false };
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('household_invites').update({ status: 'declined' }).eq('id', invite.id);
+    }
+
+    setHouseholdInvites(prev => prev.map(i => i.id === invite.id ? { ...i, status: 'declined' } : i));
+    setReceivedInvites(prev => prev.filter(i => i.id !== invite.id));
+    return { success: true };
+  };
+
+  const cancelHouseholdInvite = async (inviteId: string): Promise<void> => {
+    setHouseholdInvites(prev => prev.filter(i => i.id !== inviteId));
+    if (isSupabaseConfigured && supabase && isUUID(inviteId)) {
+      await supabase.from('household_invites').delete().eq('id', inviteId);
+    }
   };
 
   const removeHouseholdMember = async (memberId: string): Promise<void> => {
@@ -2442,9 +2537,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         household,
         householdMembers,
         householdInvites,
+        receivedInvites,
         createHousehold,
         inviteHouseholdMember,
         acceptHouseholdInvite,
+        declineHouseholdInvite,
+        cancelHouseholdInvite,
         removeHouseholdMember,
         updateMemberRole,
         leaveHousehold,

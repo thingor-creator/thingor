@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck } from 'lucide-react';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock } from 'lucide-react';
 import type { HouseholdRole } from '../types';
 
 export const HouseholdView: React.FC = () => {
@@ -8,8 +8,12 @@ export const HouseholdView: React.FC = () => {
     household,
     householdMembers,
     householdInvites,
+    receivedInvites,
     createHousehold,
     inviteHouseholdMember,
+    acceptHouseholdInvite,
+    declineHouseholdInvite,
+    cancelHouseholdInvite,
     removeHouseholdMember,
     updateMemberRole,
     leaveHousehold,
@@ -85,6 +89,63 @@ export const HouseholdView: React.FC = () => {
   if (!household) {
     return (
       <div className="max-w-2xl mx-auto space-y-6 py-8">
+        {/* Received Pending Invitations */}
+        {receivedInvites.length > 0 && (
+          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 text-white rounded-2xl border-2 border-emerald-500/60 p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+                <Mail className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-lg font-extrabold text-white">
+                  {language === 'hu' ? 'Családi Meghívás Érkezett!' : 'Family Invitation Received!'}
+                </h2>
+                <p className="text-xs text-slate-300">
+                  {language === 'hu'
+                    ? 'Meghívót kaptál egy közös családi háztartáshoz. A fiókok és tárgyak csak a visszaigazolás után kapcsolódnak össze!'
+                    : 'You received an invitation to join a family household. Accounts will link only after confirmation!'}
+                </p>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-800">
+              {receivedInvites.map((inv) => (
+                <div key={inv.id} className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-white">
+                      {inv.household_name || (language === 'hu' ? 'Családi Háztartás' : 'Family Household')}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-emerald-400 font-semibold">{inv.role}</strong>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        const res = await acceptHouseholdInvite(inv.id);
+                        if (!res.success) alert(res.error);
+                      }}
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
+                    >
+                      <Check className="w-4 h-4" />
+                      {language === 'hu' ? 'Elfogadom (Visszaigazolás)' : 'Confirm & Accept'}
+                    </button>
+
+                    <button
+                      onClick={() => declineHouseholdInvite(inv.id)}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 rounded-xl text-xs flex items-center gap-1 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                      {language === 'hu' ? 'Elutasítom' : 'Decline'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
             <Users className="w-8 h-8" />
@@ -291,22 +352,95 @@ export const HouseholdView: React.FC = () => {
         </div>
       </div>
 
-      {/* Pending Invites */}
-      {householdInvites.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-bold text-slate-800">
-            {language === 'hu' ? 'Függőben Lévő Meghívók' : 'Pending Invitations'}
-          </h2>
-          <div className="divide-y divide-slate-100 text-sm">
-            {householdInvites.map((inv) => (
-              <div key={inv.id} className="py-2.5 flex items-center justify-between">
+      {/* Received Pending Invitations */}
+      {receivedInvites.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-950 to-slate-900 text-white rounded-2xl border-2 border-emerald-500/60 p-6 shadow-xl space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+              <Mail className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-lg font-extrabold text-white">
+                {language === 'hu' ? 'Családi Meghívás Érkezett!' : 'Family Invitation Received!'}
+              </h2>
+              <p className="text-xs text-slate-300">
+                {language === 'hu'
+                  ? 'Meghívót kaptál egy közös családi háztartáshoz. A fiókok és tárgyak csak a visszaigazolás után kapcsolódnak össze!'
+                  : 'You received an invitation to join a family household. Accounts will link only after confirmation!'}
+              </p>
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-800">
+            {receivedInvites.map((inv) => (
+              <div key={inv.id} className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <span className="font-semibold text-slate-800">{inv.invited_email}</span>
+                  <p className="text-sm font-bold text-white">
+                    {inv.household_name || (language === 'hu' ? 'Családi Háztartás' : 'Family Household')}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-emerald-400 font-semibold">{inv.role}</strong>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      const res = await acceptHouseholdInvite(inv.id);
+                      if (!res.success) alert(res.error);
+                    }}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
+                  >
+                    <Check className="w-4 h-4" />
+                    {language === 'hu' ? 'Elfogadom (Visszaigazolás)' : 'Confirm & Accept'}
+                  </button>
+
+                  <button
+                    onClick={() => declineHouseholdInvite(inv.id)}
+                    className="px-3.5 py-2 bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 rounded-xl text-xs flex items-center gap-1 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                    {language === 'hu' ? 'Elutasítom' : 'Decline'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sent Pending Invites */}
+      {householdInvites.filter(i => i.status === 'pending').length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-500" />
+            {language === 'hu' ? 'Kiküldött Függőben Lévő Meghívók' : 'Sent Pending Invitations'}
+          </h2>
+          <p className="text-xs text-slate-500">
+            {language === 'hu'
+              ? 'A meghívott fiókja csak akkor kapcsolódik össze a családdal, ha visszaigazolja a meghívást.'
+              : 'The invited account will link with the family only after they confirm the invitation.'}
+          </p>
+          <div className="divide-y divide-slate-100 text-sm">
+            {householdInvites.filter(i => i.status === 'pending').map((inv) => (
+              <div key={inv.id} className="py-3 flex items-center justify-between gap-3">
+                <div>
+                  <span className="font-semibold text-slate-800">{inv.invited_email || inv.email}</span>
                   <span className="ml-2 text-xs text-slate-500">({inv.role})</span>
                 </div>
-                <span className="text-xs px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">
-                  {inv.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {language === 'hu' ? 'Várakozás a visszaigazolásra...' : 'Pending confirmation...'}
+                  </span>
+                  <button
+                    onClick={() => cancelHouseholdInvite(inv.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                    title={language === 'hu' ? 'Meghívó visszavonása' : 'Cancel invitation'}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
