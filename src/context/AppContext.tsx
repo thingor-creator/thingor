@@ -394,8 +394,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const isPoppingRef = useRef(false);
   const prevModalRef = useRef(false);
 
-  const isAnyModalOpen = Boolean(
-    selectedItemId ||
+  const isOverlayModalOpen = Boolean(
     isAddEditItemModalOpen ||
     isLocationModalOpen ||
     isCategoryModalOpen ||
@@ -403,22 +402,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isSupabaseInfoOpen
   );
 
-  // Push history entry when any modal opens so device Back button closes modal first instead of exiting PWA
+  // Push history entry when an overlay modal opens so device Back button closes modal first
   useEffect(() => {
-    if (isAnyModalOpen && !prevModalRef.current) {
-      window.history.pushState({ view: currentView, isModal: true }, '');
-    } else if (!isAnyModalOpen && prevModalRef.current) {
+    if (isOverlayModalOpen && !prevModalRef.current) {
+      window.history.pushState({ view: currentView, selectedItemId, isModal: true }, '');
+    } else if (!isOverlayModalOpen && prevModalRef.current) {
       if (!isPoppingRef.current && window.history.state && window.history.state.isModal) {
         window.history.back();
       }
     }
-    prevModalRef.current = isAnyModalOpen;
-  }, [isAnyModalOpen, currentView]);
+    prevModalRef.current = isOverlayModalOpen;
+  }, [isOverlayModalOpen, currentView, selectedItemId]);
 
   // Handle popstate (Device Back Button / Browser Back Arrow / PWA Swipe Back)
   useEffect(() => {
     if (!window.history.state || !window.history.state.view) {
-      window.history.replaceState({ view: currentView, isModal: false }, '');
+      window.history.replaceState({ view: currentView, selectedItemId, isModal: false }, '');
     }
 
     const handlePopState = (e: PopStateEvent) => {
@@ -427,39 +426,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         isPoppingRef.current = false;
       }, 100);
 
-      // 1. Close open modals first
-      if (selectedItemId) {
-        setSelectedItemId(null);
-        return;
-      }
+      const state = e.state;
+
+      // 1. Close overlay modals first
       if (isAddEditItemModalOpen) {
         setIsAddEditItemModalOpen(false);
-        return;
       }
       if (isLocationModalOpen) {
         setIsLocationModalOpen(false);
-        return;
       }
       if (isCategoryModalOpen) {
         setIsCategoryModalOpen(false);
-        return;
       }
       if (isAuthModalOpen) {
         setIsAuthModalOpen(false);
-        return;
       }
       if (isSupabaseInfoOpen) {
         setIsSupabaseInfoOpen(false);
-        return;
       }
 
-      // 2. Change view if history state contains a view
-      if (e.state && e.state.view) {
-        setCurrentView(e.state.view);
+      // 2. Sync selectedItemId and currentView from history state
+      if (state) {
+        if (state.selectedItemId !== undefined) {
+          setSelectedItemId(state.selectedItemId);
+        } else {
+          setSelectedItemId(null);
+        }
+
+        if (state.view) {
+          setCurrentView(state.view);
+        }
       } else {
-        const savedUser = localStorage.getItem('thingor_user');
-        if (savedUser && currentView !== 'dashboard' && currentView !== 'landing') {
-          setCurrentView('dashboard');
+        if (selectedItemId) {
+          setSelectedItemId(null);
+        } else {
+          const savedUser = localStorage.getItem('thingor_user');
+          if (savedUser && currentView !== 'dashboard' && currentView !== 'landing') {
+            setCurrentView('dashboard');
+          }
         }
       }
     };
@@ -478,7 +482,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Custom view changer that pushes history entries when navigating views
   const handleSetCurrentView = (view: ViewMode) => {
-    if (view !== currentView) {
+    if (view !== currentView || selectedItemId !== null) {
       setSelectedItemId(null);
       setIsAddEditItemModalOpen(false);
       setIsLocationModalOpen(false);
@@ -486,8 +490,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsAuthModalOpen(false);
       setIsSupabaseInfoOpen(false);
 
-      window.history.pushState({ view, isModal: false }, '');
+      window.history.pushState({ view, selectedItemId: null, isModal: false }, '');
       setCurrentView(view);
+    }
+  };
+
+  const handleSetSelectedItemId = (itemId: string | null) => {
+    if (itemId !== selectedItemId) {
+      if (itemId) {
+        window.history.pushState({ view: currentView, selectedItemId: itemId, isModal: false }, '');
+        setSelectedItemId(itemId);
+      } else {
+        if (!isPoppingRef.current && window.history.state && (window.history.state.selectedItemId || window.history.state.isModal)) {
+          window.history.back();
+        } else {
+          setSelectedItemId(null);
+        }
+      }
     }
   };
 
@@ -2371,7 +2390,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         currentView,
         setCurrentView: handleSetCurrentView,
         selectedItemId,
-        setSelectedItemId,
+        setSelectedItemId: handleSetSelectedItemId,
 
         isAddEditItemModalOpen,
         setIsAddEditItemModalOpen,
