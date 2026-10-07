@@ -866,7 +866,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       supabase
         .from('household_invites')
         .select('*, households(name)')
-        .ilike('invited_email', user.email)
+        .ilike('invited_email', user.email.trim())
         .eq('status', 'pending')
         .then(({ data: rData }) => {
           if (rData && isMounted) {
