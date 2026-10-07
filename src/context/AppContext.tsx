@@ -521,7 +521,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [currentView]);
 
   useEffect(() => {
-    localStorage.setItem('thingor_items', JSON.stringify(items));
+    if (items.length > 0) {
+      localStorage.setItem('thingor_items', JSON.stringify(items));
+      localStorage.setItem('thingor_items_backup', JSON.stringify(items));
+    }
   }, [items]);
 
   useEffect(() => {
@@ -747,42 +750,48 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Controlled LocalStorage One-Time Migration to Supabase Cloud (M16)
     const migrationKey = `thingor_migrated_${user.id}`;
-    const hasMigrated = localStorage.getItem(migrationKey) === 'true';
-
+    // Controlled LocalStorage Migration to Supabase Cloud
     async function runControlledMigration() {
-      if (hasMigrated || !supabase || !user?.id) return;
+      if (!supabase || !user?.id) return;
 
       try {
-        const savedItems = localStorage.getItem('thingor_items');
-        if (savedItems) {
-          const parsed: Item[] = JSON.parse(savedItems);
-          const itemsToInsert = parsed
-            .filter(i => !i.id.startsWith('item-'))
-            .map(i => ({
-              name: i.name,
-              description: i.description,
-              photo_url: i.photo_url,
-              purchase_date: i.purchase_date,
-              purchase_price: i.purchase_price,
-              current_value: i.current_value,
-              store_seller: i.store_seller,
-              condition: i.condition,
-              warranty_start: i.warranty_start,
-              warranty_end: i.warranty_end,
-              notes: i.notes,
-              user_id: user.id,
-              category_id: isUUID(i.category_id) ? i.category_id : null,
-              location_id: isUUID(i.location_id) ? i.location_id : null,
-            }));
+        const savedItemsStr = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
+        if (savedItemsStr) {
+          const parsed: Item[] = JSON.parse(savedItemsStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localStorage.setItem('thingor_items_backup', JSON.stringify(parsed));
 
-          if (itemsToInsert.length > 0) {
-            await supabase.from('items').insert(itemsToInsert);
+            const { data: existingCloudItems } = await supabase.from('items').select('name').eq('user_id', user.id);
+            const existingNames = new Set((existingCloudItems || []).map(i => i.name.toLowerCase().trim()));
+
+            const itemsToInsert = parsed
+              .filter(i => i.name && i.name.trim() && !existingNames.has(i.name.toLowerCase().trim()))
+              .map(i => ({
+                name: i.name.trim(),
+                description: i.description || null,
+                photo_url: i.photo_url || null,
+                additional_photos: i.additional_photos || [],
+                purchase_date: i.purchase_date || null,
+                purchase_price: i.purchase_price || null,
+                current_value: i.current_value || null,
+                store_seller: i.store_seller || null,
+                condition: i.condition || 'Good',
+                ownership_scope: i.ownership_scope || 'private',
+                warranty_start: i.warranty_start || null,
+                warranty_end: i.warranty_end || null,
+                notes: i.notes || null,
+                user_id: user.id,
+                category_id: isUUID(i.category_id) ? i.category_id : null,
+                location_id: isUUID(i.location_id) ? i.location_id : null,
+              }));
+
+            if (itemsToInsert.length > 0) {
+              await supabase.from('items').insert(itemsToInsert);
+            }
           }
         }
       } catch (e) {
         console.error('Migration error:', e);
-      } finally {
-        localStorage.setItem(migrationKey, 'true');
       }
     }
 
@@ -818,13 +827,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .from('items')
       .select('*')
       .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!error && data && isMounted) {
-          setItems(data as Item[]);
+          if (data.length > 0) {
+            setItems(data as Item[]);
+          } else {
+            await runControlledMigration();
+            const { data: reData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+            if (reData && isMounted && reData.length > 0) {
+              setItems(reData as Item[]);
+            } else {
+              const saved = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
+              if (saved && isMounted) {
+                try {
+                  const parsed = JSON.parse(saved);
+                  if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
+                } catch (e) {}
+              }
+            }
+          }
         } else if (error) {
           console.warn('Full items fetch failed, falling back to user_id:', error.message);
           supabase.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data: fbItems }) => {
-            if (fbItems && isMounted) setItems(fbItems as Item[]);
+            if (fbItems && isMounted && fbItems.length > 0) {
+              setItems(fbItems as Item[]);
+            } else {
+              const saved = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
+              if (saved && isMounted) {
+                try {
+                  const parsed = JSON.parse(saved);
+                  if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
+                } catch (e) {}
+              }
+            }
           });
         }
       });

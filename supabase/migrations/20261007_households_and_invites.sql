@@ -257,9 +257,15 @@ CREATE POLICY "Users can view own or shared household items"
   USING (
     user_id = auth.uid() OR
     ownership_scope = 'household' OR
+    ownership_scope IS NULL OR
     household_id IN (
       SELECT household_id FROM public.household_members
       WHERE user_id = auth.uid() OR lower(user_email) = lower(auth.jwt()->>'email')
+    ) OR
+    user_id IN (
+      SELECT hm2.user_id FROM public.household_members hm1
+      JOIN public.household_members hm2 ON hm1.household_id = hm2.household_id
+      WHERE hm1.user_id = auth.uid() OR lower(hm1.user_email) = lower(auth.jwt()->>'email')
     ) OR
     EXISTS (
       SELECT 1 FROM public.item_shares
