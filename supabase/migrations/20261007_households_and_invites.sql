@@ -203,7 +203,7 @@ CREATE POLICY "Users can view own or shared household locations"
   ON public.locations FOR SELECT
   USING (
     user_id = auth.uid() OR
-    id IN (
+    id::text IN (
       SELECT unnest(shared_location_ids) FROM public.households
       WHERE id IN (
         SELECT household_id FROM public.household_members
@@ -228,7 +228,7 @@ CREATE POLICY "Users can update own locations"
   ON public.locations FOR UPDATE
   USING (
     auth.uid() = user_id OR
-    id IN (
+    id::text IN (
       SELECT unnest(shared_location_ids) FROM public.households
       WHERE id IN (
         SELECT household_id FROM public.household_members
