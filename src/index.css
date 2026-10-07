@@ -14,14 +14,19 @@
     overflow-x: hidden;
   }
 
-  input, select, textarea {
-    color: #0f172a !important;
-    background-color: #ffffff;
+  input::placeholder, select::placeholder, textarea::placeholder {
+    color: #94a3b8;
   }
+}
 
-  input::placeholder, textarea::placeholder {
-    color: #94a3b8 !important;
-  }
+/* Ensure browser autofill matches input text contrast on dark inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #090d16 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Custom scrollbar */

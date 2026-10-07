@@ -251,7 +251,7 @@ export const ItemFormModal: React.FC = () => {
                       placeholder={isHu ? 'pl. Garázs polc' : 'e.g. Garage shelf'}
                       value={newLocName}
                       onChange={(e) => setNewLocName(e.target.value)}
-                      className="flex-1 p-2 rounded-xl border border-slate-800 bg-slate-950 text-xs"
+                      className="flex-1 p-2 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-xs focus:border-emerald-500 outline-none"
                     />
                     <button
                       type="button"
