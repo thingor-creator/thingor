@@ -826,38 +826,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .select('*')
       .order('created_at', { ascending: false })
       .then(async ({ data, error }) => {
+        const savedStr = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
+        let localItems: Item[] = [];
+        if (savedStr) {
+          try {
+            const parsed = JSON.parse(savedStr);
+            if (Array.isArray(parsed)) localItems = parsed;
+          } catch (e) {}
+        }
+
         if (!error && data && isMounted) {
-          if (data.length > 0) {
-            setItems(data as Item[]);
+          const itemMap = new Map<string, Item>();
+          for (const item of localItems) {
+            if (item && item.name) itemMap.set(item.id, item);
+          }
+          for (const item of (data as Item[])) {
+            if (item && item.name) itemMap.set(item.id, item);
+          }
+          const combined = Array.from(itemMap.values()).sort((a, b) => 
+            (b.created_at || '').localeCompare(a.created_at || '')
+          );
+
+          if (combined.length > 0) {
+            setItems(combined);
           } else {
             await runControlledMigration();
             const { data: reData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
             if (reData && isMounted && reData.length > 0) {
               setItems(reData as Item[]);
-            } else {
-              const saved = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
-              if (saved && isMounted) {
-                try {
-                  const parsed = JSON.parse(saved);
-                  if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
-                } catch (e) {}
-              }
             }
           }
         } else if (error) {
-          console.warn('Full items fetch failed, falling back to user_id:', error.message);
+          console.warn('Full items fetch failed, falling back to user_id/local:', error.message);
           supabase.from('items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data: fbItems }) => {
-            if (fbItems && isMounted && fbItems.length > 0) {
-              setItems(fbItems as Item[]);
-            } else {
-              const saved = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
-              if (saved && isMounted) {
-                try {
-                  const parsed = JSON.parse(saved);
-                  if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
-                } catch (e) {}
-              }
+            const cloudFb = fbItems || [];
+            const itemMap = new Map<string, Item>();
+            for (const item of localItems) {
+              if (item && item.name) itemMap.set(item.id, item);
             }
+            for (const item of (cloudFb as Item[])) {
+              if (item && item.name) itemMap.set(item.id, item);
+            }
+            const combined = Array.from(itemMap.values());
+            if (combined.length > 0 && isMounted) setItems(combined);
           });
         }
       });
