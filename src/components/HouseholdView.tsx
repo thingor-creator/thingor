@@ -15,7 +15,6 @@ export const HouseholdView: React.FC = () => {
     declineHouseholdInvite,
     cancelHouseholdInvite,
     removeHouseholdMember,
-    updateMemberRole,
     leaveHousehold,
     updateHouseholdSharedLocations,
     locations,
