@@ -255,11 +255,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const [items, setItems] = useState<Item[]>(() => {
-    const saved = localStorage.getItem('thingor_items');
+    const saved = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
     if (saved) {
       try {
         const parsed: Item[] = JSON.parse(saved);
-        return parsed.filter(i => !i.id.startsWith('item-1') && !i.id.startsWith('item-2') && !i.id.startsWith('item-3') && !i.id.startsWith('item-4') && !i.id.startsWith('item-5') && !i.id.startsWith('item-6'));
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
     return [];
@@ -284,7 +284,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (saved) {
       try {
         const parsed: LocationItem[] = JSON.parse(saved);
-        return parsed.filter(l => !l.id.startsWith('loc-'));
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
     return [];
@@ -295,7 +295,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (saved) {
       try {
         const parsed: ItemDocument[] = JSON.parse(saved);
-        return parsed.filter(d => !d.id.startsWith('doc-'));
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
     return [];
