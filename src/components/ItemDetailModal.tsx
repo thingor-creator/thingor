@@ -24,10 +24,12 @@ import {
   Wrench,
   Link2,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  QrCode
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
 import { ShareModal } from './ShareModal';
+import { QRCodeModal } from './QRCodeModal';
 
 export const ItemDetailModal: React.FC = () => {
   const {
@@ -60,6 +62,7 @@ export const ItemDetailModal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'photos' | 'notes'>('overview');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
 
   // Inline Editing State for specific fields
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -380,6 +383,14 @@ export const ItemDetailModal: React.FC = () => {
                 >
                   <Share2 className="h-3.5 w-3.5" />
                   {isHu ? 'Megosztás' : 'Share'}
+                </button>
+
+                <button
+                  onClick={() => setIsQRCodeModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow transition-all"
+                >
+                  <QrCode className="h-3.5 w-3.5" />
+                  {isHu ? 'QR-kód' : 'QR Code'}
                 </button>
 
                 {isDeleting ? (
@@ -1374,6 +1385,12 @@ export const ItemDetailModal: React.FC = () => {
         item={item}
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
+      />
+
+      <QRCodeModal
+        item={item}
+        isOpen={isQRCodeModalOpen}
+        onClose={() => setIsQRCodeModalOpen(false)}
       />
     </div>
   );

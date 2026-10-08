@@ -20,6 +20,8 @@ import {
   ShieldCheck,
   ListChecks,
   Share2,
+  Bell,
+  QrCode,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -38,6 +40,9 @@ export const Navbar: React.FC = () => {
     setLanguage,
     t,
     siteSettings,
+    unreadNotificationCount,
+    setIsNotificationModalOpen,
+    setIsQRScannerOpen,
   } = useApp();
 
   const isHu = language === 'hu';
@@ -331,6 +336,31 @@ export const Navbar: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Notification Bell Icon & QR Scanner (Authenticated) */}
+            {isAuthenticated && (
+              <>
+                <button
+                  onClick={() => setIsQRScannerOpen(true)}
+                  className="flex items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+                  title={isHu ? 'QR Kód Beolvasása' : 'Scan QR Code'}
+                >
+                  <QrCode className="h-4 w-4 text-emerald-400 shrink-0" />
+                </button>
+                <button
+                  onClick={() => setIsNotificationModalOpen(true)}
+                  className="relative flex items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+                  title={isHu ? 'Értesítések' : 'Notifications'}
+                >
+                  <Bell className="h-4 w-4 text-emerald-400 shrink-0" />
+                  {unreadNotificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 min-w-[18px] items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-slate-950 border border-slate-950 animate-pulse px-1">
+                      {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                    </span>
+                  )}
+                </button>
+              </>
+            )}
 
             {isAuthenticated ? (
               /* User Profile Dropdown */

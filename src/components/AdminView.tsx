@@ -1032,7 +1032,7 @@ export const AdminView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 6: REGISTRATION & MAINTENANCE */}
+          {/* TAB 6: REGISTRATION & MAINTENANCE & NOTIFICATIONS */}
           {activeTab === 'registration' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
               <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
@@ -1064,6 +1064,38 @@ export const AdminView: React.FC = () => {
                   }`}
                 >
                   {siteSettings.maintenance_mode ? 'Karbantartás Kikapcsolása' : 'Karbantartási Mód Aktiválása'}
+                </button>
+              </div>
+
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                <h3 className="text-base font-extrabold text-white">Rendszer Értesítési Motor</h3>
+                <p className="text-xs text-slate-400">Garancia, finanszírozás és javítási értesítések globális ki/bekapcsolása.</p>
+
+                <button
+                  onClick={() => updateSiteSettings({ notifications_enabled: !(siteSettings.notifications_enabled ?? true) })}
+                  className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
+                    (siteSettings.notifications_enabled ?? true)
+                      ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  }`}
+                >
+                  {(siteSettings.notifications_enabled ?? true) ? 'Értesítések Globálisan Aktívak (Kattints a kikapcsoláshoz)' : 'Értesítések Globálisan Kikapcsolva (Kattints az aktiváláshoz)'}
+                </button>
+              </div>
+
+              <div className="bg-[#1c1c24] border border-[#2b2b38] rounded-2xl p-6 space-y-4">
+                <h3 className="text-base font-extrabold text-white">Email Értesítő Rendszer</h3>
+                <p className="text-xs text-slate-400">Időzített szerveroldali email küldés engedélyezése a platformon.</p>
+
+                <button
+                  onClick={() => updateSiteSettings({ email_notifications_enabled: !(siteSettings.email_notifications_enabled ?? true) })}
+                  className={`w-full py-3 rounded-xl font-bold text-xs transition-all ${
+                    (siteSettings.email_notifications_enabled ?? true)
+                      ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700'
+                  }`}
+                >
+                  {(siteSettings.email_notifications_enabled ?? true) ? 'Szerveroldali Email Küldés Aktív' : 'Szerveroldali Email Küldés Szünetel'}
                 </button>
               </div>
             </div>

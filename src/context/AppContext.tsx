@@ -29,7 +29,9 @@ import type {
   RepairStatus,
   ItemRelation,
   ItemRelationType,
-  QuickNote
+  QuickNote,
+  AppNotification,
+  UserNotificationSettings
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
@@ -163,6 +165,23 @@ interface AppContextType {
   addQuickNote: (note: Omit<QuickNote, 'id' | 'created_at'>) => Promise<QuickNote>;
   updateQuickNote: (id: string, updates: Partial<QuickNote>) => Promise<void>;
   deleteQuickNote: (id: string) => Promise<void>;
+
+  // Notification Engine
+  notifications: AppNotification[];
+  unreadNotificationCount: number;
+  userNotificationSettings: UserNotificationSettings | null;
+  isNotificationModalOpen: boolean;
+  setIsNotificationModalOpen: (open: boolean) => void;
+  fetchNotifications: () => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  updateNotificationSettings: (settings: Partial<UserNotificationSettings>) => Promise<void>;
+  createNotification: (notification: Omit<AppNotification, 'id' | 'created_at' | 'is_read'>) => Promise<void>;
+
+  // QR Code Scanner Module
+  isQRScannerOpen: boolean;
+  setIsQRScannerOpen: (open: boolean) => void;
   convertNoteToItem: (noteId: string) => Promise<void>;
 
   // Helper getters
@@ -343,6 +362,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return [];
   });
+
+  // Notifications State
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    const saved = localStorage.getItem('thingor_notifications');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  const [userNotificationSettings, setUserNotificationSettings] = useState<UserNotificationSettings | null>(() => {
+    const saved = localStorage.getItem('thingor_notification_settings');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      user_id: '',
+      warranty_enabled: true,
+      financing_enabled: true,
+      repair_enabled: true,
+      email_enabled: true,
+      inapp_enabled: true,
+    };
+  });
+
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
   const [receivedInvites, setReceivedInvites] = useState<HouseholdInvite[]>([]);
 
@@ -1158,6 +1204,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHouseholdMembers([]);
     setHouseholdInvites([]);
     setReceivedInvites([]);
+    setNotifications([]);
+    setUserNotificationSettings(null);
     localStorage.removeItem('thingor_user');
     localStorage.removeItem('thingor_items');
     localStorage.removeItem('thingor_documents');
@@ -1165,6 +1213,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('thingor_household');
     localStorage.removeItem('thingor_household_members');
     localStorage.removeItem('thingor_household_invites');
+    localStorage.removeItem('thingor_notifications');
+    localStorage.removeItem('thingor_notification_settings');
     localStorage.removeItem('thingor_current_view');
     setIsAuthModalOpen(false);
     setCurrentView('landing');
@@ -1466,6 +1516,229 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setDocuments(prev => prev.filter(d => d.id !== docId));
   };
 
+  // Notification Engine Helpers
+  const createNotification = async (noteData: Omit<AppNotification, 'id' | 'created_at' | 'is_read'>) => {
+    if (userNotificationSettings && userNotificationSettings.inapp_enabled === false) {
+      return;
+    }
+    if (noteData.type === 'warranty' && userNotificationSettings?.warranty_enabled === false) return;
+    if (noteData.type === 'financing' && userNotificationSettings?.financing_enabled === false) return;
+    if (noteData.type === 'repair' && userNotificationSettings?.repair_enabled === false) return;
+
+    const newNote: AppNotification = {
+      ...noteData,
+      id: 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert([{ ...noteData, user_id: user.id }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        setNotifications(prev => {
+          if (prev.some(n => n.id === data.id || (data.dedup_key && n.dedup_key === data.dedup_key))) {
+            return prev;
+          }
+          const updated = [data as AppNotification, ...prev];
+          localStorage.setItem('thingor_notifications', JSON.stringify(updated));
+          return updated;
+        });
+        return;
+      }
+    }
+
+    setNotifications(prev => {
+      if (prev.some(n => noteData.dedup_key && n.dedup_key === noteData.dedup_key)) {
+        return prev;
+      }
+      const updated = [newNote, ...prev];
+      localStorage.setItem('thingor_notifications', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const fetchNotifications = async () => {
+    if (isSupabaseConfigured && supabase && user?.id) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setNotifications(data as AppNotification[]);
+        localStorage.setItem('thingor_notifications', JSON.stringify(data));
+      }
+
+      const { data: settingsData } = await supabase
+        .from('user_notification_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (settingsData) {
+        setUserNotificationSettings(settingsData as UserNotificationSettings);
+        localStorage.setItem('thingor_notification_settings', JSON.stringify(settingsData));
+      }
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    setNotifications(prev => {
+      const updated = prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n);
+      localStorage.setItem('thingor_notifications', JSON.stringify(updated));
+      return updated;
+    });
+    if (isSupabaseConfigured && supabase && isUUID(notificationId)) {
+      await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, is_read: true }));
+      localStorage.setItem('thingor_notifications', JSON.stringify(updated));
+      return updated;
+    });
+    if (isSupabaseConfigured && supabase && user?.id) {
+      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+    }
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.id !== notificationId);
+      localStorage.setItem('thingor_notifications', JSON.stringify(updated));
+      return updated;
+    });
+    if (isSupabaseConfigured && supabase && isUUID(notificationId)) {
+      await supabase.from('notifications').delete().eq('id', notificationId);
+    }
+  };
+
+  const updateNotificationSettings = async (settingsUpdates: Partial<UserNotificationSettings>) => {
+    setUserNotificationSettings(prev => {
+      const updated = prev ? { ...prev, ...settingsUpdates } : {
+        user_id: user?.id || '',
+        warranty_enabled: true,
+        financing_enabled: true,
+        repair_enabled: true,
+        email_enabled: true,
+        inapp_enabled: true,
+        ...settingsUpdates,
+      };
+      localStorage.setItem('thingor_notification_settings', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      await supabase.from('user_notification_settings').upsert({
+        user_id: user.id,
+        ...settingsUpdates,
+        updated_at: new Date().toISOString(),
+      });
+    }
+  };
+
+  // Background evaluator for warranty & financing notifications
+  const checkAndGenerateNotifications = () => {
+    if (siteSettings.notifications_enabled === false) return;
+    if (userNotificationSettings?.inapp_enabled === false) return;
+    if (!user?.id) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date(todayStr);
+
+    // 1. Warranty Checks (30, 14, 3, 0 days)
+    if (userNotificationSettings?.warranty_enabled !== false) {
+      for (const item of items) {
+        if (!item.warranty_end) continue;
+        const warrantyDate = new Date(item.warranty_end);
+        const diffMs = warrantyDate.getTime() - today.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+        let alertThreshold: number | null = null;
+        if (diffDays === 30) alertThreshold = 30;
+        else if (diffDays === 14) alertThreshold = 14;
+        else if (diffDays === 3) alertThreshold = 3;
+        else if (diffDays === 0) alertThreshold = 0;
+
+        if (alertThreshold !== null) {
+          const dedupKey = `warranty:${item.id}:${alertThreshold}d`;
+          const title = alertThreshold === 0
+            ? (language === 'hu' ? 'A garancia ma lejár!' : 'Warranty expires today!')
+            : (language === 'hu' ? `Garancia lejárati figyelmeztetés (${alertThreshold} nap)` : `Warranty Expiry Alert (${alertThreshold} days)`);
+          const description = alertThreshold === 0
+            ? (language === 'hu' ? `A(z) "${item.name}" tárgy garanciája a mai napon (${item.warranty_end}) lejár.` : `The warranty for "${item.name}" expires today (${item.warranty_end}).`)
+            : (language === 'hu' ? `A(z) "${item.name}" tárgy garanciája ${alertThreshold} nap múlva lejár (${item.warranty_end}).` : `The warranty for "${item.name}" expires in ${alertThreshold} days (${item.warranty_end}).`);
+
+          createNotification({
+            user_id: user.id,
+            title,
+            description,
+            type: 'warranty',
+            reference_id: item.id,
+            dedup_key: dedupKey,
+          });
+        }
+      }
+    }
+
+    // 2. Financing Checks (7, 3, 0 days)
+    if (userNotificationSettings?.financing_enabled !== false) {
+      for (const fin of financings) {
+        if (!fin.next_payment_date) continue;
+        const item = items.find(i => i.id === fin.item_id);
+        const itemName = item?.name || 'Finanszírozott tárgy';
+
+        const paymentDate = new Date(fin.next_payment_date);
+        const diffMs = paymentDate.getTime() - today.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+        let alertThreshold: number | null = null;
+        if (diffDays === 7) alertThreshold = 7;
+        else if (diffDays === 3) alertThreshold = 3;
+        else if (diffDays === 0) alertThreshold = 0;
+
+        if (alertThreshold !== null) {
+          const dedupKey = `financing:${fin.id}:${fin.next_payment_date}:${alertThreshold}d`;
+          const title = alertThreshold === 0
+            ? (language === 'hu' ? 'Részletfizetés esedékes a mai napon!' : 'Financing payment due today!')
+            : (language === 'hu' ? `Közelgő részletfizetés (${alertThreshold} nap)` : `Upcoming payment (${alertThreshold} days)`);
+          const description = alertThreshold === 0
+            ? (language === 'hu' ? `A(z) "${itemName}" mai napon fizetendő részlete: ${fin.monthly_installment} Ft (${fin.provider || 'Finanszírozás'}).` : `Payment due today for "${itemName}": ${fin.monthly_installment} (${fin.provider}).`)
+            : (language === 'hu' ? `A(z) "${itemName}" esedékes havi részlete: ${fin.monthly_installment} Ft (${fin.next_payment_date} - ${fin.provider || 'Finanszírozás'}).` : `Monthly installment for "${itemName}": ${fin.monthly_installment} due on ${fin.next_payment_date}.`);
+
+          createNotification({
+            user_id: user.id,
+            title,
+            description,
+            type: 'financing',
+            reference_id: fin.id,
+            dedup_key: dedupKey,
+          });
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchNotifications();
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id && (items.length > 0 || financings.length > 0)) {
+      checkAndGenerateNotifications();
+    }
+  }, [items, financings, user?.id]);
+
   // CRUD Repairs & Maintenance
   const addRepair = async (repairData: Omit<ItemRepair, 'id' | 'created_at'>): Promise<ItemRepair> => {
     const newRepair: ItemRepair = {
@@ -1479,11 +1752,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!error && data) {
         setRepairs(prev => [data as ItemRepair, ...prev]);
         updateItem(repairData.item_id, { status: repairData.status === 'completed' ? 'Repaired' : 'UnderRepair' });
+        createNotification({
+          user_id: user.id,
+          title: language === 'hu' ? 'Új javítás rögzítve' : 'New Repair Logged',
+          description: language === 'hu' ? `Új javítás lett rögzítve: "${repairData.fault_title || 'Szerviz'}"` : `New repair logged: "${repairData.fault_title || 'Service'}"`,
+          type: 'repair',
+          reference_id: repairData.item_id,
+          dedup_key: `repair:${data.id}:pending`,
+        });
         return data as ItemRepair;
       }
     }
     setRepairs(prev => [newRepair, ...prev]);
     updateItem(repairData.item_id, { status: repairData.status === 'completed' ? 'Repaired' : 'UnderRepair' });
+    createNotification({
+      user_id: user?.id || '',
+      title: language === 'hu' ? 'Új javítás rögzítve' : 'New Repair Logged',
+      description: language === 'hu' ? `Új javítás lett rögzítve: "${repairData.fault_title || 'Szerviz'}"` : `New repair logged: "${repairData.fault_title || 'Service'}"`,
+      type: 'repair',
+      reference_id: repairData.item_id,
+      dedup_key: `repair:${newRepair.id}:pending`,
+    });
     return newRepair;
   };
 
@@ -1493,6 +1782,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (targetRepair) {
       const itemStatus = status === 'completed' ? 'Repaired' : status === 'in_progress' ? 'UnderRepair' : 'Faulty';
       updateItem(targetRepair.item_id, { status: itemStatus });
+      const statusLabel = status === 'completed' ? (language === 'hu' ? 'elkészült' : 'completed') : status === 'in_progress' ? (language === 'hu' ? 'folyamatban' : 'in progress') : (language === 'hu' ? 'frissült' : 'updated');
+      createNotification({
+        user_id: user?.id || '',
+        title: language === 'hu' ? `Javítás státusza: ${statusLabel}` : `Repair status: ${statusLabel}`,
+        description: language === 'hu' ? `A(z) "${targetRepair.fault_title || 'tárgy'}" javítási státusza megváltozott.` : `Repair status for "${targetRepair.fault_title || 'item'}" was updated.`,
+        type: 'repair',
+        reference_id: targetRepair.item_id,
+        dedup_key: `repair:${repairId}:${status}:${Date.now()}`,
+      });
     }
     if (isSupabaseConfigured && supabase && isUUID(repairId)) {
       await supabase.from('item_repairs').update({ status, ...details }).eq('id', repairId);
@@ -2683,6 +2981,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         declineHouseholdInvite,
         cancelHouseholdInvite,
         removeHouseholdMember,
+        updateHouseholdMember,
+        updateMemberAllowedLocations,
         updateMemberRole,
         leaveHousehold,
         updateHouseholdSharedLocations,
@@ -2697,6 +2997,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateQuickNote,
         deleteQuickNote,
         convertNoteToItem,
+
+        notifications,
+        unreadNotificationCount: notifications.filter(n => !n.is_read).length,
+        userNotificationSettings,
+        isNotificationModalOpen,
+        setIsNotificationModalOpen,
+        isQRScannerOpen,
+        setIsQRScannerOpen,
+        fetchNotifications,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        deleteNotification,
+        updateNotificationSettings,
+        createNotification,
 
         getLocationPath,
         getCategoryName,

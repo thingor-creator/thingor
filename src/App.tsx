@@ -19,8 +19,10 @@ import { AuthModal } from './components/AuthModal';
 import { SupabaseSetupModal } from './components/SupabaseSetupModal';
 import { LegalViewModal } from './components/LegalViewModal';
 import { PendingInviteModal } from './components/PendingInviteModal';
+import { NotificationCenterModal } from './components/NotificationCenterModal';
+import { QRScannerModal } from './components/QRScannerModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
-import { Wrench, ShieldCheck } from 'lucide-react';
+import { Wrench, ShieldCheck, ShieldAlert } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const {
@@ -31,10 +33,20 @@ const AppContent: React.FC = () => {
     setIsAuthModalOpen,
     setAuthModalMode,
     activeLegalSlug,
+    isNotificationModalOpen,
+    setIsNotificationModalOpen,
+    isQRScannerOpen,
+    setIsQRScannerOpen,
+    items,
+    setSelectedItemId,
+    setCurrentView,
+    language,
+    isAuthenticated,
   } = useApp();
 
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentView === 'legal') {
@@ -43,42 +55,100 @@ const AppContent: React.FC = () => {
   }, [currentView]);
 
   useEffect(() => {
-    const parseShareToken = () => {
-      // Check location hash e.g. #share/xyz
+    const parseUrlParameters = () => {
       const hash = window.location.hash;
-      if (hash.startsWith('#share/')) {
-        const token = hash.replace('#share/', '').trim();
-        if (token) {
-          setShareToken(token);
-          return;
-        }
-      }
-
-      // Check query string e.g. ?share=xyz
       const searchParams = new URLSearchParams(window.location.search);
+      const pathname = window.location.pathname;
+
+      // 1. Check share token (#share/xyz, ?share=xyz, /share/xyz)
+      if (hash.startsWith('#share/')) {
+        setShareToken(hash.replace('#share/', '').trim());
+        return;
+      }
       const queryToken = searchParams.get('share');
       if (queryToken) {
         setShareToken(queryToken);
         return;
       }
-
-      // Check pathname e.g. /share/xyz
-      const pathname = window.location.pathname;
       if (pathname.startsWith('/share/')) {
-        const pathToken = pathname.replace('/share/', '').trim();
-        if (pathToken) {
-          setShareToken(pathToken);
-          return;
-        }
+        setShareToken(pathname.replace('/share/', '').trim());
+        return;
+      }
+      setShareToken(null);
+
+      // 2. Check Item ID (#item/xyz, ?item=xyz, /item/xyz)
+      let itemId: string | null = null;
+      if (hash.startsWith('#item/')) {
+        itemId = hash.replace('#item/', '').trim();
+      } else if (searchParams.get('item')) {
+        itemId = searchParams.get('item');
+      } else if (pathname.startsWith('/item/')) {
+        itemId = pathname.replace('/item/', '').trim();
       }
 
-      setShareToken(null);
+      if (itemId) {
+        const targetItem = items.find(i => i.id === itemId);
+        if (targetItem) {
+          setSelectedItemId(itemId);
+          setCurrentView('items');
+        } else if (isAuthenticated && items.length > 0) {
+          setAccessDeniedMessage(
+            language === 'hu'
+              ? 'Hozzáférés megtagadva: Nincs jogosultságod ennek a tárgynak a megtekintéséhez.'
+              : 'Access denied: You do not have permission to view this item.'
+          );
+        }
+      }
     };
 
-    parseShareToken();
-    window.addEventListener('hashchange', parseShareToken);
-    return () => window.removeEventListener('hashchange', parseShareToken);
-  }, []);
+    parseUrlParameters();
+    window.addEventListener('hashchange', parseUrlParameters);
+    return () => window.removeEventListener('hashchange', parseUrlParameters);
+  }, [items, isAuthenticated, language]);
+
+  const handleQRScanResult = (resultText: string) => {
+    setIsQRScannerOpen(false);
+    setAccessDeniedMessage(null);
+
+    if (!resultText) return;
+
+    const text = resultText.trim();
+
+    // If it's a share link
+    if (text.includes('#share/') || text.includes('share=')) {
+      const token = text.split('#share/')[1] || text.split('share=')[1]?.split('&')[0];
+      if (token) {
+        window.location.hash = `#share/${token.trim()}`;
+        return;
+      }
+    }
+
+    // If it's an item link or ID
+    let scannedItemId = text;
+    if (text.includes('#item/')) {
+      scannedItemId = text.split('#item/')[1].trim();
+    } else if (text.includes('item=')) {
+      scannedItemId = text.split('item=')[1].split('&')[0].trim();
+    } else if (text.includes('://')) {
+      const parts = text.split('/');
+      scannedItemId = parts[parts.length - 1].trim();
+    }
+
+    if (scannedItemId) {
+      window.location.hash = `#item/${scannedItemId}`;
+      const targetItem = items.find(i => i.id === scannedItemId);
+      if (targetItem) {
+        setSelectedItemId(scannedItemId);
+        setCurrentView('items');
+      } else if (isAuthenticated) {
+        setAccessDeniedMessage(
+          language === 'hu'
+            ? 'Hozzáférés megtagadva: Nincs jogosultságod ennek a tárgynak a megtekintéséhez vagy a tárgy nem létezik.'
+            : 'Access denied: You do not have permission to view this item or item does not exist.'
+        );
+      }
+    }
+  };
 
   // 1. GUEST SHARE VIEW ROUTING
   if (shareToken) {
@@ -159,11 +229,46 @@ const AppContent: React.FC = () => {
       <AuthModal />
       <SupabaseSetupModal />
       <PendingInviteModal />
+      <NotificationCenterModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+      />
+      <QRScannerModal
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScanResult={handleQRScanResult}
+      />
       <LegalViewModal
         slug={activeLegalSlug}
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
       />
+
+      {/* Access Denied Alert Modal */}
+      {accessDeniedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-rose-500/30 p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-white">
+              {language === 'hu' ? 'Hozzáférés Megtagadva' : 'Access Denied'}
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {accessDeniedMessage}
+            </p>
+            <button
+              onClick={() => {
+                setAccessDeniedMessage(null);
+                window.location.hash = '';
+              }}
+              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors"
+            >
+              {language === 'hu' ? 'Rendben' : 'OK'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* PWA Install Banner */}
       <PWAInstallPrompt />

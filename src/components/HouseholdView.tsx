@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Settings, CheckSquare, Lock } from 'lucide-react';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Lock } from 'lucide-react';
 import type { HouseholdRole, HouseholdMember } from '../types';
 
 export const HouseholdView: React.FC = () => {
@@ -124,6 +124,10 @@ export const HouseholdView: React.FC = () => {
   // Shared household items
   const sharedItems = items.filter(i => i.ownership_scope === 'household');
   const sharedTotalValue = sharedItems.reduce((sum, i) => sum + (i.current_value || i.purchase_price || 0), 0);
+
+  // Current user member and permissions
+  const currentUserMember = householdMembers.find(m => m.user_id === user?.id);
+  const isOwnerOrAdmin = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
 
   if (!user) {
     return (

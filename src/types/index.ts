@@ -224,6 +224,8 @@ export interface SiteSettings {
   favicon_url?: string;
   logo_height?: number;
   meta_description?: string;
+  notifications_enabled?: boolean;
+  email_notifications_enabled?: boolean;
   updated_at?: string;
   updated_by?: string;
 }
@@ -334,4 +336,30 @@ export interface FilterState {
   sortBy: SortField;
   sortOrder: SortOrder;
 }
+
+// Notification Engine Module
+export type NotificationType = 'warranty' | 'financing' | 'repair' | 'system';
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  type: NotificationType;
+  reference_id?: string | null;
+  dedup_key?: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface UserNotificationSettings {
+  user_id: string;
+  warranty_enabled: boolean;
+  financing_enabled: boolean;
+  repair_enabled: boolean;
+  email_enabled: boolean;
+  inapp_enabled: boolean;
+  updated_at?: string;
+}
+
 

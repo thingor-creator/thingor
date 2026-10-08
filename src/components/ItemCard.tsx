@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Item } from '../types';
 import { useApp } from '../context/AppContext';
-import { MapPin, ShieldCheck, Tag, Edit3, Image as ImageIcon } from 'lucide-react';
+import { MapPin, ShieldCheck, Tag, Edit3, Image as ImageIcon, QrCode } from 'lucide-react';
 
 interface ItemCardProps {
   item: Item;
@@ -81,14 +81,26 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
           </span>
         </div>
 
-        {/* Quick Edit Icon */}
-        <button
-          onClick={handleEdit}
-          className="absolute top-3 right-3 p-2 rounded-full bg-slate-950/80 text-slate-300 hover:text-white hover:bg-emerald-500 hover:text-slate-950 backdrop-blur transition-all opacity-0 group-hover:opacity-100"
-          title={t('edit_thing')}
-        >
-          <Edit3 className="h-3.5 w-3.5" />
-        </button>
+        {/* Quick Actions (Edit & QR) */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedItemId(item.id);
+            }}
+            className="p-2 rounded-full bg-slate-950/80 text-slate-300 hover:text-slate-950 hover:bg-amber-500 backdrop-blur transition-all"
+            title={language === 'hu' ? 'QR-kód azonosító' : 'QR Code'}
+          >
+            <QrCode className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={handleEdit}
+            className="p-2 rounded-full bg-slate-950/80 text-slate-300 hover:text-white hover:bg-emerald-500 hover:text-slate-950 backdrop-blur transition-all"
+            title={t('edit_thing')}
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+          </button>
+        </div>
 
         {/* Condition Tag & Photo Count Overlay */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
