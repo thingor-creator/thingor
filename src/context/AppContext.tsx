@@ -1574,7 +1574,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           .order('created_at', { ascending: false });
 
         if (error) {
-          if (error.code === 'PGRST301' || error.status === 404 || error.message?.includes('404') || error.message?.includes('does not exist')) {
+          if (error.code === 'PGRST301' || error.code === '42P01' || (error as any).status === 404 || error.message?.includes('404') || error.message?.includes('does not exist')) {
             notificationTablesAvailableRef.current = false;
             return;
           }
@@ -1592,7 +1592,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           .maybeSingle();
 
         if (settingsError) {
-          if (settingsError.code === 'PGRST301' || settingsError.status === 404 || settingsError.message?.includes('404') || settingsError.message?.includes('does not exist')) {
+          if (settingsError.code === 'PGRST301' || settingsError.code === '42P01' || (settingsError as any).status === 404 || settingsError.message?.includes('404') || settingsError.message?.includes('does not exist')) {
             notificationTablesAvailableRef.current = false;
           }
         }
