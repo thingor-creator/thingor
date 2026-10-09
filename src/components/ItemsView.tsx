@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ItemCard } from './ItemCard';
 import { InsuranceInventoryModal } from './InsuranceInventoryModal';
+import { CSVModal } from './CSVModal';
 import type { SortField } from '../types';
 import {
   Search,
@@ -10,11 +11,13 @@ import {
   Boxes,
   X,
   RotateCcw,
-  FileText
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const ItemsView: React.FC = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
   const {
     items,
     categories,
@@ -134,6 +137,15 @@ export const ItemsView: React.FC = () => {
           >
             <FileText className="h-4 w-4 text-emerald-400" />
             <span>{language === 'hu' ? 'Biztosítási Leltár (PDF)' : 'Insurance PDF'}</span>
+          </button>
+
+          <button
+            onClick={() => setIsCSVModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600"
+            title={language === 'hu' ? 'CSV Import és Export kezelése' : 'CSV Import and Export'}
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+            <span>{language === 'hu' ? 'CSV Import / Export' : 'CSV Import / Export'}</span>
           </button>
 
           <button
@@ -311,6 +323,11 @@ export const ItemsView: React.FC = () => {
       <InsuranceInventoryModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+      />
+
+      <CSVModal
+        isOpen={isCSVModalOpen}
+        onClose={() => setIsCSVModalOpen(false)}
       />
     </div>
   );
