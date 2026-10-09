@@ -98,15 +98,22 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
         logging: false,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
+          // Replace oklch(...) in all <style> tags in cloned document to prevent html2canvas color parse crash
+          const styleTags = clonedDoc.querySelectorAll('style');
+          styleTags.forEach(style => {
+            if (style.textContent && style.textContent.includes('oklch')) {
+              style.textContent = style.textContent.replace(/oklch\([^)]+\)/g, '#0f172a');
+            }
+          });
+
           const container = clonedDoc.getElementById('printable-insurance-inventory');
           if (container) {
-            // Strip any inherited oklch color values on cloned DOM to prevent html2canvas color parse error
             const allElements = container.querySelectorAll('*');
             const sanitizeNode = (el: HTMLElement) => {
               try {
                 const style = window.getComputedStyle(el);
-                ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
-                  const val = (style as any)[prop];
+                ['color', 'backgroundColor', 'borderColor', 'stroke', 'fill'].forEach(prop => {
+                  const val = (el.style as any)[prop] || style.getPropertyValue(prop);
                   if (val && val.includes('oklch')) {
                     (el.style as any)[prop] = prop === 'color' ? '#0f172a' : prop === 'backgroundColor' ? '#ffffff' : '#e2e8f0';
                   }
