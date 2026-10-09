@@ -503,7 +503,9 @@ export const ItemFormModal: React.FC = () => {
                   type="date"
                   value={purchaseDate}
                   onChange={(e) => setPurchaseDate(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
+                  onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                  onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500 cursor-pointer min-h-[42px] font-medium"
                 />
               </div>
 
@@ -584,7 +586,9 @@ export const ItemFormModal: React.FC = () => {
                   type="date"
                   value={warrantyStart}
                   onChange={(e) => setWarrantyStart(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
+                  onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                  onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500 cursor-pointer min-h-[42px] font-medium"
                 />
               </div>
 
@@ -596,7 +600,9 @@ export const ItemFormModal: React.FC = () => {
                   type="date"
                   value={warrantyEnd}
                   onChange={(e) => setWarrantyEnd(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
+                  onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                  onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500 cursor-pointer min-h-[42px] font-medium"
                 />
               </div>
             </div>

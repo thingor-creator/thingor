@@ -525,7 +525,9 @@ export const ItemDetailModal: React.FC = () => {
                         type="date"
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                        onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg cursor-pointer font-medium"
                         autoFocus
                       />
                       <button onClick={(e) => saveInlineField(e, 'purchase_date')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
@@ -805,7 +807,9 @@ export const ItemDetailModal: React.FC = () => {
                         type="date"
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                        onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg cursor-pointer font-medium"
                       />
                     </div>
                     <div>
@@ -814,7 +818,9 @@ export const ItemDetailModal: React.FC = () => {
                         type="date"
                         value={inlineSecondValue}
                         onChange={(e) => setInlineSecondValue(e.target.value)}
-                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                        onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg cursor-pointer font-medium"
                       />
                     </div>
                   </div>

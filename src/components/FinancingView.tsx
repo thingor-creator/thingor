@@ -410,7 +410,9 @@ export const FinancingView: React.FC = () => {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                    onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                    onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium cursor-pointer min-h-[42px]"
                   />
                 </div>
 
@@ -422,7 +424,9 @@ export const FinancingView: React.FC = () => {
                     type="date"
                     value={nextPaymentDate}
                     onChange={(e) => setNextPaymentDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                    onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                    onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium cursor-pointer min-h-[42px]"
                   />
                 </div>
               </div>
