@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   FileText,
   Calendar,
-  Euro,
+  Coins,
   Store,
   Plus,
   AlertTriangle,
@@ -558,7 +558,7 @@ export const ItemDetailModal: React.FC = () => {
                 {editingField === 'purchase_price' ? (
                   <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
-                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Vételár (Ft)' : 'Purchase Price (€)'}
+                      <Coins className="h-3.5 w-3.5" /> {isHu ? 'Vételár (Ft)' : 'Purchase Price (€)'}
                     </span>
                     <div className="flex items-center gap-1">
                       <input
@@ -590,7 +590,7 @@ export const ItemDetailModal: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                        <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
+                        <Coins className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
@@ -604,7 +604,7 @@ export const ItemDetailModal: React.FC = () => {
                 {editingField === 'current_value' ? (
                   <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
-                      <Euro className="h-3.5 w-3.5" /> {isHu ? 'Jelenlegi érték (Ft)' : 'Current Value (€)'}
+                      <Coins className="h-3.5 w-3.5" /> {isHu ? 'Jelenlegi érték (Ft)' : 'Current Value (€)'}
                     </span>
                     <div className="flex items-center gap-1">
                       <input
@@ -636,7 +636,7 @@ export const ItemDetailModal: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                        <Euro className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
+                        <Coins className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
