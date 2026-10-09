@@ -78,6 +78,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^https:\/\/.*\.supabase\.co/, /^https:\/\/media\.thingor\.com/, /^https:\/\/images\.weserv\.nl/],

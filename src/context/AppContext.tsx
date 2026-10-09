@@ -37,6 +37,11 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
 import { isAdmin, isSuspended } from '../lib/permissions';
 
+const isUUID = (str: string | null | undefined): boolean => {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+};
+
 // Default categories in Hungarian
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat-1', name: 'Elektronika', is_custom: false },
@@ -1968,6 +1973,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return { success: false, error: language === 'hu' ? 'Ez a felhasználó már a háztartás tagja!' : 'This user is already a household member!' };
     }
 
+    // Ensure we have a valid Supabase UUID for household.id if Supabase is active
+    let activeHousehold = household;
+    if (isSupabaseConfigured && supabase && user?.id && (!activeHousehold.id || !isUUID(activeHousehold.id))) {
+      const { data: realHh, error: realHhErr } = await supabase
+        .from('households')
+        .insert([{ name: activeHousehold.name, owner_id: user.id }])
+        .select()
+        .single();
+
+      if (!realHhErr && realHh) {
+        const { data: mData } = await supabase
+          .from('household_members')
+          .insert([{
+            household_id: realHh.id,
+            user_id: user.id,
+            user_email: user.email,
+            user_name: user.display_name,
+            role: 'owner'
+          }])
+          .select()
+          .single();
+
+        activeHousehold = realHh as Household;
+        setHousehold(activeHousehold);
+        if (mData) {
+          setHouseholdMembers(prev => [mData as HouseholdMember, ...prev.filter(m => m.user_id !== user.id)]);
+        }
+      } else if (realHhErr) {
+        console.error('Failed to create real household in Supabase:', realHhErr);
+        return {
+          success: false,
+          error: language === 'hu'
+            ? `Szerver oldali háztartási hiba: ${realHhErr.message}`
+            : realHhErr.message
+        };
+      }
+    }
+
     // Check if the invited email belongs to a registered user
     let isRegisteredUser = false;
     if (isSupabaseConfigured && supabase) {
@@ -1991,7 +2034,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const newInvite: HouseholdInvite = {
       id: 'inv-' + Date.now(),
-      household_id: household.id,
+      household_id: activeHousehold.id,
       invited_email: cleanEmail,
       title: cleanTitle,
       role,
@@ -1999,15 +2042,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       token: Math.random().toString(36).substring(2, 10),
       status: 'pending',
       created_at: new Date().toISOString(),
-      household_name: household.name
+      household_name: activeHousehold.name
     };
 
     let createdInvite: HouseholdInvite = newInvite;
 
-    if (isSupabaseConfigured && supabase && user?.id) {
+    if (isSupabaseConfigured && supabase && user?.id && isUUID(activeHousehold.id)) {
       // 1. First attempt insert with title column
       let { data, error } = await supabase.from('household_invites').insert([{
-        household_id: household.id,
+        household_id: activeHousehold.id,
         invited_email: cleanEmail,
         title: cleanTitle || null,
         role,
@@ -2020,7 +2063,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (error && error.message && error.message.includes('title')) {
         console.warn("Schema cache warning: 'title' column missing on household_invites. Fallback insert without title column...");
         const retry = await supabase.from('household_invites').insert([{
-          household_id: household.id,
+          household_id: activeHousehold.id,
           invited_email: cleanEmail,
           role,
           invited_by: user.id,
@@ -2036,7 +2079,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return { success: false, error: error.message };
       }
 
-      createdInvite = { ...data, title: cleanTitle || data?.title, household_name: household.name } as HouseholdInvite;
+      createdInvite = { ...data, title: cleanTitle || data?.title, household_name: activeHousehold.name } as HouseholdInvite;
     }
 
     setHouseholdInvites(prev => [...prev, createdInvite]);
