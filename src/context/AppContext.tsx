@@ -446,6 +446,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // PWA History & Back Navigation Handler
   const isPoppingRef = useRef(false);
   const prevModalRef = useRef(false);
+  const notificationTablesAvailableRef = useRef<boolean>(true);
 
   const isOverlayModalOpen = Boolean(
     isAddEditItemModalOpen ||
@@ -1563,6 +1564,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const fetchNotifications = async () => {
+    if (!notificationTablesAvailableRef.current) return;
     if (isSupabaseConfigured && supabase && user?.id) {
       try {
         const { data, error } = await supabase
@@ -1570,6 +1572,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
+
+        if (error) {
+          if (error.code === 'PGRST301' || error.status === 404 || error.message?.includes('404') || error.message?.includes('does not exist')) {
+            notificationTablesAvailableRef.current = false;
+            return;
+          }
+        }
 
         if (!error && data) {
           setNotifications(data as AppNotification[]);
@@ -1582,12 +1591,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           .eq('user_id', user.id)
           .maybeSingle();
 
+        if (settingsError) {
+          if (settingsError.code === 'PGRST301' || settingsError.status === 404 || settingsError.message?.includes('404') || settingsError.message?.includes('does not exist')) {
+            notificationTablesAvailableRef.current = false;
+          }
+        }
+
         if (!settingsError && settingsData) {
           setUserNotificationSettings(settingsData as UserNotificationSettings);
           localStorage.setItem('thingor_notification_settings', JSON.stringify(settingsData));
         }
       } catch {
-        // Ignore missing optional notification table responses gracefully
+        notificationTablesAvailableRef.current = false;
       }
     }
   };
@@ -1598,7 +1613,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
-    if (isSupabaseConfigured && supabase && isUUID(notificationId)) {
+    if (isSupabaseConfigured && supabase && isUUID(notificationId) && notificationTablesAvailableRef.current) {
       await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId);
     }
   };
@@ -1609,7 +1624,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
-    if (isSupabaseConfigured && supabase && user?.id) {
+    if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
       await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
     }
   };
@@ -1620,7 +1635,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
-    if (isSupabaseConfigured && supabase && isUUID(notificationId)) {
+    if (isSupabaseConfigured && supabase && isUUID(notificationId) && notificationTablesAvailableRef.current) {
       await supabase.from('notifications').delete().eq('id', notificationId);
     }
   };
@@ -1640,7 +1655,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return updated;
     });
 
-    if (isSupabaseConfigured && supabase && user?.id) {
+    if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
       await supabase.from('user_notification_settings').upsert({
         user_id: user.id,
         ...settingsUpdates,

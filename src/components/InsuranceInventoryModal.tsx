@@ -98,14 +98,35 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
         logging: false,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
-          // Replace oklch(...) in all <style> tags in cloned document to prevent html2canvas color parse crash
-          const styleTags = clonedDoc.querySelectorAll('style');
-          styleTags.forEach(style => {
-            if (style.textContent && style.textContent.includes('oklch')) {
-              style.textContent = style.textContent.replace(/oklch\([^)]+\)/g, '#0f172a');
-            }
-          });
+          // 1. Remove all external <link rel="stylesheet"> and <style> tags in clonedDoc that contain Tailwind v4 oklch rules
+          clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach(el => el.remove());
 
+          // 2. Build a combined CSS string from document.styleSheets in the parent document
+          let combinedCss = '';
+          try {
+            Array.from(document.styleSheets).forEach(sheet => {
+              try {
+                const rules = Array.from(sheet.cssRules || []);
+                rules.forEach(rule => {
+                  combinedCss += rule.cssText + '\n';
+                });
+              } catch {
+                // Cross-origin stylesheet rules might be inaccessible, ignore
+              }
+            });
+          } catch {}
+
+          // 3. Replace all oklch(...) occurrences in combinedCss
+          if (combinedCss.includes('oklch')) {
+            combinedCss = combinedCss.replace(/oklch\([^)]+\)/g, '#0f172a');
+          }
+
+          // 4. Create a clean sanitized <style> element in clonedDoc head
+          const sanitizedStyle = clonedDoc.createElement('style');
+          sanitizedStyle.textContent = combinedCss;
+          clonedDoc.head.appendChild(sanitizedStyle);
+
+          // 5. Sanitize any inline element style properties containing oklch
           const container = clonedDoc.getElementById('printable-insurance-inventory');
           if (container) {
             const allElements = container.querySelectorAll('*');
