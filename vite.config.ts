@@ -48,25 +48,25 @@ export default defineConfig({
         icons: [
           {
             src: '/android-chrome-192x192.png',
-            sizes: '192x192',
+            sizes: '100x95',
             type: 'image/png',
             purpose: 'any'
           },
           {
             src: '/android-chrome-192x192.png',
-            sizes: '192x192',
+            sizes: '100x95',
             type: 'image/png',
             purpose: 'maskable'
           },
           {
             src: '/android-chrome-512x512.png',
-            sizes: '512x512',
+            sizes: '100x95',
             type: 'image/png',
             purpose: 'any'
           },
           {
             src: '/android-chrome-512x512.png',
-            sizes: '512x512',
+            sizes: '100x95',
             type: 'image/png',
             purpose: 'maskable'
           }
@@ -75,7 +75,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^https:\/\/.*\.supabase\.co/, /^https:\/\/media\.thingor\.com/],
+        navigateFallbackDenylist: [/^\/api/, /^https:\/\/.*\.supabase\.co/, /^https:\/\/media\.thingor\.com/, /^https:\/\/images\.weserv\.nl/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -108,11 +108,6 @@ export default defineConfig({
           {
             // NetworkOnly for Supabase API and Auth to ensure real-time security and zero data caching
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkOnly'
-          },
-          {
-            // NetworkOnly for Cloudflare R2 files to protect user data and signed URLs
-            urlPattern: /^https:\/\/media\.thingor\.com\/.*/i,
             handler: 'NetworkOnly'
           }
         ]

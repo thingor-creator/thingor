@@ -83,6 +83,43 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
     }
   };
 
+  const convertImageToBase64 = async (url: string): Promise<string> => {
+    if (!url) return '';
+    if (url.startsWith('data:')) return url;
+
+    // Try direct fetch first
+    try {
+      const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+      if (res.ok) {
+        const blob = await res.blob();
+        return await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string) || '');
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch {}
+
+    // Fallback via CORS-friendly image proxy (weserv.nl)
+    try {
+      const cleanUrl = url.replace(/^https?:\/\//, '');
+      const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=300&output=jpg`;
+      const res = await fetch(proxyUrl, { cache: 'force-cache' });
+      if (res.ok) {
+        const blob = await res.blob();
+        return await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string) || '');
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch {}
+
+    return '';
+  };
+
   const handleDownloadPDF = async () => {
     if (!printRef.current) return;
     setIsGenerating(true);
@@ -97,7 +134,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
+        onclone: async (clonedDoc) => {
           // 1. Remove all external <link rel="stylesheet"> and <style> tags in clonedDoc that contain Tailwind v4 oklch rules
           clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach(el => el.remove());
 
@@ -126,7 +163,27 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
           sanitizedStyle.textContent = combinedCss;
           clonedDoc.head.appendChild(sanitizedStyle);
 
-          // 5. Sanitize any inline element style properties containing oklch
+          // 5. Convert all item photo images in clonedDoc to inline Base64 Data URLs
+          const imgElements = Array.from(
+            clonedDoc.querySelectorAll('#printable-insurance-inventory img')
+          ) as HTMLImageElement[];
+
+          await Promise.all(
+            imgElements.map(async (img) => {
+              const src = img.getAttribute('src');
+              if (src && (src.startsWith('http://') || src.startsWith('https://'))) {
+                const base64 = await convertImageToBase64(src);
+                if (base64) {
+                  img.src = base64;
+                  img.removeAttribute('crossorigin');
+                } else {
+                  img.style.display = 'none';
+                }
+              }
+            })
+          );
+
+          // 6. Sanitize any inline element style properties containing oklch
           const container = clonedDoc.getElementById('printable-insurance-inventory');
           if (container) {
             const allElements = container.querySelectorAll('*');
