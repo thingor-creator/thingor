@@ -88,18 +88,18 @@ export const Navbar: React.FC = () => {
     <>
       {/* Main Top Header */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8">
           
           {/* Logo & Brand */}
-          <div className="flex items-center gap-4 xl:gap-6 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 xl:gap-6 shrink-0">
             <button
               onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
-              className="flex items-center gap-3 text-left focus:outline-none group py-1 shrink-0"
+              className="flex items-center gap-2 text-left focus:outline-none group py-1 shrink-0"
             >
               <img
                 src={siteSettings.logo_url || '/logo.png'}
                 alt={siteSettings.site_name || 'Thingor Logo'}
-                className="h-10 sm:h-12 md:h-14 max-w-[180px] sm:max-w-[240px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
+                className="h-8 sm:h-12 md:h-14 max-w-[120px] xs:max-w-[150px] sm:max-w-[240px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
               />
             </button>
 
@@ -298,7 +298,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Right Action controls */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
 
             {/* Language Selector */}
             <div className="relative shrink-0">
@@ -448,64 +448,64 @@ export const Navbar: React.FC = () => {
 
       {/* MOBILE BOTTOM NAVIGATION BAR (Logged In Users) */}
       {isAuthenticated && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800/90 backdrop-blur-md px-2 py-1.5 flex items-center justify-around shadow-2xl">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800/90 backdrop-blur-md px-1 sm:px-2 py-1 flex items-center justify-around shadow-2xl">
           {/* 1. Vezérlőpult */}
           <button
             onClick={() => handleNav('dashboard')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <LayoutDashboard className="h-5 w-5" />
-            <span className="text-[10px]">{isHu ? 'Vezérlőpult' : 'Dashboard'}</span>
+            <LayoutDashboard className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Vezérlőpult' : 'Dashboard'}</span>
           </button>
 
           {/* 2. Tárgyaim */}
           <button
             onClick={() => handleNav('items')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'items' || currentView === 'locations' || currentView === 'categories'
                 ? 'text-emerald-400 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Boxes className="h-5 w-5" />
-            <span className="text-[10px]">{isHu ? 'Tárgyaim' : 'Items'}</span>
+            <Boxes className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárgyaim' : 'Items'}</span>
           </button>
 
           {/* 3. Teendők */}
           <button
             onClick={() => handleNav('repairs')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'repairs' || currentView === 'financing'
                 ? 'text-emerald-400 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <ListChecks className="h-5 w-5" />
-            <span className="text-[10px]">{isHu ? 'Teendők' : 'Tasks'}</span>
+            <ListChecks className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Teendők' : 'Tasks'}</span>
           </button>
 
           {/* 4. Jegyzetek */}
           <button
             onClick={() => handleNav('notes')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'notes' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <StickyNote className="h-5 w-5" />
-            <span className="text-[10px]">{isHu ? 'Jegyzetek' : 'Notes'}</span>
+            <StickyNote className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Jegyzetek' : 'Notes'}</span>
           </button>
 
           {/* 5. Menü (Drawer toggle) */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
               isMobileMenuOpen ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Menu className="h-5 w-5" />
-            <span className="text-[10px]">{isHu ? 'Menü' : 'Menu'}</span>
+            <Menu className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Menü' : 'Menu'}</span>
           </button>
         </nav>
       )}

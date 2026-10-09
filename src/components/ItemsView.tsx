@@ -129,31 +129,31 @@ export const ItemsView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="grid grid-cols-1 sm:flex sm:items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={() => setIsExportModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600 w-full sm:w-auto"
             title={language === 'hu' ? 'Biztosítási leltár PDF exportálása' : 'Export insurance inventory PDF'}
           >
-            <FileText className="h-4 w-4 text-emerald-400" />
+            <FileText className="h-4 w-4 text-emerald-400 shrink-0" />
             <span>{language === 'hu' ? 'Biztosítási Leltár (PDF)' : 'Insurance PDF'}</span>
           </button>
 
           <button
             onClick={() => setIsCSVModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600 w-full sm:w-auto"
             title={language === 'hu' ? 'CSV Import és Export kezelése' : 'CSV Import and Export'}
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
             <span>{language === 'hu' ? 'CSV Import / Export' : 'CSV Import / Export'}</span>
           </button>
 
           <button
             onClick={handleOpenAdd}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02]"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02] w-full sm:w-auto"
           >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            {t('add_thing')}
+            <Plus className="h-4 w-4 stroke-[2.5] shrink-0" />
+            <span>{t('add_thing')}</span>
           </button>
         </div>
       </div>

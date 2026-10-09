@@ -318,7 +318,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
         )}
 
         {/* Scrollable Preview & Print Template Container */}
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-950/90">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-950/90">
           
           {totalItemsCount === 0 ? (
             <div className="p-12 text-center space-y-4">
@@ -337,7 +337,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
             <div
               ref={printRef}
               id="printable-insurance-inventory"
-              className="w-full p-8 rounded-xl shadow-lg space-y-6 text-left border"
+              className="w-full p-4 sm:p-8 rounded-xl shadow-lg space-y-6 text-left border"
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
                 backgroundColor: '#ffffff',
@@ -348,15 +348,15 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
               
               {/* PDF Document Header */}
               <div
-                className="flex items-start justify-between pb-5"
+                className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-5"
                 style={{ borderBottom: '2px solid #059669' }}
               >
                 <div>
-                  <div className="flex items-center gap-2 font-extrabold text-sm uppercase tracking-wider" style={{ color: '#047857' }}>
-                    <ShieldCheck className="h-5 w-5" />
+                  <div className="flex items-center gap-2 font-extrabold text-xs sm:text-sm uppercase tracking-wider" style={{ color: '#047857' }}>
+                    <ShieldCheck className="h-4 sm:h-5 w-4 sm:w-5" />
                     <span>Thingor Inventory System</span>
                   </div>
-                  <h1 className="text-2xl font-black mt-1" style={{ color: '#0f172a' }}>
+                  <h1 className="text-xl sm:text-2xl font-black mt-1" style={{ color: '#0f172a' }}>
                     BIZTOSÍTÁSI LELTÁR KIMUTATÁS
                   </h1>
                   <p className="text-xs mt-0.5 font-medium" style={{ color: '#64748b' }}>
@@ -364,7 +364,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
                   </p>
                 </div>
 
-                <div className="text-right space-y-1 text-xs">
+                <div className="sm:text-right space-y-1 text-xs shrink-0">
                   <div className="font-bold" style={{ color: '#1e293b' }}>
                     Dátum: <span className="font-normal" style={{ color: '#475569' }}>{new Date().toLocaleDateString('hu-HU')}</span>
                   </div>
@@ -382,24 +382,24 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
 
               {/* Summary Stats Grid */}
               <div
-                className="grid grid-cols-4 gap-4 p-4 rounded-xl text-xs"
+                className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl text-xs"
                 style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
               >
                 <div>
                   <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Tárgyak száma</span>
-                  <span className="text-lg font-black" style={{ color: '#0f172a' }}>{totalItemsCount} db</span>
+                  <span className="text-base sm:text-lg font-black" style={{ color: '#0f172a' }}>{totalItemsCount} db</span>
                 </div>
                 <div>
                   <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Összes vételár</span>
-                  <span className="text-lg font-black" style={{ color: '#047857' }}>{formatPrice(totalPurchasePrice)}</span>
+                  <span className="text-base sm:text-lg font-black" style={{ color: '#047857' }}>{formatPrice(totalPurchasePrice)}</span>
                 </div>
                 <div>
                   <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Becsült érték</span>
-                  <span className="text-lg font-black" style={{ color: '#0f172a' }}>{formatPrice(totalCurrentValue)}</span>
+                  <span className="text-base sm:text-lg font-black" style={{ color: '#0f172a' }}>{formatPrice(totalCurrentValue)}</span>
                 </div>
                 <div>
                   <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Aktív garancia</span>
-                  <span className="text-lg font-black" style={{ color: '#1d4ed8' }}>{warrantyCount} tárgy</span>
+                  <span className="text-base sm:text-lg font-black" style={{ color: '#1d4ed8' }}>{warrantyCount} tárgy</span>
                 </div>
               </div>
 
@@ -412,7 +412,8 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
                   Részletes Tárgylistázás ({totalItemsCount} tételezett elem)
                 </h3>
 
-                <table className="w-full text-left text-xs border-collapse">
+                <div className="overflow-x-auto w-full rounded-lg border border-slate-200">
+                  <table className="w-full min-w-[640px] text-left text-xs border-collapse">
                   <thead>
                     <tr
                       className="text-[11px] font-bold"
@@ -531,6 +532,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
 
               {/* PDF Document Footer */}
