@@ -10,6 +10,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 import type { ItemCondition } from '../types';
 
 interface CSVModalProps {
@@ -367,6 +368,8 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
 
   // EXECUTE IMPORT
   const handleExecuteImport = async () => {
+    if (isImporting) return;
+
     const validRows = parsedRows.filter(r => r.isValid);
     if (validRows.length === 0) return;
 
@@ -376,7 +379,7 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
 
     for (const r of validRows) {
       try {
-        await addItem({
+        const createdItem = await addItem({
           name: r.name,
           category_id: r.categoryId,
           location_id: r.locationId,
@@ -390,7 +393,13 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
           status: 'Working',
           ownership_scope: 'private'
         });
-        success++;
+
+        if (isSupabaseConfigured && createdItem?.id?.startsWith('item-')) {
+          console.warn('CSV import row failed on Supabase backend:', r.name);
+          fail++;
+        } else {
+          success++;
+        }
       } catch (err) {
         console.error('CSV import row failed:', err);
         fail++;

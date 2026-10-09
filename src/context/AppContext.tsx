@@ -1564,26 +1564,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchNotifications = async () => {
     if (isSupabaseConfigured && supabase && user?.id) {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        setNotifications(data as AppNotification[]);
-        localStorage.setItem('thingor_notifications', JSON.stringify(data));
-      }
+        if (!error && data) {
+          setNotifications(data as AppNotification[]);
+          localStorage.setItem('thingor_notifications', JSON.stringify(data));
+        }
 
-      const { data: settingsData } = await supabase
-        .from('user_notification_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('user_notification_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (settingsData) {
-        setUserNotificationSettings(settingsData as UserNotificationSettings);
-        localStorage.setItem('thingor_notification_settings', JSON.stringify(settingsData));
+        if (!settingsError && settingsData) {
+          setUserNotificationSettings(settingsData as UserNotificationSettings);
+          localStorage.setItem('thingor_notification_settings', JSON.stringify(settingsData));
+        }
+      } catch {
+        // Ignore missing optional notification table responses gracefully
       }
     }
   };

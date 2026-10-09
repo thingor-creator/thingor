@@ -97,6 +97,28 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          const container = clonedDoc.getElementById('printable-insurance-inventory');
+          if (container) {
+            // Strip any inherited oklch color values on cloned DOM to prevent html2canvas color parse error
+            const allElements = container.querySelectorAll('*');
+            const sanitizeNode = (el: HTMLElement) => {
+              try {
+                const style = window.getComputedStyle(el);
+                ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
+                  const val = (style as any)[prop];
+                  if (val && val.includes('oklch')) {
+                    (el.style as any)[prop] = prop === 'color' ? '#0f172a' : prop === 'backgroundColor' ? '#ffffff' : '#e2e8f0';
+                  }
+                });
+              } catch {
+                // Ignore style read errors
+              }
+            };
+            sanitizeNode(container);
+            allElements.forEach(node => sanitizeNode(node as HTMLElement));
+          }
+        }
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -226,71 +248,91 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
               </p>
             </div>
           ) : (
-            /* Printable Template (A4 Light Style for Crisp PDF Output) */
+            /* Printable Template (A4 Light Style with Explicit Hex Colors for html2canvas compatibility) */
             <div
               ref={printRef}
               id="printable-insurance-inventory"
-              className="w-full bg-white text-slate-900 p-8 rounded-xl shadow-lg space-y-6 text-left border border-slate-200"
-              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+              className="w-full p-8 rounded-xl shadow-lg space-y-6 text-left border"
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                borderColor: '#e2e8f0'
+              }}
             >
               
               {/* PDF Document Header */}
-              <div className="flex items-start justify-between border-b-2 border-emerald-600 pb-5">
+              <div
+                className="flex items-start justify-between pb-5"
+                style={{ borderBottom: '2px solid #059669' }}
+              >
                 <div>
-                  <div className="flex items-center gap-2 text-emerald-700 font-extrabold text-sm uppercase tracking-wider">
+                  <div className="flex items-center gap-2 font-extrabold text-sm uppercase tracking-wider" style={{ color: '#047857' }}>
                     <ShieldCheck className="h-5 w-5" />
                     <span>Thingor Inventory System</span>
                   </div>
-                  <h1 className="text-2xl font-black text-slate-900 mt-1">
+                  <h1 className="text-2xl font-black mt-1" style={{ color: '#0f172a' }}>
                     BIZTOSÍTÁSI LELTÁR KIMUTATÁS
                   </h1>
-                  <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  <p className="text-xs mt-0.5 font-medium" style={{ color: '#64748b' }}>
                     Hivatalos vagyontárgy jegyzék biztosítási kárigényhez és archiváláshoz
                   </p>
                 </div>
 
                 <div className="text-right space-y-1 text-xs">
-                  <div className="font-bold text-slate-800">
-                    Dátum: <span className="font-normal text-slate-600">{new Date().toLocaleDateString('hu-HU')}</span>
+                  <div className="font-bold" style={{ color: '#1e293b' }}>
+                    Dátum: <span className="font-normal" style={{ color: '#475569' }}>{new Date().toLocaleDateString('hu-HU')}</span>
                   </div>
-                  <div className="font-bold text-slate-800">
-                    Tulajdonos: <span className="font-normal text-slate-600">{user?.email || 'Nyilvántartott Felhasználó'}</span>
+                  <div className="font-bold" style={{ color: '#1e293b' }}>
+                    Tulajdonos: <span className="font-normal" style={{ color: '#475569' }}>{user?.email || 'Nyilvántartott Felhasználó'}</span>
                   </div>
-                  <div className="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                  <div
+                    className="inline-block px-2 py-0.5 rounded text-[10px] font-bold"
+                    style={{ backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0' }}
+                  >
                     Hitelesített Leltár
                   </div>
                 </div>
               </div>
 
               {/* Summary Stats Grid */}
-              <div className="grid grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <div
+                className="grid grid-cols-4 gap-4 p-4 rounded-xl text-xs"
+                style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
+              >
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-slate-500">Tárgyak száma</span>
-                  <span className="text-lg font-black text-slate-900">{totalItemsCount} db</span>
+                  <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Tárgyak száma</span>
+                  <span className="text-lg font-black" style={{ color: '#0f172a' }}>{totalItemsCount} db</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-slate-500">Összes vételár</span>
-                  <span className="text-lg font-black text-emerald-700">{formatPrice(totalPurchasePrice)}</span>
+                  <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Összes vételár</span>
+                  <span className="text-lg font-black" style={{ color: '#047857' }}>{formatPrice(totalPurchasePrice)}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-slate-500">Becsült érték</span>
-                  <span className="text-lg font-black text-slate-900">{formatPrice(totalCurrentValue)}</span>
+                  <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Becsült érték</span>
+                  <span className="text-lg font-black" style={{ color: '#0f172a' }}>{formatPrice(totalCurrentValue)}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-slate-500">Aktív garancia</span>
-                  <span className="text-lg font-black text-blue-700">{warrantyCount} tárgy</span>
+                  <span className="block text-[10px] uppercase font-bold" style={{ color: '#64748b' }}>Aktív garancia</span>
+                  <span className="text-lg font-black" style={{ color: '#1d4ed8' }}>{warrantyCount} tárgy</span>
                 </div>
               </div>
 
               {/* Items Detail Table */}
               <div className="space-y-3 pt-2">
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 border-b border-slate-300 pb-1">
+                <h3
+                  className="text-xs font-extrabold uppercase tracking-wider pb-1"
+                  style={{ color: '#334155', borderBottom: '1px solid #cbd5e1' }}
+                >
                   Részletes Tárgylistázás ({totalItemsCount} tételezett elem)
                 </h3>
 
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-100 border-b border-slate-300 text-[11px] font-bold text-slate-700">
+                    <tr
+                      className="text-[11px] font-bold"
+                      style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', color: '#334155' }}
+                    >
                       <th className="p-2 w-12 text-center">Fotó</th>
                       <th className="p-2">Tárgy megnevezése</th>
                       <th className="p-2">Kategória / Helyszín</th>
@@ -301,14 +343,20 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
                       <th className="p-2 text-center">Dok.</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 text-slate-800 text-[11px]">
+                  <tbody className="text-[11px]" style={{ color: '#1e293b' }}>
                     {userItems.map((item, idx) => {
                       const category = getCategoryName(item.category_id);
                       const location = getLocationPath(item.location_id);
                       const itemDocs = documents.filter(d => d.item_id === item.id);
 
                       return (
-                        <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                        <tr
+                          key={item.id}
+                          style={{
+                            backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                            borderBottom: '1px solid #f1f5f9'
+                          }}
+                        >
                           
                           {/* Thumbnail photo */}
                           <td className="p-2 text-center align-top">
@@ -316,13 +364,17 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
                               <img
                                 src={item.photo_url}
                                 alt={item.name}
-                                className="w-9 h-9 object-cover rounded border border-slate-300 mx-auto"
+                                className="w-9 h-9 object-cover rounded mx-auto"
+                                style={{ border: '1px solid #cbd5e1' }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
                             ) : (
-                              <div className="w-9 h-9 rounded bg-slate-200 flex items-center justify-center text-[9px] text-slate-500 mx-auto font-semibold">
+                              <div
+                                className="w-9 h-9 rounded flex items-center justify-center text-[9px] mx-auto font-semibold"
+                                style={{ backgroundColor: '#e2e8f0', color: '#64748b' }}
+                              >
                                 Nincs
                               </div>
                             )}
@@ -330,17 +382,17 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
 
                           {/* Name & Details */}
                           <td className="p-2 align-top">
-                            <div className="font-bold text-slate-900">{item.name}</div>
+                            <div className="font-bold" style={{ color: '#0f172a' }}>{item.name}</div>
                             {item.store_seller && (
-                              <div className="text-[10px] text-slate-500">Üzlet: {item.store_seller}</div>
+                              <div className="text-[10px]" style={{ color: '#64748b' }}>Üzlet: {item.store_seller}</div>
                             )}
-                            <div className="text-[10px] text-slate-500">Állapot: {getConditionLabel(item.condition)}</div>
+                            <div className="text-[10px]" style={{ color: '#64748b' }}>Állapot: {getConditionLabel(item.condition)}</div>
                           </td>
 
                           {/* Category & Location */}
                           <td className="p-2 align-top">
-                            <div className="font-semibold text-slate-800">{category}</div>
-                            <div className="text-[10px] text-slate-500">{location}</div>
+                            <div className="font-semibold" style={{ color: '#1e293b' }}>{category}</div>
+                            <div className="text-[10px]" style={{ color: '#64748b' }}>{location}</div>
                           </td>
 
                           {/* Purchase Date */}
@@ -354,33 +406,39 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
                           </td>
 
                           {/* Current Value */}
-                          <td className="p-2 text-right align-top font-bold text-slate-900 whitespace-nowrap">
+                          <td className="p-2 text-right align-top font-bold whitespace-nowrap" style={{ color: '#0f172a' }}>
                             {formatPrice(item.current_value ?? item.purchase_price)}
                           </td>
 
                           {/* Warranty */}
                           <td className="p-2 text-center align-top whitespace-nowrap">
                             {item.warranty_end ? (
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                new Date(item.warranty_end) > new Date()
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-slate-200 text-slate-600'
-                              }`}>
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                style={
+                                  new Date(item.warranty_end) > new Date()
+                                    ? { backgroundColor: '#dcfce7', color: '#166534' }
+                                    : { backgroundColor: '#e2e8f0', color: '#475569' }
+                                }
+                              >
                                 {formatDate(item.warranty_end)}
                               </span>
                             ) : (
-                              <span className="text-slate-400 text-[10px]">-</span>
+                              <span className="text-[10px]" style={{ color: '#94a3b8' }}>-</span>
                             )}
                           </td>
 
                           {/* Documents indicator */}
                           <td className="p-2 text-center align-top font-semibold">
                             {itemDocs.length > 0 ? (
-                              <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}
+                              >
                                 {itemDocs.length} db
                               </span>
                             ) : (
-                              <span className="text-slate-400 text-[10px]">Nem</span>
+                              <span className="text-[10px]" style={{ color: '#94a3b8' }}>Nem</span>
                             )}
                           </td>
                         </tr>
@@ -391,12 +449,15 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
               </div>
 
               {/* PDF Document Footer */}
-              <div className="pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500">
+              <div
+                className="pt-4 flex items-center justify-between text-[10px]"
+                style={{ borderTop: '1px solid #cbd5e1', color: '#64748b' }}
+              >
                 <div>
-                  Készült a <span className="font-bold text-slate-700">Thingor</span> nyilvántartóból. Minden jog fenntartva.
+                  Készült a <span className="font-bold" style={{ color: '#334155' }}>Thingor</span> nyilvántartóból. Minden jog fenntartva.
                 </div>
                 <div>
-                  Biztosítási Archiválási azonosító: <span className="font-mono text-slate-700">{user?.id?.slice(0, 8) || 'THINGOR-PDF'}</span>
+                  Biztosítási Archiválási azonosító: <span className="font-mono" style={{ color: '#334155' }}>{user?.id?.slice(0, 8) || 'THINGOR-PDF'}</span>
                 </div>
               </div>
 
