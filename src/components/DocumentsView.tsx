@@ -120,27 +120,33 @@ export const DocumentsView: React.FC = () => {
             return (
               <div
                 key={doc.id}
-                className="p-4 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-slate-700 transition-all flex flex-col justify-between"
+                className="p-4 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-slate-700 transition-all flex flex-col justify-between min-w-0 overflow-hidden"
               >
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="p-2.5 rounded-xl bg-slate-950 text-emerald-400">
+                    <div className="p-2.5 rounded-xl bg-slate-950 text-emerald-400 shrink-0">
                       <FileText className="h-5 w-5" />
                     </div>
 
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getDocTypeBadge(doc.document_type)}`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${getDocTypeBadge(doc.document_type)}`}>
                       {getDocTypeLabel(doc.document_type)}
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-white line-clamp-1">{doc.file_name}</h3>
+                  <h3 className="text-sm font-bold text-white truncate" title={doc.file_name}>
+                    {doc.file_name}
+                  </h3>
 
                   {item && (
                     <button
                       onClick={() => setSelectedItemId(item.id)}
-                      className="mt-1 text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium truncate"
+                      className="mt-1 text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium max-w-full text-left"
+                      title={`${isHu ? 'Tárgyhoz csatolva:' : 'Attached to:'} ${item.name}`}
                     >
-                      <Boxes className="h-3 w-3" /> {isHu ? 'Tárgyhoz csatolva:' : 'Attached to:'} {item.name}
+                      <Boxes className="h-3 w-3 shrink-0 text-emerald-400" />
+                      <span className="truncate min-w-0">
+                        {isHu ? 'Tárgyhoz csatolva:' : 'Attached to:'} {item.name}
+                      </span>
                     </button>
                   )}
                 </div>
