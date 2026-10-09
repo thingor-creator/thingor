@@ -37,7 +37,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
 import { isAdmin, isSuspended } from '../lib/permissions';
 
-const isUUID = (str: string | null | undefined): boolean => {
+export const isUUID = (str: string | null | undefined): boolean => {
   if (!str) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 };
