@@ -87,11 +87,11 @@ export const NotesView: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <StickyNote className="w-7 h-7 text-amber-500" />
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <StickyNote className="w-7 h-7 text-amber-400" />
             {isHu ? 'Gyors Jegyzetek & Feljegyzések' : 'Quick Notes'}
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-400 text-sm mt-1">
             {isHu
               ? 'Rögzíts gyorsan feljegyzéseket anyagaidról, alkatrészeidről vagy tetszőleges tárgyakról.'
               : 'Record fast notes about raw materials, parts, or arbitrary items.'}

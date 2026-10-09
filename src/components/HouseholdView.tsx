@@ -220,10 +220,10 @@ export const HouseholdView: React.FC = () => {
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
             <Users className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-800">
+          <h1 className="text-3xl font-bold text-white">
             {language === 'hu' ? 'Családi / Háztartási Hozzáférés' : 'Family / Household Access'}
           </h1>
-          <p className="text-slate-600 text-sm max-w-lg mx-auto">
+          <p className="text-slate-400 text-sm max-w-lg mx-auto">
             {language === 'hu'
               ? 'Hozz létre egy közös háztartást, hívd meg családtagjaidat és kezeljétek közösen az otthoni vagyontárgyakat pontos jogosultságokkal.'
               : 'Create a shared household, invite family members, and manage home assets together with granular RBAC permissions.'}
@@ -267,13 +267,13 @@ export const HouseholdView: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <Users className="w-7 h-7 text-emerald-600" />
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Users className="w-7 h-7 text-emerald-400" />
               {household.name}
             </h1>
             {getRoleBadge(currentUserMember?.role || 'member')}
           </div>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-400 text-sm mt-1">
             {language === 'hu'
               ? 'Közös háztartás leltárja, tagok és jogosultságok kezelése.'
               : 'Shared household inventory, member roles, and permission settings.'}

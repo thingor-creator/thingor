@@ -80,11 +80,11 @@ export const FinancingView: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <CreditCard className="w-7 h-7 text-indigo-600" />
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <CreditCard className="w-7 h-7 text-indigo-400" />
             {language === 'hu' ? 'Finanszírozásaim & Részletfizetés' : 'Financing & Installments'}
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-400 text-sm mt-1">
             {language === 'hu'
               ? 'Áruhitelek, részletfizetések és lejárati határidők átlátható kezelése.'
               : 'Track consumer loans, installment payments, and maturity dates.'}

@@ -103,11 +103,11 @@ export const RepairsView: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Wrench className="w-7 h-7 text-emerald-600" />
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Wrench className="w-7 h-7 text-emerald-400" />
             {language === 'hu' ? 'Hibák & Javításkezelés' : 'Repairs & Maintenance'}
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-400 text-sm mt-1">
             {language === 'hu'
               ? 'Kövesd nyomon a hibás tárgyakat, szervizfolyamatokat és javítási költségeket.'
               : 'Track faulty items, service workflows, and maintenance costs.'}
