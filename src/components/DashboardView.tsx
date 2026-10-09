@@ -17,7 +17,6 @@ import {
   TrendingDown,
   Building2,
   HelpCircle,
-  CheckCircle2,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,

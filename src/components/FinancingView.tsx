@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { CreditCard, Calendar, CheckCircle2, AlertCircle, Plus, Trash2, DollarSign, Package } from 'lucide-react';
+import { CreditCard, Calendar, CheckCircle2, Plus, Trash2, DollarSign, Package } from 'lucide-react';
 
 export const FinancingView: React.FC = () => {
   const { items, financings, saveFinancing, recordInstallmentPayment, deleteFinancing, t, setSelectedItemId, language } = useApp();
