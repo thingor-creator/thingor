@@ -1,0 +1,412 @@
+import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import {
+  X,
+  FileText,
+  Download,
+  Printer,
+  ShieldCheck,
+  Boxes,
+  Loader2,
+  AlertCircle
+} from 'lucide-react';
+import { useApp } from '../context/AppContext';
+
+interface InsuranceInventoryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  const {
+    items,
+    documents,
+    getLocationPath,
+    getCategoryName,
+    user,
+    language
+  } = useApp();
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+  const isHu = language === 'hu';
+
+  if (!isOpen) return null;
+
+  // Filter items (only valid user items)
+  const userItems = items;
+
+  // Summary Metrics
+  const totalItemsCount = userItems.length;
+  const totalPurchasePrice = userItems.reduce((acc, item) => acc + (item.purchase_price || 0), 0);
+  const totalCurrentValue = userItems.reduce(
+    (acc, item) => acc + (item.current_value ?? item.purchase_price ?? 0),
+    0
+  );
+  const warrantyCount = userItems.filter(item => {
+    if (!item.warranty_end) return false;
+    return new Date(item.warranty_end) > new Date();
+  }).length;
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString(isHu ? 'hu-HU' : 'en-US');
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatPrice = (val?: number) => {
+    if (val === undefined || val === null) return '-';
+    return isHu
+      ? `${val.toLocaleString('hu-HU')} Ft`
+      : `€${val.toLocaleString('en-US')}`;
+  };
+
+  const getConditionLabel = (cond: string) => {
+    switch (cond) {
+      case 'New': return isHu ? 'Új' : 'New';
+      case 'Excellent': return isHu ? 'Kiváló' : 'Excellent';
+      case 'Good': return isHu ? 'Jó' : 'Good';
+      case 'Fair': return isHu ? 'Közepes' : 'Fair';
+      case 'Poor': return isHu ? 'Gyenge' : 'Poor';
+      case 'Broken': return isHu ? 'Hibás/Törött' : 'Broken';
+      default: return cond;
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!printRef.current) return;
+    setIsGenerating(true);
+    setErrorMsg(null);
+
+    try {
+      const element = printRef.current;
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position = position - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      pdf.save(`Thingor_Biztositasi_Leltar_${todayStr}.pdf`);
+    } catch (err: any) {
+      console.error('PDF Generation failed:', err);
+      setErrorMsg(
+        isHu
+          ? 'Hiba történt a PDF generálásakor. Kérjük, próbáld meg újra.'
+          : 'Failed to generate PDF. Please try again.'
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handlePrintNative = () => {
+    window.print();
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-4xl rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">
+                {isHu ? 'Biztosítási Leltár Export (PDF)' : 'Insurance Inventory Export (PDF)'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {isHu
+                  ? 'Hivatalos vagyontárgy kimutatás és archiválható PDF dokumentum'
+                  : 'Official asset documentation for insurance and offline archiving'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Action Controls Top Bar */}
+        <div className="px-6 py-3 bg-slate-950/40 border-b border-slate-800/80 flex items-center justify-between gap-4 shrink-0 flex-wrap">
+          <div className="text-xs text-slate-400 flex items-center gap-2">
+            <Boxes className="h-4 w-4 text-emerald-400" />
+            <span>
+              {isHu
+                ? `${totalItemsCount} tárgy készen áll az exportálásra`
+                : `${totalItemsCount} items ready for export`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={handlePrintNative}
+              disabled={isGenerating || totalItemsCount === 0}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors disabled:opacity-50"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>{isHu ? 'Nyomtatás' : 'Print'}</span>
+            </button>
+
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isGenerating || totalItemsCount === 0}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              <span>{isHu ? 'PDF Letöltése' : 'Download PDF'}</span>
+            </button>
+          </div>
+        </div>
+
+        {errorMsg && (
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Scrollable Preview & Print Template Container */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-950/90">
+          
+          {totalItemsCount === 0 ? (
+            <div className="p-12 text-center space-y-4">
+              <Boxes className="h-12 w-12 text-slate-600 mx-auto" />
+              <h4 className="text-base font-bold text-white">
+                {isHu ? 'Nincs exportálható tárgy' : 'No items to export'}
+              </h4>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                {isHu
+                  ? 'A leltár jelenleg üres. Vegyél fel új tárgyakat az exportálás előtt.'
+                  : 'Your inventory is currently empty. Add items before exporting.'}
+              </p>
+            </div>
+          ) : (
+            /* Printable Template (A4 Light Style for Crisp PDF Output) */
+            <div
+              ref={printRef}
+              id="printable-insurance-inventory"
+              className="w-full bg-white text-slate-900 p-8 rounded-xl shadow-lg space-y-6 text-left border border-slate-200"
+              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+            >
+              
+              {/* PDF Document Header */}
+              <div className="flex items-start justify-between border-b-2 border-emerald-600 pb-5">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-700 font-extrabold text-sm uppercase tracking-wider">
+                    <ShieldCheck className="h-5 w-5" />
+                    <span>Thingor Inventory System</span>
+                  </div>
+                  <h1 className="text-2xl font-black text-slate-900 mt-1">
+                    BIZTOSÍTÁSI LELTÁR KIMUTATÁS
+                  </h1>
+                  <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                    Hivatalos vagyontárgy jegyzék biztosítási kárigényhez és archiváláshoz
+                  </p>
+                </div>
+
+                <div className="text-right space-y-1 text-xs">
+                  <div className="font-bold text-slate-800">
+                    Dátum: <span className="font-normal text-slate-600">{new Date().toLocaleDateString('hu-HU')}</span>
+                  </div>
+                  <div className="font-bold text-slate-800">
+                    Tulajdonos: <span className="font-normal text-slate-600">{user?.email || 'Nyilvántartott Felhasználó'}</span>
+                  </div>
+                  <div className="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                    Hitelesített Leltár
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary Stats Grid */}
+              <div className="grid grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-500">Tárgyak száma</span>
+                  <span className="text-lg font-black text-slate-900">{totalItemsCount} db</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-500">Összes vételár</span>
+                  <span className="text-lg font-black text-emerald-700">{formatPrice(totalPurchasePrice)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-500">Becsült érték</span>
+                  <span className="text-lg font-black text-slate-900">{formatPrice(totalCurrentValue)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-500">Aktív garancia</span>
+                  <span className="text-lg font-black text-blue-700">{warrantyCount} tárgy</span>
+                </div>
+              </div>
+
+              {/* Items Detail Table */}
+              <div className="space-y-3 pt-2">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 border-b border-slate-300 pb-1">
+                  Részletes Tárgylistázás ({totalItemsCount} tételezett elem)
+                </h3>
+
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-300 text-[11px] font-bold text-slate-700">
+                      <th className="p-2 w-12 text-center">Fotó</th>
+                      <th className="p-2">Tárgy megnevezése</th>
+                      <th className="p-2">Kategória / Helyszín</th>
+                      <th className="p-2">Vásárlás</th>
+                      <th className="p-2 text-right">Vételár</th>
+                      <th className="p-2 text-right">Aktuális Érték</th>
+                      <th className="p-2 text-center">Garancia</th>
+                      <th className="p-2 text-center">Dok.</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-slate-800 text-[11px]">
+                    {userItems.map((item, idx) => {
+                      const category = getCategoryName(item.category_id);
+                      const location = getLocationPath(item.location_id);
+                      const itemDocs = documents.filter(d => d.item_id === item.id);
+
+                      return (
+                        <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                          
+                          {/* Thumbnail photo */}
+                          <td className="p-2 text-center align-top">
+                            {item.photo_url ? (
+                              <img
+                                src={item.photo_url}
+                                alt={item.name}
+                                className="w-9 h-9 object-cover rounded border border-slate-300 mx-auto"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded bg-slate-200 flex items-center justify-center text-[9px] text-slate-500 mx-auto font-semibold">
+                                Nincs
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Name & Details */}
+                          <td className="p-2 align-top">
+                            <div className="font-bold text-slate-900">{item.name}</div>
+                            {item.store_seller && (
+                              <div className="text-[10px] text-slate-500">Üzlet: {item.store_seller}</div>
+                            )}
+                            <div className="text-[10px] text-slate-500">Állapot: {getConditionLabel(item.condition)}</div>
+                          </td>
+
+                          {/* Category & Location */}
+                          <td className="p-2 align-top">
+                            <div className="font-semibold text-slate-800">{category}</div>
+                            <div className="text-[10px] text-slate-500">{location}</div>
+                          </td>
+
+                          {/* Purchase Date */}
+                          <td className="p-2 align-top whitespace-nowrap">
+                            {formatDate(item.purchase_date)}
+                          </td>
+
+                          {/* Purchase Price */}
+                          <td className="p-2 text-right align-top font-semibold whitespace-nowrap">
+                            {formatPrice(item.purchase_price)}
+                          </td>
+
+                          {/* Current Value */}
+                          <td className="p-2 text-right align-top font-bold text-slate-900 whitespace-nowrap">
+                            {formatPrice(item.current_value ?? item.purchase_price)}
+                          </td>
+
+                          {/* Warranty */}
+                          <td className="p-2 text-center align-top whitespace-nowrap">
+                            {item.warranty_end ? (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                new Date(item.warranty_end) > new Date()
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-slate-200 text-slate-600'
+                              }`}>
+                                {formatDate(item.warranty_end)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-[10px]">-</span>
+                            )}
+                          </td>
+
+                          {/* Documents indicator */}
+                          <td className="p-2 text-center align-top font-semibold">
+                            {itemDocs.length > 0 ? (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
+                                {itemDocs.length} db
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-[10px]">Nem</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* PDF Document Footer */}
+              <div className="pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500">
+                <div>
+                  Készült a <span className="font-bold text-slate-700">Thingor</span> nyilvántartóból. Minden jog fenntartva.
+                </div>
+                <div>
+                  Biztosítási Archiválási azonosító: <span className="font-mono text-slate-700">{user?.id?.slice(0, 8) || 'THINGOR-PDF'}</span>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
+      </div>
+    </div>,
+    document.body
+  );
+};

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ItemCard } from './ItemCard';
+import { InsuranceInventoryModal } from './InsuranceInventoryModal';
 import type { SortField } from '../types';
 import {
   Search,
@@ -8,10 +9,12 @@ import {
   ArrowUpDown,
   Boxes,
   X,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from 'lucide-react';
 
 export const ItemsView: React.FC = () => {
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const {
     items,
     categories,
@@ -123,13 +126,24 @@ export const ItemsView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02]"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          {t('add_thing')}
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600"
+            title={language === 'hu' ? 'Biztosítási leltár PDF exportálása' : 'Export insurance inventory PDF'}
+          >
+            <FileText className="h-4 w-4 text-emerald-400" />
+            <span>{language === 'hu' ? 'Biztosítási Leltár (PDF)' : 'Insurance PDF'}</span>
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02]"
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            {t('add_thing')}
+          </button>
+        </div>
       </div>
 
       {/* SEARCH AND FILTERS BAR */}
@@ -294,6 +308,10 @@ export const ItemsView: React.FC = () => {
         </div>
       )}
 
+      <InsuranceInventoryModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+      />
     </div>
   );
 };
