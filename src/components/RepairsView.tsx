@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, Trash2, ShieldCheck, DollarSign, Package } from 'lucide-react';
-import type { RepairStatus, RepairUrgency, ItemRepair } from '../types';
+import type { RepairStatus, RepairUrgency } from '../types';
 
 export const RepairsView: React.FC = () => {
   const { items, repairs, addRepair, updateRepairStatus, deleteRepair, t, setSelectedItemId, language } = useApp();
