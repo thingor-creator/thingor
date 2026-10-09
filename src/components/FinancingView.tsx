@@ -319,11 +319,11 @@ export const FinancingView: React.FC = () => {
                       setOriginalPrice(it.purchase_price);
                     }
                   }}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 >
-                  <option value="">{language === 'hu' ? '-- Válassz tárgyat --' : '-- Select Item --'}</option>
+                  <option value="" className="bg-white text-slate-900">{language === 'hu' ? '-- Válassz tárgyat --' : '-- Select Item --'}</option>
                   {items.map(i => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
+                    <option key={i.id} value={i.id} className="bg-white text-slate-900">{i.name}</option>
                   ))}
                 </select>
               </div>
@@ -338,7 +338,7 @@ export const FinancingView: React.FC = () => {
                   placeholder={language === 'hu' ? 'Pl. OTP Bank, Cofidis, Cetelem, Apple Financial' : 'e.g. OTP Credit, Cofidis'}
                   value={provider}
                   onChange={(e) => setProvider(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 />
               </div>
 
@@ -353,7 +353,7 @@ export const FinancingView: React.FC = () => {
                     min="1"
                     value={originalPrice || ''}
                     onChange={(e) => setOriginalPrice(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                   />
                 </div>
 
@@ -366,7 +366,7 @@ export const FinancingView: React.FC = () => {
                     min="0"
                     value={downPayment || ''}
                     onChange={(e) => setDownPayment(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                   />
                 </div>
               </div>
@@ -382,7 +382,7 @@ export const FinancingView: React.FC = () => {
                     min="1"
                     value={monthlyInstallment || ''}
                     onChange={(e) => setMonthlyInstallment(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                   />
                 </div>
 
@@ -396,7 +396,7 @@ export const FinancingView: React.FC = () => {
                     min="1"
                     value={totalInstallments || ''}
                     onChange={(e) => setTotalInstallments(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                   />
                 </div>
               </div>
@@ -410,7 +410,7 @@ export const FinancingView: React.FC = () => {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                   />
                 </div>
 
@@ -422,7 +422,7 @@ export const FinancingView: React.FC = () => {
                     type="date"
                     value={nextPaymentDate}
                     onChange={(e) => setNextPaymentDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                   />
                 </div>
               </div>
@@ -436,7 +436,7 @@ export const FinancingView: React.FC = () => {
                   placeholder={language === 'hu' ? 'Pl. Szerződésszám: 12345' : 'e.g. Contract ID'}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 />
               </div>
 
