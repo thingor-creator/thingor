@@ -12,7 +12,6 @@ import {
   Info,
   Settings,
   ExternalLink,
-  SlidersHorizontal,
   Mail,
   Smartphone,
 } from 'lucide-react';
@@ -33,7 +32,6 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
     userNotificationSettings,
     updateNotificationSettings,
     language,
-    t,
     setSelectedItemId,
     setCurrentView,
   } = useApp();

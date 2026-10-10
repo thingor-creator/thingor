@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import type { LegalSlug, LegalDocumentVersion } from '../types';
-import { X, ShieldCheck, FileText, Loader2 } from 'lucide-react';
+import { X, ShieldCheck, Loader2 } from 'lucide-react';
 
 interface LegalViewModalProps {
   slug: LegalSlug;
