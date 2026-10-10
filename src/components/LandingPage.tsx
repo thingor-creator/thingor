@@ -48,9 +48,9 @@ export const LandingPage: React.FC = () => {
       
       {/* HERO SECTION */}
       <section className="relative pt-8 pb-16 md:pt-12 md:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
-        {/* Background glow effects */}
-        <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[var(--color-primary-blue,#2563EB)]/10 blur-[140px] rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 right-1/4 w-[350px] h-[350px] bg-[var(--color-primary-blue,#2563EB)]/5 blur-[120px] rounded-full pointer-events-none" />
+        {/* Background glow effects (Soft, desaturated ambient lighting) */}
+        <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#4A6482]/[0.05] blur-[150px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-[#3B5470]/[0.03] blur-[130px] rounded-full pointer-events-none" />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
           
@@ -64,11 +64,12 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* Logo Image */}
-            <div className="mb-4 sm:mb-5">
+            <div className="mb-4 sm:mb-5 relative inline-block">
+              <div className="absolute -inset-2 bg-[#4A6482]/[0.04] blur-xl rounded-full pointer-events-none" />
               <img
                 src={siteSettings.logo_url || '/logo.png'}
                 alt={siteSettings.site_name || 'Thingor Logo'}
-                className="h-22 sm:h-28 md:h-36 lg:h-40 w-auto object-contain mx-auto lg:mx-0 drop-shadow-[0_18px_36px_rgba(37,99,235,0.22)] filter brightness-105 transition-all"
+                className="relative h-22 sm:h-28 md:h-36 lg:h-40 w-auto object-contain mx-auto lg:mx-0 drop-shadow-[0_10px_24px_rgba(15,23,42,0.28)] drop-shadow-[0_2px_16px_rgba(71,98,130,0.07)] transition-all"
               />
             </div>
 

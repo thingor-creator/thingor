@@ -90,18 +90,20 @@ export const Navbar: React.FC = () => {
       <header className="sticky top-0 z-40 w-full border-b border-[var(--border-color,#56616D)] bg-[var(--bg-main,#303943)]/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8">
           
-          {/* Logo & Brand */}
+          {/* Logo & Brand (Hidden on Landing Page to avoid duplicate logo) */}
           <div className="flex items-center gap-2 sm:gap-4 xl:gap-6 shrink-0">
-            <button
-              onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
-              className="flex items-center gap-2 text-left focus:outline-none group py-1 shrink-0"
-            >
-              <img
-                src={siteSettings.logo_url || '/logo.png'}
-                alt={siteSettings.site_name || 'Thingor Logo'}
-                className="h-8 sm:h-12 md:h-14 max-w-[120px] xs:max-w-[150px] sm:max-w-[240px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
-              />
-            </button>
+            {currentView !== 'landing' && (
+              <button
+                onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
+                className="flex items-center gap-2 text-left focus:outline-none group py-1 shrink-0"
+              >
+                <img
+                  src={siteSettings.logo_url || '/logo.png'}
+                  alt={siteSettings.site_name || 'Thingor Logo'}
+                  className="h-8 sm:h-12 md:h-14 max-w-[120px] xs:max-w-[150px] sm:max-w-[240px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
+                />
+              </button>
+            )}
 
             {/* Desktop Hierarchical Navigation (Authenticated) */}
             {isAuthenticated && (
