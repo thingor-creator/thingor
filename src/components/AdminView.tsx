@@ -29,11 +29,12 @@ import {
   Upload,
   Loader2,
   Image as ImageIcon,
+  Menu,
 } from 'lucide-react';
 import type { UserStatus, LegalSlug, UserDetailStats } from '../types';
 import { isAdmin as checkIsAdmin } from '../lib/permissions';
 import { isR2Configured } from '../lib/r2';
-import { uploadFileToStorage } from '../lib/storage';
+import { uploadFileToStorage, deleteFileFromStorage } from '../lib/storage';
 
 export const AdminView: React.FC = () => {
   const {
@@ -70,6 +71,7 @@ export const AdminView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'registration' | 'content' | 'legal' | 'settings' | 'audit' | 'faq'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // User details modal state
   const [selectedUserStats, setSelectedUserStats] = useState<UserDetailStats | null>(null);
@@ -98,22 +100,36 @@ export const AdminView: React.FC = () => {
     if (!file) return;
     setIsUploadingLogo(true);
     try {
+      const oldLogo = siteSettings.logo_url || logoUrl;
       const res = await uploadFileToStorage(file, 'photos', user?.id || 'admin');
       if (res.error) {
         setActionMsg({ type: 'error', text: 'Hiba a logó feltöltésekor: ' + res.error });
       } else {
         const url = res.signedUrl || res.path || '';
         if (url) {
+          // Delete old stored logo file if different
+          if (oldLogo && oldLogo !== url) {
+            try {
+              await deleteFileFromStorage(oldLogo);
+            } catch (delErr) {
+              console.warn('Nem sikerült törölni az előző logó fájlt:', delErr);
+            }
+          }
           setLogoUrl(url);
-          await updateSiteSettings({ logo_url: url });
-          setActionMsg({ type: 'success', text: 'Új logó kép feltöltve, beállítva és elmentve!' });
-          setTimeout(() => setActionMsg(null), 3000);
+          const updateRes = await updateSiteSettings({ logo_url: url });
+          if (updateRes.success) {
+            setActionMsg({ type: 'success', text: 'Új logó kép feltöltve, a régi törölve és sikeresen elmentve!' });
+          } else {
+            setActionMsg({ type: 'error', text: 'Logó feltöltve, de a beállítás mentése sikertelen: ' + (updateRes.error || '') });
+          }
+          setTimeout(() => setActionMsg(null), 3500);
         }
       }
     } catch (err: any) {
       setActionMsg({ type: 'error', text: 'Hiba a logó feltöltésekor: ' + (err.message || 'Ismeretlen hiba') });
     } finally {
       setIsUploadingLogo(false);
+      e.target.value = '';
     }
   };
 
@@ -122,22 +138,35 @@ export const AdminView: React.FC = () => {
     if (!file) return;
     setIsUploadingFavicon(true);
     try {
+      const oldFavicon = siteSettings.favicon_url || faviconUrl;
       const res = await uploadFileToStorage(file, 'photos', user?.id || 'admin');
       if (res.error) {
         setActionMsg({ type: 'error', text: 'Hiba a favicon feltöltésekor: ' + res.error });
       } else {
         const url = res.signedUrl || res.path || '';
         if (url) {
+          if (oldFavicon && oldFavicon !== url) {
+            try {
+              await deleteFileFromStorage(oldFavicon);
+            } catch (delErr) {
+              console.warn('Nem sikerült törölni az előző favicon fájlt:', delErr);
+            }
+          }
           setFaviconUrl(url);
-          await updateSiteSettings({ favicon_url: url });
-          setActionMsg({ type: 'success', text: 'Új favicon & PWA ikon feltöltve, beállítva és elmentve!' });
-          setTimeout(() => setActionMsg(null), 3000);
+          const updateRes = await updateSiteSettings({ favicon_url: url });
+          if (updateRes.success) {
+            setActionMsg({ type: 'success', text: 'Új favicon & PWA ikon feltöltve, a régi törölve és elmentve!' });
+          } else {
+            setActionMsg({ type: 'error', text: 'Favicon feltöltve, de a mentés sikertelen: ' + (updateRes.error || '') });
+          }
+          setTimeout(() => setActionMsg(null), 3500);
         }
       }
     } catch (err: any) {
       setActionMsg({ type: 'error', text: 'Hiba a favicon feltöltésekor: ' + (err.message || 'Ismeretlen hiba') });
     } finally {
       setIsUploadingFavicon(false);
+      e.target.value = '';
     }
   };
 
@@ -243,6 +272,22 @@ export const AdminView: React.FC = () => {
 
   const handleSavePlatformSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    const oldLogo = siteSettings.logo_url;
+    const oldFavicon = siteSettings.favicon_url;
+    if (oldLogo && logoUrl && oldLogo !== logoUrl) {
+      try {
+        await deleteFileFromStorage(oldLogo);
+      } catch (delErr) {
+        console.warn('Nem sikerült törölni az előző logót:', delErr);
+      }
+    }
+    if (oldFavicon && faviconUrl && oldFavicon !== faviconUrl) {
+      try {
+        await deleteFileFromStorage(oldFavicon);
+      } catch (delErr) {
+        console.warn('Nem sikerült törölni az előző favicont:', delErr);
+      }
+    }
     const res = await updateSiteSettings({
       site_name: siteName,
       site_description: siteDescription,
@@ -305,12 +350,21 @@ export const AdminView: React.FC = () => {
   const currentLegalVersions = legalDocumentVersions.filter(v => v.document_slug === activeLegalSlug);
 
   return (
-    <div className="bg-[var(--bg-main,#303943)] min-h-screen text-[var(--text-main,#E0E3E6)] flex flex-col font-sans -mx-4 -mt-6 sm:-mx-6 sm:-mt-8">
+    <div className="bg-[var(--bg-main,#303943)] min-h-screen text-[var(--text-main,#E0E3E6)] flex flex-col font-sans -mx-4 -mt-6 sm:-mx-6 sm:-mt-8 lg:-mx-8">
       {/* TOP HEADER BAR */}
-      <header className="h-16 border-b border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] px-6 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-md">
-        {/* Left Logo / Admin Title */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-900/30">
+      <header className="h-16 border-b border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] px-4 sm:px-6 flex items-center justify-between gap-3 sticky top-0 z-30 shadow-md">
+        {/* Left Mobile Menu Toggle + Logo */}
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 -ml-1 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white md:hidden border border-[var(--border-color,#56616D)] transition-colors"
+            title="Navigációs menü"
+            aria-label="Navigációs menü"
+          >
+            {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-900/30 shrink-0">
             <Shield className="w-5 h-5" />
           </div>
           <div>
@@ -326,7 +380,7 @@ export const AdminView: React.FC = () => {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-sub,#B5BDC6)]" />
           <input
             type="text"
-            placeholder="Keresés tárgyak, könyvek, felhasználók, beállítások..."
+            placeholder="Keresés tárgyak, felhasználók, beállítások..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-all"
@@ -334,9 +388,9 @@ export const AdminView: React.FC = () => {
         </div>
 
         {/* Right User & Controls */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold text-[var(--text-main,#E0E3E6)]">{user?.email || 'admin@thingor.com'}</p>
+            <p className="text-xs font-semibold text-[var(--text-main,#E0E3E6)] truncate max-w-[150px]">{user?.email || 'admin@thingor.com'}</p>
             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
               Adminisztrátor
             </span>
@@ -352,10 +406,199 @@ export const AdminView: React.FC = () => {
         </div>
       </header>
 
+      {/* MOBILE HORIZONTAL SCROLLABLE TAB PILLS */}
+      <div className="md:hidden flex items-center gap-1.5 overflow-x-auto px-4 py-2.5 bg-[var(--card-bg,#3A4551)] border-b border-[var(--border-color,#56616D)] no-scrollbar shrink-0">
+        {[
+          { id: 'overview', label: 'Áttekintés', icon: LayoutDashboard, color: 'text-indigo-400' },
+          { id: 'users', label: 'Moderáció', icon: ShieldAlert, color: 'text-rose-400' },
+          { id: 'content', label: 'Kezdőlap', icon: Layers, color: 'text-pink-400' },
+          { id: 'faq', label: 'GYIK', icon: HelpCircle, color: 'text-purple-400' },
+          { id: 'legal', label: 'Jogi', icon: FileText, color: 'text-teal-400' },
+          { id: 'registration', label: 'Működés', icon: Sliders, color: 'text-amber-400' },
+          { id: 'settings', label: 'Beállítások', icon: Palette, color: 'text-emerald-400' },
+          { id: 'audit', label: 'Audit', icon: Activity, color: 'text-cyan-400' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id as any); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+              activeTab === tab.id
+                ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white'
+            }`}
+          >
+            <tab.icon className={`w-3.5 h-3.5 ${activeTab === tab.id ? 'text-white' : tab.color}`} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* MOBILE DRAWER NAVIGATION */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div className="w-72 max-w-[85vw] bg-[var(--card-bg,#3A4551)] border-r border-[var(--border-color,#56616D)] h-full flex flex-col justify-between p-4 shadow-2xl animate-fade-in overflow-y-auto">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-blue-400" />
+                  <span className="font-extrabold text-sm text-[var(--text-main,#E0E3E6)]">Admin Menü</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* GROUP 1: ADMIN */}
+              <div>
+                <p className="text-[10px] font-extrabold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider px-3 mb-2">
+                  ADMIN
+                </p>
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'overview'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+                    <span>Áttekintés</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('users'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'users'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <ShieldAlert className="w-4 h-4 text-rose-400" />
+                    <span>Moderáció & Jogok</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* GROUP 2: TARTALOM */}
+              <div>
+                <p className="text-[10px] font-extrabold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider px-3 mb-2">
+                  TARTALOM
+                </p>
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => { setActiveTab('content'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'content'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4 text-pink-400" />
+                    <span>Kezdőlap & Blokkok</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('faq'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'faq'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <HelpCircle className="w-4 h-4 text-purple-400" />
+                    <span>GYIK & Kérdések</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('legal'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'legal'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 text-teal-400" />
+                    <span>Jogi Dokumentumok</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* GROUP 3: PLATFORM & BEÁLLÍTÁSOK */}
+              <div>
+                <p className="text-[10px] font-extrabold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider px-3 mb-2">
+                  PLATFORM & BEÁLLÍTÁSOK
+                </p>
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => { setActiveTab('registration'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'registration'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4 text-amber-400" />
+                    <span>Regisztráció & Működés</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'settings'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <Palette className="w-4 h-4 text-emerald-400" />
+                    <span>Rendszer Beállítások</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* GROUP 4: BIZTONSÁG & LOGOK */}
+              <div>
+                <p className="text-[10px] font-extrabold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider px-3 mb-2">
+                  BIZTONSÁG & LOGOK
+                </p>
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => { setActiveTab('audit'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'audit'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <Activity className="w-4 h-4 text-cyan-400" />
+                    <span>Audit Napló</span>
+                  </button>
+                </nav>
+              </div>
+            </div>
+
+            {/* BOTTOM EXIT BUTTON */}
+            <div className="pt-4 border-t border-[var(--border-color,#56616D)]">
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); setCurrentView('dashboard'); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-white transition-all"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Vissza a főoldalra</span>
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+        </div>
+      )}
+
       {/* MAIN CONTAINER: SIDEBAR + CONTENT */}
       <div className="flex flex-1 min-h-[calc(100vh-4rem)]">
-        {/* LEFT SIDEBAR NAVIGATION */}
-        <aside className="w-64 bg-[var(--card-bg,#3A4551)] border-r border-[var(--border-color,#56616D)] flex flex-col justify-between p-4 flex-shrink-0">
+        {/* DESKTOP LEFT SIDEBAR NAVIGATION */}
+        <aside className="hidden md:flex w-64 bg-[var(--card-bg,#3A4551)] border-r border-[var(--border-color,#56616D)] flex-col justify-between p-4 flex-shrink-0">
           <div className="space-y-6">
             {/* GROUP 1: ADMIN */}
             <div>
@@ -499,7 +742,7 @@ export const AdminView: React.FC = () => {
         </aside>
 
         {/* RIGHT MAIN CONTENT AREA */}
-        <main className="flex-1 bg-[var(--bg-main,#303943)] p-6 md:p-8 overflow-y-auto">
+        <main className="flex-1 min-w-0 bg-[var(--bg-main,#303943)] p-4 sm:p-6 md:p-8 overflow-y-auto">
           {/* Action Notification Toast */}
           {actionMsg && (
             <div
@@ -518,11 +761,11 @@ export const AdminView: React.FC = () => {
 
           {/* TAB 1: OVERVIEW DASHBOARD */}
           {activeTab === 'overview' && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-6 sm:space-y-8 animate-fade-in">
               {/* Header */}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h1 className="text-2xl font-black text-[var(--text-main,#E0E3E6)] tracking-tight">Áttekintés</h1>
+                  <h1 className="text-xl sm:text-2xl font-black text-[var(--text-main,#E0E3E6)] tracking-tight">Áttekintés</h1>
                   <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-1">
                     Üdvözöljük, <span className="text-[var(--text-main,#E0E3E6)] font-semibold">{user?.email}</span>! Itt látja a tartalmak összesítését.
                   </p>
@@ -530,7 +773,7 @@ export const AdminView: React.FC = () => {
 
                 <button
                   onClick={() => { fetchUsersList(); fetchLandingBlocks(); fetchFAQs(); }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs font-medium text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]/80 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs font-medium text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]/80 transition-colors self-start sm:self-auto"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Frissítés</span>
@@ -538,7 +781,7 @@ export const AdminView: React.FC = () => {
               </div>
 
               {/* 5 METRIC CARDS ROW */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                 {/* Metric 1 */}
                 <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-5 flex flex-col justify-between hover:border-pink-500/40 transition-all group shadow-sm">
                   <div className="flex items-center justify-between">
@@ -751,7 +994,7 @@ export const AdminView: React.FC = () => {
 
               <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl overflow-hidden shadow-xl">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-[var(--text-main,#E0E3E6)]">
+                  <table className="w-full text-left text-xs text-[var(--text-main,#E0E3E6)] min-w-[620px]">
                     <thead className="bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] font-bold uppercase tracking-wider border-b border-[var(--border-color,#56616D)]">
                       <tr>
                         <th className="px-6 py-4">Felhasználó</th>
@@ -1130,7 +1373,7 @@ export const AdminView: React.FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">Kapcsolattartó Email</label>
                     <input
@@ -1173,15 +1416,15 @@ export const AdminView: React.FC = () => {
 
                     <div>
                       <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">Logó Kép URL</label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         <input
                           type="text"
                           value={logoUrl}
                           onChange={e => setLogoUrl(e.target.value)}
                           placeholder="/logo.png vagy R2 URL..."
-                          className="w-full px-3 py-2 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] font-mono"
+                          className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] font-mono"
                         />
-                        <label className="px-3 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md transition-colors">
+                        <label className="px-3 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5 shrink-0 shadow-md transition-colors">
                           {isUploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                           <span>Feltöltés</span>
                           <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
@@ -1193,13 +1436,13 @@ export const AdminView: React.FC = () => {
                     <div className="p-4 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] space-y-2">
                       <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider block">Élő Előnézet – Fejléc (Header Bar)</span>
                       <div className="h-16 bg-slate-950 rounded-lg border border-slate-800 p-2 flex items-center px-4">
-                        <img src={logoUrl || '/logo.png'} alt="Logo Preview" className="h-10 w-auto object-contain" />
+                        <img src={logoUrl || '/logo.png'} alt="Logo Preview" className="h-10 w-auto object-contain max-w-full" />
                       </div>
                     </div>
                   </div>
 
                   {/* FAVICON & PWA ICON MANAGEMENT */}
-                  <div className="space-y-4 bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] p-5 rounded-xl">
+                  <div className="space-y-4 bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] p-4 sm:p-5 rounded-xl">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)] uppercase tracking-wider">2. Favicon & PWA App Ikon</span>
                       <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]">Böngésző fül & Mobil App</span>
@@ -1207,15 +1450,15 @@ export const AdminView: React.FC = () => {
 
                     <div>
                       <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">Favicon / Ikon URL</label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         <input
                           type="text"
                           value={faviconUrl}
                           onChange={e => setFaviconUrl(e.target.value)}
                           placeholder="/favicon.png vagy R2 URL..."
-                          className="w-full px-3 py-2 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] font-mono"
+                          className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] font-mono"
                         />
-                        <label className="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md transition-colors">
+                        <label className="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5 shrink-0 shadow-md transition-colors">
                           {isUploadingFavicon ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                           <span>Feltöltés</span>
                           <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
@@ -1227,15 +1470,15 @@ export const AdminView: React.FC = () => {
                     <div className="p-4 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] space-y-3">
                       <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider block">Élő Előnézet – Böngésző fül & Mobil PWA</span>
                       
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                         {/* Browser tab simulation */}
-                        <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center gap-2">
-                          <img src={faviconUrl || '/favicon.png'} alt="Favicon Preview" className="w-4 h-4 object-contain rounded" />
+                        <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center gap-2 min-w-0">
+                          <img src={faviconUrl || '/favicon.png'} alt="Favicon Preview" className="w-4 h-4 object-contain rounded shrink-0" />
                           <span className="text-[11px] font-semibold text-slate-300 truncate">Thingor – A tárgyaid...</span>
                         </div>
 
                         {/* Mobile App icon simulation */}
-                        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2">
+                        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2 shrink-0">
                           <img src={faviconUrl || '/favicon.png'} alt="PWA Icon Preview" className="w-8 h-8 object-cover rounded-xl shadow-md" />
                           <span className="text-[10px] font-extrabold text-white">Thingor App</span>
                         </div>
@@ -1245,10 +1488,10 @@ export const AdminView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-900/30 transition-colors"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-900/30 transition-colors"
                 >
                   Minden Beállítás Mentése
                 </button>

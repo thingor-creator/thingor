@@ -694,6 +694,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const newSettings: SiteSettings = {
           id: data.id || 'default',
           site_name: data.site_name || 'Thingor',
+          site_description: data.site_description || '',
           hero_title: data.hero_title || 'Személyes leltár, tárgy- és dokumentumkezelő',
           hero_subtitle: data.hero_subtitle || 'Rendszerezd, dokumentáld és oszd meg értékeidet biztonságosan.',
           announcement: data.announcement || null,
@@ -708,6 +709,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           logo_url: data.logo_url || '/logo.png',
           favicon_url: data.favicon_url || '/favicon.png',
           meta_description: data.meta_description || '',
+          notifications_enabled: data.notifications_enabled ?? true,
+          email_notifications_enabled: data.email_notifications_enabled ?? true,
         };
         setSiteSettings(newSettings);
         localStorage.setItem('thingor_site_settings', JSON.stringify(newSettings));
@@ -2833,31 +2836,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase.from('site_settings').upsert({
+        const payload: Record<string, any> = {
           id: 'default',
           ...updates,
           updated_at: new Date().toISOString(),
           updated_by: user?.id
-        });
+        };
+        const { error } = await supabase.from('site_settings').upsert(payload);
         if (error) {
           console.warn('Supabase site_settings upsert error:', error.message);
-          // If schema cache error occurs, try upserting base columns as fallback
-          const baseUpdates = {
+          // If upsert with partial keys fails, try full updated record
+          const fullRecord = {
             id: 'default',
             site_name: updated.site_name,
+            site_description: updated.site_description || '',
             hero_title: updated.hero_title,
             hero_subtitle: updated.hero_subtitle,
             announcement: updated.announcement,
             registration_enabled: updated.registration_enabled,
             maintenance_mode: updated.maintenance_mode,
             maintenance_message: updated.maintenance_message,
+            logo_url: updated.logo_url,
+            favicon_url: updated.favicon_url,
+            primary_color: updated.primary_color,
+            contact_email: updated.contact_email,
+            support_email: updated.support_email,
+            registration_paused_title: updated.registration_paused_title,
+            registration_paused_message: updated.registration_paused_message,
+            notifications_enabled: updated.notifications_enabled ?? true,
+            email_notifications_enabled: updated.email_notifications_enabled ?? true,
             updated_at: new Date().toISOString(),
             updated_by: user?.id
           };
-          await supabase.from('site_settings').upsert(baseUpdates);
+          const fallbackRes = await supabase.from('site_settings').upsert(fullRecord);
+          if (fallbackRes.error) {
+            console.error('Supabase site_settings fallback error:', fallbackRes.error.message);
+            return { success: false, error: fallbackRes.error.message };
+          }
         }
-      } catch (err) {
-        console.warn('Supabase site_settings fallback:', err);
+      } catch (err: any) {
+        console.error('Supabase site_settings exception:', err);
+        return { success: false, error: err?.message || 'Hiba történt a mentés során.' };
       }
     }
     await logAdminAction('update_site_settings', undefined, updates);

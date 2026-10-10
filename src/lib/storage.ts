@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { isR2Configured, uploadFileToR2, getR2FileSignedUrl, deleteFileFromR2 } from './r2';
+import { isR2Configured, uploadFileToR2, getR2FileSignedUrl, deleteFileFromR2, r2BucketName, r2PublicDomain } from './r2';
 
 export interface StorageUploadResult {
   path?: string;
@@ -201,23 +201,98 @@ export async function getFileSignedUrl(pathOrUrl: string): Promise<string> {
 }
 
 /**
- * Deletes a file from Cloudflare R2 storage (or Supabase fallback).
+ * Extracts the storage object path (key) from a raw path or URL.
+ * Returns null if the path is a local/static asset, empty, or external non-bucket URL.
  */
-export async function deleteFileFromStorage(filePath: string): Promise<{ success: boolean; error?: string }> {
-  if (!filePath) return { success: true };
-
-  if (isR2Configured) {
-    return await deleteFileFromR2(filePath);
+export function extractStoragePath(pathOrUrl: string): string | null {
+  if (!pathOrUrl) return null;
+  const trimmed = pathOrUrl.trim();
+  if (
+    trimmed === '' ||
+    trimmed.startsWith('/logo') ||
+    trimmed === 'logo.png' ||
+    trimmed.startsWith('/favicon') ||
+    trimmed === 'favicon.png' ||
+    trimmed === 'favicon.ico' ||
+    trimmed.startsWith('data:')
+  ) {
+    return null;
   }
 
-  if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Storage not configured' };
+  // If it's already a relative storage path (e.g. "admin/photos/..." or "<uuid>/photos/...")
+  if (/^[a-zA-Z0-9_-]+\/(photos|documents)\/.+$/i.test(trimmed)) {
+    return trimmed;
+  }
 
-  const { error } = await supabase.storage
-    .from('thingor-assets')
-    .remove([filePath]);
+  try {
+    const url = new URL(trimmed);
+    let pathname = decodeURIComponent(url.pathname);
+    if (pathname.startsWith('/')) pathname = pathname.slice(1);
 
-  if (error) {
-    return { success: false, error: error.message };
+    // If matches storage pattern directly (e.g. pathname: "admin/photos/123.webp")
+    if (/^[a-zA-Z0-9_-]+\/(photos|documents)\/.+$/i.test(pathname)) {
+      return pathname;
+    }
+
+    // If R2 endpoint format: /<bucketName>/<filePath>
+    if (r2BucketName && pathname.startsWith(r2BucketName + '/')) {
+      const stripped = pathname.slice(r2BucketName.length + 1);
+      if (/^[a-zA-Z0-9_-]+\/(photos|documents)\/.+$/i.test(stripped)) {
+        return stripped;
+      }
+    }
+
+    // If Supabase storage format: .../thingor-assets/<filePath>
+    const thingorAssetsIndex = pathname.indexOf('thingor-assets/');
+    if (thingorAssetsIndex !== -1) {
+      const stripped = pathname.slice(thingorAssetsIndex + 'thingor-assets/'.length);
+      if (stripped) {
+        return stripped;
+      }
+    }
+
+    // Generic fallback: check if pathname contains /(photos|documents)/
+    const match = pathname.match(/([a-zA-Z0-9_-]+\/(photos|documents)\/[^?#]+)/);
+    if (match) {
+      return match[1];
+    }
+  } catch {
+    // Not a valid URL, test regex on string
+    const match = trimmed.match(/([a-zA-Z0-9_-]+\/(photos|documents)\/[^?#]+)/);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Deletes a file from Cloudflare R2 storage (or Supabase fallback).
+ * Accepts either an object key/path or a full storage URL.
+ * Safely ignores static assets (/logo.png, etc.) and non-storage links.
+ */
+export async function deleteFileFromStorage(filePathOrUrl: string): Promise<{ success: boolean; error?: string }> {
+  if (!filePathOrUrl) return { success: true };
+  const storagePath = extractStoragePath(filePathOrUrl);
+  if (!storagePath) {
+    return { success: true };
+  }
+
+  if (isR2Configured) {
+    const res = await deleteFileFromR2(storagePath);
+    if (res.success) return { success: true };
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.storage
+      .from('thingor-assets')
+      .remove([storagePath]);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
   }
 
   return { success: true };
