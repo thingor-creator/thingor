@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import type { ItemDocument } from '../types';
 import {
@@ -124,6 +124,44 @@ export const ItemDetailModal: React.FC = () => {
   const [targetItemIdRelation, setTargetItemIdRelation] = useState('');
   const [relationTypeForm, setRelationTypeForm] = useState<any>('accessory');
 
+  const topRef = useRef<HTMLDivElement>(null);
+
+  // Automatically scroll to top whenever an item is opened or switched (linked items)
+  useEffect(() => {
+    if (!selectedItemId) return;
+
+    setActiveTab('overview');
+    setEditingField(null);
+    setIsAddDocOpen(false);
+    setIsAddRelationOpen(false);
+
+    // Immediate scroll to top
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    // Double-ensure after render frame and animation paint
+    const rafId = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      if (topRef.current) {
+        topRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+      }
+    });
+
+    const timerId = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 60);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+    };
+  }, [selectedItemId]);
+
   if (!selectedItemId) return null;
 
   const item = items.find(i => i.id === selectedItemId);
@@ -179,11 +217,16 @@ export const ItemDetailModal: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 pb-16 w-full text-[var(--text-main,#E0E3E6)] animate-in fade-in duration-200">
+    <div ref={topRef} className="space-y-6 pb-16 w-full text-[var(--text-main,#E0E3E6)] animate-in fade-in duration-200">
       {/* Top Back Navigation Bar */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => setSelectedItemId(null)}
+          onClick={() => {
+            setSelectedItemId(null);
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+          }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] hover:border-[var(--border-color,#56616D)] font-bold text-xs transition-all shadow-sm group"
         >
           <ArrowLeft className="h-4 w-4 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
@@ -1089,8 +1132,16 @@ export const ItemDetailModal: React.FC = () => {
                                   {getRelationLabel(rel.relation_type, isSource)}
                                 </span>
                                 <button
-                                  onClick={() => otherItem && setSelectedItemId(otherItem.id)}
-                                  className="font-semibold text-[var(--text-main,#E0E3E6)] hover:text-emerald-400 transition"
+                                  type="button"
+                                  onClick={() => {
+                                    if (otherItem) {
+                                      setSelectedItemId(otherItem.id);
+                                      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                                      document.documentElement.scrollTop = 0;
+                                      document.body.scrollTop = 0;
+                                    }
+                                  }}
+                                  className="font-semibold text-[var(--text-main,#E0E3E6)] hover:text-emerald-400 transition cursor-pointer text-left"
                                 >
                                   {otherItem ? otherItem.name : (isHu ? 'Törölt tárgy' : 'Deleted item')}
                                 </button>

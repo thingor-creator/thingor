@@ -48,6 +48,13 @@ const AppContent: React.FC = () => {
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
 
+  // Scroll window to top whenever view or selected item changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [currentView, selectedItemId]);
+
   useEffect(() => {
     if (currentView === 'legal') {
       setIsLegalModalOpen(true);
