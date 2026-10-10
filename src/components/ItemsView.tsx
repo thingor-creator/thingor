@@ -112,17 +112,17 @@ export const ItemsView: React.FC = () => {
     <div className="space-y-6 pb-20">
       
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-color,#56616D)] pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main,#E0E3E6)] tracking-tight">
               {t('my_things')}
             </h1>
-            <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-emerald-400 font-bold text-xs">
+            <span className="px-3 py-1 rounded-full bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)] font-bold text-xs">
               {items.length} {language === 'hu' ? 'tárgy' : 'items'}
             </span>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
             {language === 'hu'
               ? 'Keresd, szűrd és kezeld a teljes fizikai tárgynyilvántartásodat.'
               : 'Search, filter, and manage your complete physical object inventory.'}
@@ -132,25 +132,25 @@ export const ItemsView: React.FC = () => {
         <div className="grid grid-cols-1 sm:flex sm:items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={() => setIsExportModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600 w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] font-bold text-xs shadow-sm transition-all w-full sm:w-auto"
             title={language === 'hu' ? 'Biztosítási leltár PDF exportálása' : 'Export insurance inventory PDF'}
           >
-            <FileText className="h-4 w-4 text-emerald-400 shrink-0" />
+            <FileText className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
             <span>{language === 'hu' ? 'Biztosítási Leltár (PDF)' : 'Insurance PDF'}</span>
           </button>
 
           <button
             onClick={() => setIsCSVModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs shadow-md transition-all hover:border-slate-600 w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] font-bold text-xs shadow-sm transition-all w-full sm:w-auto"
             title={language === 'hu' ? 'CSV Import és Export kezelése' : 'CSV Import and Export'}
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
+            <FileSpreadsheet className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
             <span>{language === 'hu' ? 'CSV Import / Export' : 'CSV Import / Export'}</span>
           </button>
 
           <button
             onClick={handleOpenAdd}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02] w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-sm shadow-md transition-all hover:scale-[1.02] w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 stroke-[2.5] shrink-0" />
             <span>{t('add_thing')}</span>
@@ -159,22 +159,22 @@ export const ItemsView: React.FC = () => {
       </div>
 
       {/* SEARCH AND FILTERS BAR */}
-      <div className="p-4 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-4">
+      <div className="p-4 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-4 shadow-sm">
         
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-sub,#B5BDC6)]" />
           <input
             type="text"
             placeholder={t('search_placeholder')}
             value={filters.search}
             onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
           />
           {filters.search && (
             <button
               onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-sub,#B5BDC6)] hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
@@ -186,11 +186,11 @@ export const ItemsView: React.FC = () => {
           
           {/* Category Filter */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('category')}</label>
+            <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('category')}</label>
             <select
               value={filters.categoryId}
               onChange={(e) => setFilters(prev => ({ ...prev, categoryId: e.target.value }))}
-              className="w-full p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 focus:border-emerald-500 focus:outline-none"
+              className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
             >
               <option value="all">{t('all_categories')}</option>
               {categories.map(cat => (
@@ -201,11 +201,11 @@ export const ItemsView: React.FC = () => {
 
           {/* Location Filter */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('location')}</label>
+            <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('location')}</label>
             <select
               value={filters.locationId}
               onChange={(e) => setFilters(prev => ({ ...prev, locationId: e.target.value }))}
-              className="w-full p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 focus:border-emerald-500 focus:outline-none"
+              className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
             >
               <option value="all">{t('all_locations')}</option>
               {locations.map(loc => (
@@ -218,11 +218,11 @@ export const ItemsView: React.FC = () => {
 
           {/* Condition Filter */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('condition')}</label>
+            <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('condition')}</label>
             <select
               value={filters.condition}
               onChange={(e) => setFilters(prev => ({ ...prev, condition: e.target.value }))}
-              className="w-full p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 focus:border-emerald-500 focus:outline-none"
+              className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
             >
               <option value="all">{t('all_conditions')}</option>
               <option value="New">{t('cond_new')}</option>
@@ -236,12 +236,12 @@ export const ItemsView: React.FC = () => {
 
           {/* Sort By */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('sort_by')}</label>
+            <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('sort_by')}</label>
             <div className="flex gap-1">
               <select
                 value={filters.sortBy}
                 onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as SortField }))}
-                className="w-full p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 focus:border-emerald-500 focus:outline-none"
+                className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
               >
                 <option value="created_at">{language === 'hu' ? 'Hozzáadás dátuma' : 'Date Added'}</option>
                 <option value="name">{language === 'hu' ? 'Név' : 'Name'}</option>
@@ -253,7 +253,7 @@ export const ItemsView: React.FC = () => {
 
               <button
                 onClick={() => setFilters(prev => ({ ...prev, sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc' }))}
-                className="p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:border-slate-700"
+                className="p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:border-[var(--color-primary-blue,#2563EB)] transition-colors"
                 title="Rendezési irány"
               >
                 <ArrowUpDown className="h-4 w-4" />
@@ -265,13 +265,13 @@ export const ItemsView: React.FC = () => {
 
         {/* Clear Filters Button */}
         {hasActiveFilters && (
-          <div className="pt-2 flex items-center justify-between border-t border-slate-800/80 text-xs">
-            <span className="text-slate-400">
+          <div className="pt-2 flex items-center justify-between border-t border-[var(--border-color,#56616D)]/60 text-xs">
+            <span className="text-[var(--text-sub,#B5BDC6)]">
               {language === 'hu' ? `Megjelenítve: ${sortedItems.length} / ${items.length} tárgy` : `Showing ${sortedItems.length} of ${items.length} items`}
             </span>
             <button
               onClick={resetFilters}
-              className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold"
+              className="text-[var(--color-primary-blue,#2563EB)] hover:underline flex items-center gap-1 font-semibold"
             >
               <RotateCcw className="h-3.5 w-3.5" /> {t('clear_filters')}
             </button>
@@ -281,31 +281,31 @@ export const ItemsView: React.FC = () => {
 
       {/* ITEMS GRID OR EMPTY STATE */}
       {sortedItems.length === 0 ? (
-        <div className="p-16 text-center rounded-2xl border border-slate-800 bg-slate-900/40 my-8">
-          <Boxes className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+        <div className="p-12 sm:p-16 text-center rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] my-8 shadow-sm">
+          <Boxes className="h-16 w-16 text-[var(--text-sub,#B5BDC6)]/40 mx-auto mb-4" />
           
           {hasActiveFilters ? (
             <>
-              <h2 className="text-xl font-bold text-white">{t('no_items_found')}</h2>
-              <p className="text-sm text-slate-400 mt-2">
+              <h2 className="text-xl font-bold text-[var(--text-main,#E0E3E6)]">{t('no_items_found')}</h2>
+              <p className="text-sm text-[var(--text-sub,#B5BDC6)] mt-2">
                 {language === 'hu' ? 'Próbáld meg módosítani a keresési feltételeket vagy a szűrőket.' : 'Try adjusting your search keywords, category filters, or location parameters.'}
               </p>
               <button
                 onClick={resetFilters}
-                className="mt-6 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-200 font-semibold text-xs inline-flex items-center gap-2"
+                className="mt-6 px-4 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] font-semibold text-xs inline-flex items-center gap-2 transition-colors"
               >
                 <RotateCcw className="h-4 w-4" /> {t('clear_filters')}
               </button>
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-white">{t('no_items_yet')}</h2>
-              <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+              <h2 className="text-2xl font-bold text-[var(--text-main,#E0E3E6)]">{t('no_items_yet')}</h2>
+              <p className="text-sm text-[var(--text-sub,#B5BDC6)] mt-2 max-w-md mx-auto">
                 {language === 'hu' ? 'Kezdd el felépíteni a saját tárgynyilvántartásodat egy helyen.' : 'Start building your personal inventory. Keep track of your tools, electronics, books, and valuables in one place.'}
               </p>
               <button
                 onClick={handleOpenAdd}
-                className="mt-6 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm inline-flex items-center gap-2 shadow-lg shadow-emerald-950/40"
+                className="mt-6 px-6 py-3 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-sm inline-flex items-center gap-2 shadow-lg transition-colors"
               >
                 <Plus className="h-5 w-5 stroke-[2.5]" /> {t('add_first_thing')}
               </button>
@@ -313,7 +313,7 @@ export const ItemsView: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
           {sortedItems.map(item => (
             <ItemCard key={item.id} item={item} />
           ))}

@@ -87,7 +87,7 @@ export const Navbar: React.FC = () => {
   return (
     <>
       {/* Main Top Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-[var(--border-color,#56616D)] bg-[var(--bg-main,#303943)]/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8">
           
           {/* Logo & Brand */}
@@ -110,13 +110,13 @@ export const Navbar: React.FC = () => {
                 {/* 1. Vezérlőpult */}
                 <button
                   onClick={() => handleNav('dashboard')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
                     currentView === 'dashboard'
-                      ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
+                      : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                   }`}
                 >
-                  <LayoutDashboard className="h-4 w-4 shrink-0 text-slate-400" />
+                  <LayoutDashboard className={`h-4 w-4 shrink-0 ${currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                   <span>{t('dashboard')}</span>
                 </button>
 
@@ -124,44 +124,44 @@ export const Navbar: React.FC = () => {
                 <div className="relative shrink-0">
                   <button
                     onClick={() => setOpenDropdown(openDropdown === 'things' ? null : 'things')}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
                       isThingsActive
-                        ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                        ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
+                        : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                     }`}
                   >
-                    <Boxes className="h-4 w-4 shrink-0 text-slate-400" />
+                    <Boxes className={`h-4 w-4 shrink-0 ${isThingsActive ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                     <span>{t('my_things')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openDropdown === 'things' ? 'rotate-180' : ''}`} />
                   </button>
 
                   {openDropdown === 'things' && (
-                    <div className="absolute left-0 mt-2 w-48 rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="absolute left-0 mt-2 w-48 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                       <button
                         onClick={() => handleNav('items')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'items' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/60'
+                          currentView === 'items' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <Boxes className="h-4 w-4 text-emerald-400" />
+                        <Boxes className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                         <span>{isHu ? 'Összes tárgy' : 'All items'}</span>
                       </button>
                       <button
                         onClick={() => handleNav('locations')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'locations' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/60'
+                          currentView === 'locations' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <MapPin className="h-4 w-4 text-emerald-400" />
+                        <MapPin className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                         <span>{t('locations')}</span>
                       </button>
                       <button
                         onClick={() => handleNav('categories')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'categories' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/60'
+                          currentView === 'categories' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <Tag className="h-4 w-4 text-emerald-400" />
+                        <Tag className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                         <span>{t('categories')}</span>
                       </button>
                     </div>
@@ -171,13 +171,13 @@ export const Navbar: React.FC = () => {
                 {/* 3. Dokumentumok */}
                 <button
                   onClick={() => handleNav('documents')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
                     currentView === 'documents'
-                      ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
+                      : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                   }`}
                 >
-                  <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                  <FileText className={`h-4 w-4 shrink-0 ${currentView === 'documents' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                   <span>{t('documents')}</span>
                 </button>
 
@@ -185,35 +185,35 @@ export const Navbar: React.FC = () => {
                 <div className="relative shrink-0">
                   <button
                     onClick={() => setOpenDropdown(openDropdown === 'tasks' ? null : 'tasks')}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
                       isTasksActive
-                        ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                        ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
+                        : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                     }`}
                   >
-                    <ListChecks className="h-4 w-4 shrink-0 text-slate-400" />
+                    <ListChecks className={`h-4 w-4 shrink-0 ${isTasksActive ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                     <span>{isHu ? 'Teendők' : 'Tasks'}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openDropdown === 'tasks' ? 'rotate-180' : ''}`} />
                   </button>
 
                   {openDropdown === 'tasks' && (
-                    <div className="absolute left-0 mt-2 w-48 rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="absolute left-0 mt-2 w-48 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                       <button
                         onClick={() => handleNav('repairs')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'repairs' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/60'
+                          currentView === 'repairs' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <Wrench className="h-4 w-4 text-amber-400" />
+                        <Wrench className="h-4 w-4 text-[var(--status-warning,#F59E0B)]" />
                         <span>{t('repairs')}</span>
                       </button>
                       <button
                         onClick={() => handleNav('financing')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'financing' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/60'
+                          currentView === 'financing' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <CreditCard className="h-4 w-4 text-indigo-400" />
+                        <CreditCard className="h-4 w-4 text-[var(--cat-books,#818CF8)]" />
                         <span>{t('financing')}</span>
                       </button>
                     </div>
@@ -224,42 +224,42 @@ export const Navbar: React.FC = () => {
                 <div className="relative shrink-0">
                   <button
                     onClick={() => setOpenDropdown(openDropdown === 'share' ? null : 'share')}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
                       isShareActive
-                        ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                        ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
+                        : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                     }`}
                   >
-                    <Share2 className="h-4 w-4 shrink-0 text-slate-400" />
+                    <Share2 className={`h-4 w-4 shrink-0 ${isShareActive ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                     <span>{isHu ? 'Megosztás' : 'Sharing'}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openDropdown === 'share' ? 'rotate-180' : ''}`} />
                   </button>
 
                   {openDropdown === 'share' && (
-                    <div className="absolute left-0 mt-2 w-60 rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
+                    <div className="absolute left-0 mt-2 w-60 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
                       <button
                         onClick={() => handleNav('household')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'household' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/60'
+                          currentView === 'household' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <Users className="h-4 w-4 text-emerald-400" />
+                        <Users className="h-4 w-4 text-[var(--status-success,#34D399)]" />
                         <span>{isHu ? 'Családi megosztás' : 'Household Sharing'}</span>
                       </button>
 
                       <button
                         onClick={() => handleNav('items')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-slate-300 hover:bg-slate-800/60`}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]`}
                       >
-                        <Tag className="h-4 w-4 text-blue-400" />
+                        <Tag className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                         <span>{isHu ? 'Hirdetés / Eladás megosztás' : 'Listing / Sale Share'}</span>
                       </button>
 
                       <button
                         onClick={() => handleNav('items')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-slate-300 hover:bg-slate-800/60`}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]`}
                       >
-                        <Share2 className="h-4 w-4 text-amber-400" />
+                        <Share2 className="h-4 w-4 text-[var(--status-warning,#F59E0B)]" />
                         <span>{isHu ? 'Egyedi / Vendég megosztás' : 'One-time Guest Share'}</span>
                       </button>
                     </div>
@@ -269,13 +269,13 @@ export const Navbar: React.FC = () => {
                 {/* 6. Jegyzetek */}
                 <button
                   onClick={() => handleNav('notes')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
                     currentView === 'notes'
-                      ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
+                      : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                   }`}
                 >
-                  <StickyNote className="h-4 w-4 shrink-0 text-amber-400" />
+                  <StickyNote className={`h-4 w-4 shrink-0 ${currentView === 'notes' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--status-warning,#F59E0B)]'}`} />
                   <span>{t('quick_notes')}</span>
                 </button>
 
@@ -283,13 +283,13 @@ export const Navbar: React.FC = () => {
                 {isAdmin && (
                   <button
                     onClick={() => handleNav('admin')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border border-emerald-500/30 ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
                       currentView === 'admin'
-                        ? 'bg-emerald-950 text-emerald-300 shadow-sm'
-                        : 'bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50'
+                        ? 'bg-[var(--color-primary-blue,#2563EB)] text-white border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                        : 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] hover:bg-[var(--surface-bg,#465362)]'
                     }`}
                   >
-                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
                     <span>Admin</span>
                   </button>
                 )}
@@ -304,21 +304,21 @@ export const Navbar: React.FC = () => {
             <div className="relative shrink-0">
               <button
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-800 bg-slate-900/90 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-xs font-semibold text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
               >
-                <Globe className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                <Globe className="h-3.5 w-3.5 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                 <span className="font-bold uppercase">{language}</span>
               </button>
 
               {isLangDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-36 rounded-xl border border-slate-800 bg-slate-900 p-1.5 shadow-2xl z-50 animate-in fade-in"
+                  className="absolute right-0 mt-2 w-36 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-1.5 shadow-2xl z-50 animate-in fade-in"
                   onClick={() => setIsLangDropdownOpen(false)}
                 >
                   <button
                     onClick={() => setLanguage('hu')}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold ${
-                      language === 'hu' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                      language === 'hu' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                     }`}
                   >
                     <span>🇭🇺 Magyar</span>
@@ -327,7 +327,7 @@ export const Navbar: React.FC = () => {
                   <button
                     onClick={() => setLanguage('en')}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold ${
-                      language === 'en' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                      language === 'en' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                     }`}
                   >
                     <span>🇬🇧 English</span>
@@ -342,19 +342,19 @@ export const Navbar: React.FC = () => {
               <>
                 <button
                   onClick={() => setIsQRScannerOpen(true)}
-                  className="flex items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+                  className="flex items-center justify-center p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
                   title={isHu ? 'QR Kód Beolvasása' : 'Scan QR Code'}
                 >
-                  <QrCode className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <QrCode className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                 </button>
                 <button
                   onClick={() => setIsNotificationModalOpen(true)}
-                  className="relative flex items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+                  className="relative flex items-center justify-center p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
                   title={isHu ? 'Értesítések' : 'Notifications'}
                 >
-                  <Bell className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <Bell className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                   {unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 min-w-[18px] items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-slate-950 border border-slate-950 animate-pulse px-1">
+                    <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 min-w-[18px] items-center justify-center rounded-full bg-[var(--color-primary-blue,#2563EB)] text-[10px] font-bold text-white border border-[var(--card-bg,#3A4551)] animate-pulse px-1">
                       {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                     </span>
                   )}
@@ -367,9 +367,9 @@ export const Navbar: React.FC = () => {
               <div className="relative shrink-0">
                 <button
                   onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-200 hover:bg-slate-800 transition-colors shrink-0"
+                  className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-950 text-emerald-400 font-bold text-xs border border-emerald-800/40 shrink-0">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-primary-blue,#2563EB)]/20 text-[var(--color-primary-blue,#2563EB)] font-bold text-xs border border-[var(--color-primary-blue,#2563EB)]/30 shrink-0">
                     {user?.display_name?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   <span className="hidden md:inline text-xs font-semibold max-w-[100px] truncate">
@@ -379,42 +379,42 @@ export const Navbar: React.FC = () => {
 
                 {isUserDropdownOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-800 bg-slate-900 p-1.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                    className="absolute right-0 mt-2 w-56 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-1.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                     onClick={() => setIsUserDropdownOpen(false)}
                   >
-                    <div className="px-3 py-2 border-b border-slate-800 mb-1">
+                    <div className="px-3 py-2 border-b border-[var(--border-color,#56616D)] mb-1">
                       <p className="text-xs font-semibold text-white">{user?.display_name}</p>
-                      <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                      <p className="text-[11px] text-[var(--text-secondary,var(--text-sub,#B5BDC6))] truncate">{user?.email}</p>
                     </div>
                     <button
                       onClick={() => handleNav('dashboard')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)] hover:text-white rounded-lg transition-colors"
                     >
-                      <LayoutDashboard className="h-3.5 w-3.5 text-slate-400" />
+                      <LayoutDashboard className="h-3.5 w-3.5 text-[var(--text-secondary,var(--text-sub,#B5BDC6))]" />
                       {t('dashboard')}
                     </button>
                     <button
                       onClick={() => handleNav('items')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)] hover:text-white rounded-lg transition-colors"
                     >
-                      <Boxes className="h-3.5 w-3.5 text-slate-400" />
+                      <Boxes className="h-3.5 w-3.5 text-[var(--text-secondary,var(--text-sub,#B5BDC6))]" />
                       {t('my_things')}
                     </button>
                     {isAdmin && (
                       <button
                         onClick={() => handleNav('admin')}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 rounded-lg transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--surface-bg,#465362)] rounded-lg transition-colors"
                       >
-                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                        <ShieldCheck className="h-3.5 w-3.5 text-[var(--color-primary-blue,#2563EB)]" />
                         {t('admin_panel')}
                       </button>
                     )}
-                    <div className="my-1 border-t border-slate-800" />
+                    <div className="my-1 border-t border-[var(--border-color,#56616D)]" />
                     <button
                       onClick={logout}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-950/40 hover:text-red-300 rounded-lg transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 rounded-lg transition-colors"
                     >
-                      <LogOut className="h-3.5 w-3.5 text-red-400" />
+                      <LogOut className="h-3.5 w-3.5 text-rose-400" />
                       {t('log_out')}
                     </button>
                   </div>
@@ -427,7 +427,7 @@ export const Navbar: React.FC = () => {
                     setAuthModalMode('login');
                     setIsAuthModalOpen(true);
                   }}
-                  className="px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-colors shrink-0 whitespace-nowrap"
+                  className="px-3 py-1.5 text-xs sm:text-sm font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white transition-colors shrink-0 whitespace-nowrap"
                 >
                   {t('sign_in')}
                 </button>
@@ -436,7 +436,7 @@ export const Navbar: React.FC = () => {
                     setAuthModalMode('signup');
                     setIsAuthModalOpen(true);
                   }}
-                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-md shrink-0 whitespace-nowrap"
+                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs sm:text-sm transition-all shadow-md shrink-0 whitespace-nowrap"
                 >
                   {t('start_organizing')}
                 </button>
@@ -448,12 +448,12 @@ export const Navbar: React.FC = () => {
 
       {/* MOBILE BOTTOM NAVIGATION BAR (Logged In Users) */}
       {isAuthenticated && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800/90 backdrop-blur-md px-1 sm:px-2 py-1 flex items-center justify-around shadow-2xl">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-main,#303943)]/95 border-t border-[var(--border-color,#56616D)] backdrop-blur-md px-1 sm:px-2 py-1 flex items-center justify-around shadow-2xl">
           {/* 1. Vezérlőpult */}
           <button
             onClick={() => handleNav('dashboard')}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
-              currentView === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
             <LayoutDashboard className="h-5 w-5 shrink-0" />
@@ -465,8 +465,8 @@ export const Navbar: React.FC = () => {
             onClick={() => handleNav('items')}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'items' || currentView === 'locations' || currentView === 'categories'
-                ? 'text-emerald-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
             <Boxes className="h-5 w-5 shrink-0" />
@@ -478,8 +478,8 @@ export const Navbar: React.FC = () => {
             onClick={() => handleNav('repairs')}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'repairs' || currentView === 'financing'
-                ? 'text-emerald-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
             <ListChecks className="h-5 w-5 shrink-0" />
@@ -490,7 +490,7 @@ export const Navbar: React.FC = () => {
           <button
             onClick={() => handleNav('notes')}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
-              currentView === 'notes' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              currentView === 'notes' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
             <StickyNote className="h-5 w-5 shrink-0" />
@@ -501,7 +501,7 @@ export const Navbar: React.FC = () => {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
-              isMobileMenuOpen ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              isMobileMenuOpen ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
             <Menu className="h-5 w-5 shrink-0" />
@@ -512,16 +512,16 @@ export const Navbar: React.FC = () => {
 
       {/* MOBILE DRAWER MENU MODAL */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-slate-950/80 backdrop-blur-sm lg:hidden animate-in fade-in duration-200">
-          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-white text-base flex items-center gap-2">
-                <Menu className="h-5 w-5 text-emerald-400" />
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm lg:hidden animate-in fade-in duration-200">
+          <div className="bg-[var(--card-bg,#3A4551)] border-t border-[var(--border-color,#56616D)] rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl text-[var(--text-primary,var(--text-main,#E0E3E6))]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
+              <h3 className="font-bold text-[var(--text-primary,var(--text-main,#E0E3E6))] text-base flex items-center gap-2">
+                <Menu className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                 {isHu ? 'Összes Menüpont' : 'Navigation Menu'}
               </h3>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1 text-slate-400 hover:text-white"
+                className="p-1 text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -529,119 +529,119 @@ export const Navbar: React.FC = () => {
 
             {isAuthenticated ? (
               <div className="space-y-1 text-sm">
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 pt-1">
+                <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-1">
                   {isHu ? 'Tárgykezelés' : 'Item Management'}
                 </p>
 
                 <button
                   onClick={() => handleNav('items')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'items' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'items' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <Boxes className="h-5 w-5 text-emerald-400" />
+                  <Boxes className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                   <span>{isHu ? 'Összes tárgy' : 'All items'}</span>
                 </button>
 
                 <button
                   onClick={() => handleNav('locations')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'locations' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'locations' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <MapPin className="h-5 w-5 text-emerald-400" />
+                  <MapPin className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                   <span>{t('locations')}</span>
                 </button>
 
                 <button
                   onClick={() => handleNav('categories')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'categories' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'categories' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <Tag className="h-5 w-5 text-emerald-400" />
+                  <Tag className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                   <span>{t('categories')}</span>
                 </button>
 
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 pt-3">
+                <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-3">
                   {isHu ? 'Dokumentumok & Feladatok' : 'Documents & Tasks'}
                 </p>
 
                 <button
                   onClick={() => handleNav('documents')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'documents' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'documents' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <FileText className="h-5 w-5 text-blue-400" />
+                  <FileText className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                   <span>{t('documents')}</span>
                 </button>
 
                 <button
                   onClick={() => handleNav('repairs')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'repairs' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'repairs' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <Wrench className="h-5 w-5 text-amber-400" />
+                  <Wrench className="h-5 w-5 text-[var(--status-warning,#F59E0B)]" />
                   <span>{t('repairs')}</span>
                 </button>
 
                 <button
                   onClick={() => handleNav('financing')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'financing' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'financing' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <CreditCard className="h-5 w-5 text-indigo-400" />
+                  <CreditCard className="h-5 w-5 text-[var(--cat-books,#818CF8)]" />
                   <span>{t('financing')}</span>
                 </button>
 
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 pt-3">
+                <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-3">
                   {isHu ? 'Megosztás & Jegyzetek' : 'Sharing & Notes'}
                 </p>
 
                 <button
                   onClick={() => handleNav('household')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'household' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'household' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <Users className="h-5 w-5 text-emerald-400" />
+                  <Users className="h-5 w-5 text-[var(--status-success,#34D399)]" />
                   <span>{t('household')}</span>
                 </button>
 
                 <button
                   onClick={() => handleNav('notes')}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'notes' ? 'bg-slate-800 text-emerald-400' : 'text-slate-300 hover:bg-slate-800/50'
+                    currentView === 'notes' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                   }`}
                 >
-                  <StickyNote className="h-5 w-5 text-amber-400" />
+                  <StickyNote className="h-5 w-5 text-[var(--status-warning,#F59E0B)]" />
                   <span>{t('quick_notes')}</span>
                 </button>
 
                 {isAdmin && (
                   <>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 pt-3">
+                    <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-3">
                       Adminisztráció
                     </p>
                     <button
                       onClick={() => handleNav('admin')}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold ${
-                        currentView === 'admin' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60' : 'text-emerald-400 hover:bg-slate-800/50'
+                        currentView === 'admin' ? 'bg-[var(--color-primary-blue,#2563EB)] text-white' : 'text-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--surface-bg,#465362)]/50'
                       }`}
                     >
-                      <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                      <ShieldCheck className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                       <span>{t('admin_panel')}</span>
                     </button>
                   </>
                 )}
 
-                <div className="pt-4 border-t border-slate-800 flex flex-col gap-2">
+                <div className="pt-4 border-t border-[var(--border-color,#56616D)] flex flex-col gap-2">
                   <button
                     onClick={handleOpenAddModal}
-                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm"
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-[var(--color-primary-blue,#2563EB)] text-white font-bold text-sm"
                   >
                     <Plus className="h-5 w-5 stroke-[2.5]" />
                     {t('add_thing')}
@@ -651,7 +651,7 @@ export const Navbar: React.FC = () => {
                       logout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-red-950/40 text-red-400 font-semibold text-sm border border-red-900/40"
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-950/40 text-rose-400 font-semibold text-sm border border-rose-900/40"
                   >
                     <LogOut className="h-4 w-4" />
                     {t('log_out')}
@@ -666,7 +666,7 @@ export const Navbar: React.FC = () => {
                     setIsAuthModalOpen(true);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full p-3 rounded-xl text-center text-sm font-semibold text-slate-200 bg-slate-900 border border-slate-800"
+                  className="w-full p-3 rounded-xl text-center text-sm font-semibold text-[var(--text-primary,var(--text-main,#E0E3E6))] bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]"
                 >
                   {t('sign_in')}
                 </button>
@@ -676,7 +676,7 @@ export const Navbar: React.FC = () => {
                     setIsAuthModalOpen(true);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full p-3 rounded-xl text-center text-sm font-semibold text-slate-950 bg-emerald-500"
+                  className="w-full p-3 rounded-xl text-center text-sm font-semibold text-white bg-[var(--color-primary-blue,#2563EB)]"
                 >
                   {t('start_organizing')}
                 </button>

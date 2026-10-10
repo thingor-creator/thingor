@@ -111,13 +111,13 @@ export const HouseholdView: React.FC = () => {
   const getRoleBadge = (role: HouseholdRole) => {
     switch (role) {
       case 'owner':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1"><Crown className="w-3.5 h-3.5 text-amber-600" /> {language === 'hu' ? 'Családfő (Tulajdonos)' : 'Owner'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-950/50 text-[var(--color-warning,#F59E0B)] border border-amber-500/40 flex items-center gap-1"><Crown className="w-3.5 h-3.5 text-amber-400" /> {language === 'hu' ? 'Családfő (Tulajdonos)' : 'Owner'}</span>;
       case 'admin':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-indigo-600" /> {language === 'hu' ? 'Adminisztrátor' : 'Admin'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-950/50 text-blue-300 border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" /> {language === 'hu' ? 'Adminisztrátor' : 'Admin'}</span>;
       case 'member':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1"><Users className="w-3.5 h-3.5 text-emerald-600" /> {language === 'hu' ? 'Családtag' : 'Member'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-950/50 text-[var(--color-status-success,#34D399)] border border-emerald-500/40 flex items-center gap-1"><Users className="w-3.5 h-3.5 text-emerald-400" /> {language === 'hu' ? 'Családtag' : 'Member'}</span>;
       case 'viewer':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1"><Eye className="w-3.5 h-3.5 text-slate-500" /> {language === 'hu' ? 'Megtekintő' : 'Viewer'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] flex items-center gap-1"><Eye className="w-3.5 h-3.5 text-[var(--text-sub,#B5BDC6)]" /> {language === 'hu' ? 'Megtekintő' : 'Viewer'}</span>;
     }
   };
 
@@ -131,14 +131,14 @@ export const HouseholdView: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="max-w-md mx-auto my-12 p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-4 shadow-xl">
-        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
+      <div className="max-w-md mx-auto my-12 p-8 bg-[var(--card-bg,#3A4551)] rounded-3xl border border-[var(--border-color,#56616D)] text-center space-y-4 shadow-2xl">
+        <div className="w-16 h-16 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] rounded-2xl flex items-center justify-center mx-auto">
           <Lock className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-800">
+        <h2 className="text-xl font-bold text-[var(--text-main,#E0E3E6)]">
           {language === 'hu' ? 'Bejelentkezés Szükséges' : 'Login Required'}
         </h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-[var(--text-sub,#B5BDC6)]">
           {language === 'hu'
             ? 'A családi és háztartási adatok megtekintéséhez kérjük, jelentkezz be a fiókodba!'
             : 'Please log in to your account to view family and household access.'}
@@ -148,7 +148,7 @@ export const HouseholdView: React.FC = () => {
             setAuthModalMode('login');
             setIsAuthModalOpen(true);
           }}
-          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition"
+          className="w-full py-3 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold rounded-xl shadow-md transition"
         >
           {language === 'hu' ? 'Bejelentkezés' : 'Log In'}
         </button>
@@ -161,16 +161,16 @@ export const HouseholdView: React.FC = () => {
       <div className="max-w-2xl mx-auto space-y-6 py-8">
         {/* Received Pending Invitations */}
         {receivedInvites.length > 0 && (
-          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 text-white rounded-2xl border-2 border-emerald-500/60 p-6 shadow-xl space-y-4">
+          <div className="bg-[var(--card-bg,#3A4551)] text-white rounded-2xl border border-[var(--color-primary-blue,#2563EB)]/50 p-6 shadow-xl space-y-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+              <div className="p-3 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] rounded-xl border border-[var(--border-color,#56616D)]">
                 <Mail className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h2 className="text-lg font-extrabold text-white">
+                <h2 className="text-lg font-extrabold text-[var(--text-main,#E0E3E6)]">
                   {language === 'hu' ? 'Családi Meghívás Érkezett!' : 'Family Invitation Received!'}
                 </h2>
-                <p className="text-xs text-slate-300">
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                   {language === 'hu'
                     ? 'Meghívót kaptál egy közös családi háztartáshoz. A fiókok és tárgyak csak a visszaigazolás után kapcsolódnak össze!'
                     : 'You received an invitation to join a family household. Accounts will link only after confirmation!'}
@@ -178,15 +178,15 @@ export const HouseholdView: React.FC = () => {
               </div>
             </div>
 
-            <div className="divide-y divide-slate-800">
+            <div className="divide-y divide-[var(--border-color,#56616D)]">
               {receivedInvites.map((inv) => (
                 <div key={inv.id} className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-white">
                       {inv.household_name || (language === 'hu' ? 'Családi Háztartás' : 'Family Household')}
                     </p>
-                    <p className="text-xs text-slate-400">
-                      {language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-emerald-400 font-semibold">{inv.role}</strong>
+                    <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
+                      {language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-[var(--color-primary-blue,#2563EB)] font-semibold">{inv.role}</strong>
                     </p>
                   </div>
 
@@ -196,7 +196,7 @@ export const HouseholdView: React.FC = () => {
                         const res = await acceptHouseholdInvite(inv.id);
                         if (!res.success) alert(res.error);
                       }}
-                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
+                      className="px-4 py-2 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
                     >
                       <Check className="w-4 h-4" />
                       {language === 'hu' ? 'Elfogadom (Visszaigazolás)' : 'Confirm & Accept'}
@@ -204,7 +204,7 @@ export const HouseholdView: React.FC = () => {
 
                     <button
                       onClick={() => declineHouseholdInvite(inv.id)}
-                      className="px-3.5 py-2 bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 rounded-xl text-xs flex items-center gap-1 transition-all"
+                      className="px-3.5 py-2 bg-[var(--surface-bg,#465362)] hover:bg-rose-950/60 hover:text-rose-300 text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] rounded-xl text-xs flex items-center gap-1 transition-all"
                     >
                       <X className="w-4 h-4" />
                       {language === 'hu' ? 'Elutasítom' : 'Decline'}
@@ -217,26 +217,26 @@ export const HouseholdView: React.FC = () => {
         )}
 
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <div className="w-16 h-16 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
             <Users className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold text-[var(--text-main,#E0E3E6)]">
             {language === 'hu' ? 'Családi / Háztartási Hozzáférés' : 'Family / Household Access'}
           </h1>
-          <p className="text-slate-400 text-sm max-w-lg mx-auto">
+          <p className="text-[var(--text-sub,#B5BDC6)] text-sm max-w-lg mx-auto">
             {language === 'hu'
               ? 'Hozz létre egy közös háztartást, hívd meg családtagjaidat és kezeljétek közösen az otthoni vagyontárgyakat pontos jogosultságokkal.'
               : 'Create a shared household, invite family members, and manage home assets together with granular RBAC permissions.'}
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-slate-800">
+        <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] shadow-sm p-6 space-y-4">
+          <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
             {language === 'hu' ? 'Új Háztartás Létrehozása' : 'Create New Household'}
           </h2>
           <form onSubmit={handleCreateHousehold} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                 {language === 'hu' ? 'Háztartás / Család neve *' : 'Household Name *'}
               </label>
               <input
@@ -245,13 +245,13 @@ export const HouseholdView: React.FC = () => {
                 placeholder={language === 'hu' ? 'Pl. Kovács Család Háztartása' : 'e.g. Smith Household'}
                 value={newHouseholdName}
                 onChange={(e) => setNewHouseholdName(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 p-3 text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                className="w-full rounded-xl border border-[var(--border-color,#56616D)] p-3 text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] placeholder-[var(--text-sub,#B5BDC6)] focus:border-[var(--color-primary-blue,#2563EB)] outline-none text-sm transition-colors"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition shadow-sm"
+              className="w-full py-3 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold rounded-xl transition shadow-md"
             >
               {language === 'hu' ? 'Háztartás Létrehozása' : 'Create Household'}
             </button>
@@ -267,13 +267,13 @@ export const HouseholdView: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Users className="w-7 h-7 text-emerald-400" />
+            <h1 className="text-2xl font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+              <Users className="w-7 h-7 text-[var(--color-primary-blue,#2563EB)]" />
               {household.name}
             </h1>
             {getRoleBadge(currentUserMember?.role || 'member')}
           </div>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-[var(--text-sub,#B5BDC6)] text-sm mt-1">
             {language === 'hu'
               ? 'Közös háztartás leltárja, tagok és jogosultságok kezelése.'
               : 'Shared household inventory, member roles, and permission settings.'}
@@ -282,7 +282,7 @@ export const HouseholdView: React.FC = () => {
 
         <button
           onClick={leaveHousehold}
-          className="inline-flex items-center gap-2 px-3.5 py-2 border border-slate-300 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-xl transition text-sm font-medium"
+          className="inline-flex items-center gap-2 px-3.5 py-2 border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:bg-rose-950/40 hover:text-rose-300 hover:border-rose-500/40 rounded-xl transition text-sm font-semibold"
         >
           <LogOut className="w-4 h-4" />
           {language === 'hu' ? 'Kilépés a háztartásból' : 'Leave Household'}
@@ -291,42 +291,42 @@ export const HouseholdView: React.FC = () => {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
+        <div className="bg-[var(--card-bg,#3A4551)] p-5 rounded-2xl border border-[var(--border-color,#56616D)] shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] rounded-xl">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{language === 'hu' ? 'Családtagok' : 'Members'}</p>
-            <p className="text-2xl font-bold text-slate-800">{householdMembers.length}</p>
+            <p className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">{language === 'hu' ? 'Családtagok' : 'Members'}</p>
+            <p className="text-2xl font-bold text-[var(--text-main,#E0E3E6)]">{householdMembers.length}</p>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
+        <div className="bg-[var(--card-bg,#3A4551)] p-5 rounded-2xl border border-[var(--border-color,#56616D)] shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] rounded-xl">
             <Package className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{language === 'hu' ? 'Közös Tárgyak' : 'Shared Items'}</p>
-            <p className="text-2xl font-bold text-slate-800">{sharedItems.length}</p>
+            <p className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">{language === 'hu' ? 'Közös Tárgyak' : 'Shared Items'}</p>
+            <p className="text-2xl font-bold text-[var(--text-main,#E0E3E6)]">{sharedItems.length}</p>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+        <div className="bg-[var(--card-bg,#3A4551)] p-5 rounded-2xl border border-[var(--border-color,#56616D)] shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-amber-950/40 text-[var(--color-warning,#F59E0B)] border border-amber-500/30 rounded-xl">
             <Crown className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{language === 'hu' ? 'Közös Vagyoni Érték' : 'Total Shared Value'}</p>
-            <p className="text-xl font-bold text-slate-800">{formatCurrency(sharedTotalValue)}</p>
+            <p className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">{language === 'hu' ? 'Közös Vagyoni Érték' : 'Total Shared Value'}</p>
+            <p className="text-xl font-bold text-emerald-400">{formatCurrency(sharedTotalValue)}</p>
           </div>
         </div>
       </div>
 
       {/* Invite Section (Owners / Admins only) */}
       {isOwnerOrAdmin && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-emerald-600" />
+        <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-[var(--color-primary-blue,#2563EB)]" />
             {language === 'hu' ? 'Új Családtag Meghívása' : 'Invite Family Member'}
           </h2>
 
@@ -339,7 +339,7 @@ export const HouseholdView: React.FC = () => {
                   placeholder={language === 'hu' ? 'Családtag e-mail címe *' : 'Member email address *'}
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full rounded-xl border border-[var(--border-color,#56616D)] p-2.5 text-sm text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] placeholder-[var(--text-sub,#B5BDC6)] focus:border-[var(--color-primary-blue,#2563EB)] outline-none transition-colors"
                 />
               </div>
 
@@ -349,14 +349,14 @@ export const HouseholdView: React.FC = () => {
                   placeholder={language === 'hu' ? 'Nevet / Titulus (pl. Apa, Anya, Tesó)' : 'Title / Role (e.g. Mom, Dad, Brother)'}
                   value={inviteTitle}
                   onChange={(e) => setInviteTitle(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full rounded-xl border border-[var(--border-color,#56616D)] p-2.5 text-sm text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] placeholder-[var(--text-sub,#B5BDC6)] focus:border-[var(--color-primary-blue,#2563EB)] outline-none transition-colors"
                 />
               </div>
 
               <div>
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold rounded-xl text-sm transition shadow-md flex items-center justify-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
                   {language === 'hu' ? 'Meghívó Küldése' : 'Send Invitation'}
@@ -366,7 +366,7 @@ export const HouseholdView: React.FC = () => {
 
             {/* Quick Title Selection Chips */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-xs font-medium text-slate-500 mr-1">
+              <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mr-1">
                 {language === 'hu' ? 'Gyors választás:' : 'Quick select:'}
               </span>
               {PRESET_TITLES.map((t) => (
@@ -376,8 +376,8 @@ export const HouseholdView: React.FC = () => {
                   onClick={() => setInviteTitle(t)}
                   className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition ${
                     inviteTitle === t
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border-slate-200'
+                      ? 'bg-[var(--color-primary-blue,#2563EB)] text-white border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                      : 'bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] border-[var(--border-color,#56616D)]'
                   }`}
                 >
                   {t}
@@ -387,7 +387,7 @@ export const HouseholdView: React.FC = () => {
           </form>
 
           {inviteMessage && (
-            <div className={`p-3 rounded-xl text-sm font-medium ${inviteMessage.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+            <div className={`p-3 rounded-xl text-sm font-medium ${inviteMessage.success ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/40' : 'bg-rose-950/40 text-rose-300 border border-rose-500/40'}`}>
               {inviteMessage.text}
             </div>
           )}
@@ -395,34 +395,34 @@ export const HouseholdView: React.FC = () => {
       )}
 
       {/* Members List */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <h2 className="text-lg font-bold text-slate-800">
+      <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
+        <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
           {language === 'hu' ? 'Háztartás Tagjai' : 'Household Members'} ({householdMembers.length})
         </h2>
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-[var(--border-color,#56616D)]">
           {householdMembers.map((member) => (
             <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-sm border border-slate-200 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] font-bold flex items-center justify-center text-sm border border-[var(--border-color,#56616D)] shrink-0">
                   {(member.user_name || member.user_email || 'U')[0].toUpperCase()}
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-slate-800 text-sm">{member.user_name || member.user_email}</p>
+                    <p className="font-semibold text-[var(--text-main,#E0E3E6)] text-sm">{member.user_name || member.user_email}</p>
                     {member.title && (
-                      <span className="px-2 py-0.5 text-xs rounded-md bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                      <span className="px-2 py-0.5 text-xs rounded-md bg-emerald-950/50 text-[var(--color-status-success,#34D399)] font-semibold border border-emerald-500/40">
                         {member.title}
                       </span>
                     )}
                     {member.allowed_location_ids && member.allowed_location_ids.length > 0 && (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                        <SlidersHorizontal className="w-3 h-3 text-indigo-500" />
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-950/50 text-blue-300 border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1">
+                        <SlidersHorizontal className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
                         {language === 'hu' ? 'Egyedi helyszínek' : 'Custom locations'} ({member.allowed_location_ids.length})
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500">{member.user_email}</p>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)]">{member.user_email}</p>
                 </div>
               </div>
 
@@ -433,26 +433,26 @@ export const HouseholdView: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEditMember(member)}
-                      className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg transition flex items-center gap-1"
+                      className="px-2.5 py-1.5 text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg transition flex items-center gap-1"
                       title={language === 'hu' ? 'Családtag szerkesztése' : 'Edit Member'}
                     >
-                      <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <Edit2 className="w-3.5 h-3.5 text-emerald-400" />
                       <span>{language === 'hu' ? 'Szerkesztés' : 'Edit'}</span>
                     </button>
 
                     <button
                       onClick={() => handleOpenSharingMember(member)}
-                      className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition flex items-center gap-1"
+                      className="px-2.5 py-1.5 text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg transition flex items-center gap-1"
                       title={language === 'hu' ? 'Megosztási helyszínek beállítása' : 'Configure Sharing'}
                     >
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
                       <span>{language === 'hu' ? 'Megosztás' : 'Sharing'}</span>
                     </button>
 
                     {member.role !== 'owner' && member.user_id !== user?.id && (
                       <button
                         onClick={() => removeHouseholdMember(member.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="p-1.5 text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition"
                         title={language === 'hu' ? 'Tag eltávolítása' : 'Remove Member'}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -468,16 +468,16 @@ export const HouseholdView: React.FC = () => {
 
       {/* Received Pending Invitations */}
       {receivedInvites.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-950 to-slate-900 text-white rounded-2xl border-2 border-emerald-500/60 p-6 shadow-xl space-y-4">
+        <div className="bg-[var(--card-bg,#3A4551)] text-white rounded-2xl border border-[var(--color-primary-blue,#2563EB)]/50 p-6 shadow-xl space-y-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+            <div className="p-3 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] rounded-xl border border-[var(--border-color,#56616D)]">
               <Mail className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-white">
+              <h2 className="text-lg font-extrabold text-[var(--text-main,#E0E3E6)]">
                 {language === 'hu' ? 'Családi Meghívás Érkezett!' : 'Family Invitation Received!'}
               </h2>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                 {language === 'hu'
                   ? 'Meghívót kaptál egy közös családi háztartáshoz. A fiókok és tárgyak csak a visszaigazolás után kapcsolódnak össze!'
                   : 'You received an invitation to join a family household. Accounts will link only after confirmation!'}
@@ -485,18 +485,18 @@ export const HouseholdView: React.FC = () => {
             </div>
           </div>
 
-          <div className="divide-y divide-slate-800">
+          <div className="divide-y divide-[var(--border-color,#56616D)]">
             {receivedInvites.map((inv) => (
               <div key={inv.id} className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold text-white">
                     {inv.household_name || (language === 'hu' ? 'Családi Háztartás' : 'Family Household')}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                     {inv.title ? (
-                      <>{language === 'hu' ? 'Megnevezés / Titulus:' : 'Title:'} <strong className="text-emerald-400 font-semibold">{inv.title}</strong></>
+                      <>{language === 'hu' ? 'Megnevezés / Titulus:' : 'Title:'} <strong className="text-[var(--color-primary-blue,#2563EB)] font-semibold">{inv.title}</strong></>
                     ) : (
-                      <>{language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-emerald-400 font-semibold">{inv.role}</strong></>
+                      <>{language === 'hu' ? 'Kijelölt szerepkör:' : 'Assigned Role:'} <strong className="text-[var(--color-primary-blue,#2563EB)] font-semibold">{inv.role}</strong></>
                     )}
                   </p>
                 </div>
@@ -507,7 +507,7 @@ export const HouseholdView: React.FC = () => {
                       const res = await acceptHouseholdInvite(inv.id);
                       if (!res.success) alert(res.error);
                     }}
-                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
+                    className="px-4 py-2 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
                   >
                     <Check className="w-4 h-4" />
                     {language === 'hu' ? 'Elfogadom (Visszaigazolás)' : 'Confirm & Accept'}
@@ -515,7 +515,7 @@ export const HouseholdView: React.FC = () => {
 
                   <button
                     onClick={() => declineHouseholdInvite(inv.id)}
-                    className="px-3.5 py-2 bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 rounded-xl text-xs flex items-center gap-1 transition-all"
+                    className="px-3.5 py-2 bg-[var(--surface-bg,#465362)] hover:bg-rose-950/60 hover:text-rose-300 text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] rounded-xl text-xs flex items-center gap-1 transition-all"
                   >
                     <X className="w-4 h-4" />
                     {language === 'hu' ? 'Elutasítom' : 'Decline'}
@@ -529,37 +529,37 @@ export const HouseholdView: React.FC = () => {
 
       {/* Sent Pending Invites */}
       {householdInvites.filter(i => i.status === 'pending').length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-amber-500" />
+        <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+            <Clock className="w-5 h-5 text-[var(--color-warning,#F59E0B)]" />
             {language === 'hu' ? 'Kiküldött Függőben Lévő Meghívók' : 'Sent Pending Invitations'}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
             {language === 'hu'
               ? 'A meghívott fiókja csak akkor kapcsolódik össze a családdal, ha visszaigazolja a meghívást.'
               : 'The invited account will link with the family only after they confirm the invitation.'}
           </p>
-          <div className="divide-y divide-slate-100 text-sm">
+          <div className="divide-y divide-[var(--border-color,#56616D)] text-sm">
             {householdInvites.filter(i => i.status === 'pending').map((inv) => (
               <div key={inv.id} className="py-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-800">{inv.invited_email || inv.email}</span>
+                  <span className="font-semibold text-[var(--text-main,#E0E3E6)]">{inv.invited_email || inv.email}</span>
                   {inv.title ? (
-                    <span className="px-2 py-0.5 text-xs rounded-md bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                    <span className="px-2 py-0.5 text-xs rounded-md bg-emerald-950/50 text-[var(--color-status-success,#34D399)] font-semibold border border-emerald-500/40">
                       {inv.title}
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-500">({inv.role})</span>
+                    <span className="text-xs text-[var(--text-sub,#B5BDC6)]">({inv.role})</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium flex items-center gap-1">
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-amber-950/40 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {language === 'hu' ? 'Várakozás a visszaigazolásra...' : 'Pending confirmation...'}
                   </span>
                   <button
                     onClick={() => cancelHouseholdInvite(inv.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                    className="p-1.5 text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition"
                     title={language === 'hu' ? 'Meghívó visszavonása' : 'Cancel invitation'}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -572,21 +572,21 @@ export const HouseholdView: React.FC = () => {
       )}
 
       {/* Shared Folders / Locations Management */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+      <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <FolderCheck className="w-5 h-5 text-emerald-600" />
+          <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+            <FolderCheck className="w-5 h-5 text-[var(--color-primary-blue,#2563EB)]" />
             {language === 'hu' ? 'Megosztott Mappák & Helyszínek' : 'Shared Folders & Locations'}
           </h2>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
           {language === 'hu'
             ? 'Válaszd ki, mely tárolási helyszíneket és mappákat osztod meg a családtagokkal.'
             : 'Select which storage locations and folders are shared with household members.'}
         </p>
 
         {locations.length === 0 ? (
-          <p className="text-sm text-slate-400 italic">{language === 'hu' ? 'Még nincs rögzített helyszín.' : 'No locations created yet.'}</p>
+          <p className="text-sm text-[var(--text-sub,#B5BDC6)] italic">{language === 'hu' ? 'Még nincs rögzített helyszín.' : 'No locations created yet.'}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {locations.map(loc => {
@@ -604,18 +604,18 @@ export const HouseholdView: React.FC = () => {
                 <label
                   key={loc.id}
                   className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition ${
-                    isLocShared ? 'bg-emerald-50/60 border-emerald-300 text-emerald-900 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    isLocShared ? 'bg-blue-950/40 border-[var(--color-primary-blue,#2563EB)] text-white font-semibold' : 'bg-[var(--surface-bg,#465362)] border-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)]'
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <MapPin className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                     <span className="text-sm truncate">{loc.name}</span>
                   </div>
                   <input
                     type="checkbox"
                     checked={isLocShared}
                     onChange={toggleLoc}
-                    className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                    className="w-4 h-4 accent-[var(--color-primary-blue,#2563EB)] rounded"
                   />
                 </label>
               );
@@ -625,15 +625,15 @@ export const HouseholdView: React.FC = () => {
       </div>
 
       {/* Shared Household Items Overview */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+      <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800">
+          <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
             {language === 'hu' ? 'Családi Közös Leltár' : 'Household Shared Inventory'} ({sharedItems.length})
           </h2>
         </div>
 
         {sharedItems.length === 0 ? (
-          <p className="text-sm text-slate-500 italic py-4 text-center">
+          <p className="text-sm text-[var(--text-sub,#B5BDC6)] italic py-4 text-center">
             {language === 'hu'
               ? 'Még egyetlen tárgynál sem állítottad be a "Családi" láthatóságot.'
               : 'No items have been assigned to household visibility yet.'}
@@ -644,14 +644,14 @@ export const HouseholdView: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setSelectedItemId(item.id)}
-                className="p-3 rounded-xl border border-slate-200 hover:border-emerald-500 transition text-left flex items-center gap-3 bg-slate-50/50"
+                className="p-3 rounded-xl border border-[var(--border-color,#56616D)] hover:border-[var(--color-primary-blue,#2563EB)] transition text-left flex items-center gap-3 bg-[var(--surface-bg,#465362)]"
               >
-                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+                <div className="p-2 bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] rounded-lg">
                   <Package className="w-4 h-4" />
                 </div>
                 <div className="truncate">
-                  <p className="font-semibold text-slate-800 text-sm truncate">{item.name}</p>
-                  <p className="text-xs text-slate-500">{formatCurrency(item.current_value || item.purchase_price || 0)}</p>
+                  <p className="font-semibold text-[var(--text-main,#E0E3E6)] text-sm truncate">{item.name}</p>
+                  <p className="text-xs text-emerald-400 font-medium">{formatCurrency(item.current_value || item.purchase_price || 0)}</p>
                 </div>
               </button>
             ))}
@@ -661,20 +661,20 @@ export const HouseholdView: React.FC = () => {
 
       {/* 1. MEMBER EDIT MODAL */}
       {editingMember && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-5 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                <div className="p-2 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] rounded-xl">
                   <Edit2 className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800">
+                <h3 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
                   {language === 'hu' ? 'Családtag Szerkesztése' : 'Edit Family Member'}
                 </h3>
               </div>
               <button
                 onClick={() => setEditingMember(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+                className="p-1.5 text-[var(--text-sub,#B5BDC6)] hover:text-white rounded-lg hover:bg-[var(--surface-bg,#465362)] transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -682,7 +682,7 @@ export const HouseholdView: React.FC = () => {
 
             <form onSubmit={handleSaveMemberEdit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {language === 'hu' ? 'Megjelenítendő név' : 'Display Name'}
                 </label>
                 <input
@@ -690,12 +690,12 @@ export const HouseholdView: React.FC = () => {
                   required
                   value={editNameInput}
                   onChange={(e) => setEditNameInput(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full rounded-xl border border-[var(--border-color,#56616D)] p-2.5 text-sm text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] placeholder-[var(--text-sub,#B5BDC6)] focus:border-[var(--color-primary-blue,#2563EB)] outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {language === 'hu' ? 'Titulus / Megnevezés (pl. Apa, Anya, Tesó)' : 'Title / Role'}
                 </label>
                 <input
@@ -703,13 +703,13 @@ export const HouseholdView: React.FC = () => {
                   value={editTitleInput}
                   onChange={(e) => setEditTitleInput(e.target.value)}
                   placeholder={language === 'hu' ? 'pl. Nagyszülő, Gyerek' : 'e.g. Grandparent'}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full rounded-xl border border-[var(--border-color,#56616D)] p-2.5 text-sm text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] placeholder-[var(--text-sub,#B5BDC6)] focus:border-[var(--color-primary-blue,#2563EB)] outline-none transition-colors"
                 />
               </div>
 
               {/* Quick Title Selection Chips */}
               <div className="space-y-1.5">
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">
                   {language === 'hu' ? 'Gyors választás:' : 'Quick select:'}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -720,8 +720,8 @@ export const HouseholdView: React.FC = () => {
                       onClick={() => setEditTitleInput(t)}
                       className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition ${
                         editTitleInput === t
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                          : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border-slate-200'
+                          ? 'bg-[var(--color-primary-blue,#2563EB)] text-white border-[var(--color-primary-blue,#2563EB)] shadow-sm'
+                          : 'bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] border-[var(--border-color,#56616D)]'
                       }`}
                     >
                       {t}
@@ -730,17 +730,17 @@ export const HouseholdView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--border-color,#56616D)]">
                 <button
                   type="button"
                   onClick={() => setEditingMember(null)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                  className="px-4 py-2 text-sm font-medium text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] rounded-xl transition"
                 >
                   {language === 'hu' ? 'Mégse' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl transition shadow-sm"
+                  className="px-5 py-2 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm rounded-xl transition shadow-md"
                 >
                   {language === 'hu' ? 'Mentés' : 'Save Changes'}
                 </button>
@@ -752,31 +752,31 @@ export const HouseholdView: React.FC = () => {
 
       {/* 2. MEMBER LOCATION SHARING MODAL */}
       {sharingMember && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-lg w-full bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-5 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="max-w-lg w-full bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                <div className="p-2 bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] rounded-xl">
                   <SlidersHorizontal className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">
+                  <h3 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
                     {language === 'hu' ? 'Családtagonkénti Megosztás' : 'Member Location Sharing'}
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                     {sharingMember.user_name || sharingMember.user_email}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSharingMember(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+                className="p-1.5 text-[var(--text-sub,#B5BDC6)] hover:text-white rounded-lg hover:bg-[var(--surface-bg,#465362)] transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
               {language === 'hu'
                 ? 'Jelöld ki azokat a helyszíneket és mappákat, amelyeket ez a családtag megtekinthet a háztartási leltárban.'
                 : 'Select specific locations and folders this family member is allowed to view.'}
@@ -786,14 +786,14 @@ export const HouseholdView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMemberAllowedLocs(locations.map(l => l.id))}
-                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+                className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400"
               >
                 {language === 'hu' ? 'Összes kijelölése' : 'Select All'}
               </button>
               <button
                 type="button"
                 onClick={() => setMemberAllowedLocs([])}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white"
               >
                 {language === 'hu' ? 'Kijelölés törlése' : 'Clear All'}
               </button>
@@ -801,7 +801,7 @@ export const HouseholdView: React.FC = () => {
 
             <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
               {locations.length === 0 ? (
-                <p className="text-xs text-slate-400 italic py-2">{language === 'hu' ? 'Nincsenek létrehozott helyszínek.' : 'No locations created.'}</p>
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)] italic py-2">{language === 'hu' ? 'Nincsenek létrehozott helyszínek.' : 'No locations created.'}</p>
               ) : (
                 locations.map((loc) => {
                   const isChecked = memberAllowedLocs.includes(loc.id);
@@ -815,19 +815,19 @@ export const HouseholdView: React.FC = () => {
                       key={loc.id}
                       className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition text-sm ${
                         isChecked
-                          ? 'bg-indigo-50/60 border-indigo-300 text-indigo-900 font-semibold'
-                          : 'bg-slate-50 border-slate-200 text-slate-700'
+                          ? 'bg-blue-950/40 border-[var(--color-primary-blue,#2563EB)] text-white font-semibold'
+                          : 'bg-[var(--surface-bg,#465362)] border-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)]'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
-                        <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <MapPin className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                         <span className="truncate">{loc.name}</span>
                       </div>
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={toggle}
-                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                        className="w-4 h-4 accent-[var(--color-primary-blue,#2563EB)] rounded"
                       />
                     </label>
                   );
@@ -835,18 +835,18 @@ export const HouseholdView: React.FC = () => {
               )}
             </div>
 
-            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+            <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--border-color,#56616D)]">
               <button
                 type="button"
                 onClick={() => setSharingMember(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                className="px-4 py-2 text-sm font-medium text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] rounded-xl transition"
               >
                 {language === 'hu' ? 'Mégse' : 'Cancel'}
               </button>
               <button
                 type="button"
                 onClick={handleSaveMemberLocations}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition shadow-sm flex items-center gap-1.5"
+                className="px-5 py-2 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm rounded-xl transition shadow-md flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
                 {language === 'hu' ? 'Beállítások Mentése' : 'Save Settings'}

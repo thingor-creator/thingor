@@ -69,27 +69,27 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden flex flex-col">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <div className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)]">
               <QrCode className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">
+              <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
                 {isHu ? 'Tárgy QR-kódja' : 'Item QR Code'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                 {isHu ? 'Nyomtatható fizikai azonosító címke' : 'Printable physical identification label'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -149,7 +149,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
             )}
           </div>
 
-          <p className="text-xs text-slate-400 max-w-xs">
+          <p className="text-xs text-[var(--text-sub,#B5BDC6)] max-w-xs">
             {isHu
               ? 'Nyomtasd ki a QR kódos címkét és ragaszd a tárgyra vagy a tárolódobozra a gyors mobil azonosításhoz.'
               : 'Print the QR label and attach it to the item or box for instant mobile identification.'}
@@ -159,14 +159,14 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
           <div className="grid grid-cols-2 gap-3 w-full pt-2">
             <button
               onClick={handlePrint}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg transition-all"
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition-all hover:scale-[1.01]"
             >
               <Printer className="h-4 w-4" />
               <span>{isHu ? 'Nyomtatás' : 'Print Label'}</span>
             </button>
             <button
               onClick={handleDownload}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-all"
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] font-semibold text-xs border border-[var(--border-color,#56616D)] transition-all"
             >
               <Download className="h-4 w-4" />
               <span>{isHu ? 'QR Mentése' : 'Save Image'}</span>

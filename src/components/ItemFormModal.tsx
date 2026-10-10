@@ -158,22 +158,22 @@ export const ItemFormModal: React.FC = () => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-main,#E0E3E6)] shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 p-5 bg-slate-950">
+        <div className="flex items-center justify-between border-b border-[var(--border-color,#56616D)] p-4 sm:p-5 bg-[var(--card-bg,#3A4551)]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800/40">
+            <div className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)]">
               <Package className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
                 {editingItem
                   ? (isHu ? 'Tárgy Szerkesztése' : 'Edit Thing')
                   : (isHu ? '+ Új Tárgy Hozzáadása' : '+ Add New Thing')}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                 {isHu
                   ? 'Rögzítsd a tárgy részleteit, helyszínét, vásárlási és garancia adatait.'
                   : 'Record details, location, purchase data, and warranty info.'}
@@ -183,7 +183,7 @@ export const ItemFormModal: React.FC = () => {
 
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+            className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -194,13 +194,13 @@ export const ItemFormModal: React.FC = () => {
 
           {/* SECTION 1: ESSENTIAL DETAILS */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-[var(--color-primary-blue,#2563EB)] uppercase tracking-wider">
               {isHu ? '1. Alapadatok' : '1. Basic Information'}
             </h3>
 
             {/* Name */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                 {isHu ? 'Tárgy Neve *' : 'Name *'}
               </label>
               <input
@@ -209,20 +209,20 @@ export const ItemFormModal: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
               />
             </div>
 
             {/* Category & Location Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Kategória *' : 'Category *'}
                 </label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500 focus:outline-none"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 >
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{getCategoryName(cat.id)}</option>
@@ -232,13 +232,13 @@ export const ItemFormModal: React.FC = () => {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-300">
+                  <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">
                     {isHu ? 'Helyszín *' : 'Location *'}
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowAddLoc(!showAddLoc)}
-                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium"
+                    className="text-[11px] text-[var(--color-primary-blue,#2563EB)] hover:underline font-medium"
                   >
                     {isHu ? '+ Új helyszín' : '+ New spot'}
                   </button>
@@ -251,12 +251,12 @@ export const ItemFormModal: React.FC = () => {
                       placeholder={isHu ? 'pl. Garázs polc' : 'e.g. Garage shelf'}
                       value={newLocName}
                       onChange={(e) => setNewLocName(e.target.value)}
-                      className="flex-1 p-2 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-xs focus:border-emerald-500 outline-none"
+                      className="flex-1 p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] outline-none transition-colors"
                     />
                     <button
                       type="button"
                       onClick={handleQuickAddLoc}
-                      className="px-3 py-1 bg-emerald-500 text-slate-950 rounded-xl text-xs font-bold"
+                      className="px-3 py-1 bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white rounded-xl text-xs font-bold transition-colors"
                     >
                       {isHu ? 'Mentés' : 'Save'}
                     </button>
@@ -265,7 +265,7 @@ export const ItemFormModal: React.FC = () => {
                   <select
                     value={locationId}
                     onChange={(e) => setLocationId(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                   >
                     {locations.map(loc => (
                       <option key={loc.id} value={loc.id}>
@@ -280,13 +280,13 @@ export const ItemFormModal: React.FC = () => {
             {/* Status & Ownership Scope Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Működési Állapot' : 'Operating Status'}
                 </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500 focus:outline-none"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 >
                   <option value="Working">{isHu ? '○ Működik' : 'Working'}</option>
                   <option value="Faulty">{isHu ? '● Hibás' : 'Faulty'}</option>
@@ -297,13 +297,13 @@ export const ItemFormModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Tulajdon / Láthatóság' : 'Ownership / Visibility'}
                 </label>
                 <select
                   value={ownershipScope}
                   onChange={(e) => setOwnershipScope(e.target.value as any)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-200 text-sm focus:border-emerald-500 focus:outline-none"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 >
                   <option value="private">{isHu ? '🔒 Csak én (Saját tárgy)' : 'Private (Only Me)'}</option>
                   <option value="household">{isHu ? '👨‍👩‍👧‍👦 Család (Közös tárgy)' : 'Household (Shared)'}</option>
@@ -312,40 +312,40 @@ export const ItemFormModal: React.FC = () => {
             </div>
 
             {/* Multi-Photo Management Section */}
-            <div className="space-y-3 p-4 rounded-xl border border-slate-800 bg-slate-950/60">
+            <div className="space-y-3 p-4 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold uppercase tracking-wider text-emerald-400">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[var(--color-primary-blue,#2563EB)]">
                   {isHu ? 'Fényképek (Fő kép és Galéria)' : 'Photos (Primary & Gallery)'}
                 </label>
-                <span className="text-[11px] text-slate-400 font-medium">
+                <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-medium">
                   {isHu ? `${(photoUrl ? 1 : 0) + additionalPhotos.length} fénykép hozzáadva` : `${(photoUrl ? 1 : 0) + additionalPhotos.length} photos added`}
                 </span>
               </div>
 
               {/* Fő Kép / Primary Photo Input & Upload */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Elsődleges / Fő Fénykép URL vagy Fájl:' : 'Primary Photo URL or File:'}
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
-                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-sub,#B5BDC6)]" />
                     <input
                       type="url"
                       placeholder="https://images.unsplash.com/..."
                       value={photoUrl}
                       onChange={(e) => setPhotoUrl(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-xs focus:border-emerald-500 focus:outline-none"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                     />
                   </div>
 
-                  <label className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 cursor-pointer transition-colors ${
+                  <label className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] text-xs font-bold border border-[var(--border-color,#56616D)] cursor-pointer transition-colors shadow-sm ${
                     isUploadingPhoto ? 'opacity-50 pointer-events-none' : ''
                   }`}>
                     {isUploadingPhoto ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                      <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
                     ) : (
-                      <Upload className="h-4 w-4 text-emerald-400" />
+                      <Upload className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                     )}
                     <span>
                       {isUploadingPhoto
@@ -394,7 +394,7 @@ export const ItemFormModal: React.FC = () => {
 
               {/* Sample Photo Presets */}
               <div className="flex items-center gap-2 flex-wrap pt-1">
-                <span className="text-[10px] text-slate-500 font-semibold">
+                <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] font-semibold">
                   {isHu ? 'Gyors mintakép:' : 'Quick sample photo:'}
                 </span>
                 {PHOTO_PRESETS.map((p, idx) => (
@@ -405,7 +405,7 @@ export const ItemFormModal: React.FC = () => {
                       if (!photoUrl) setPhotoUrl(p.url);
                       else setAdditionalPhotos(prev => [...prev, p.url]);
                     }}
-                    className="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-800"
+                    className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:border-[var(--color-primary-blue,#2563EB)] transition-colors"
                   >
                     {p.label}
                   </button>
@@ -414,22 +414,22 @@ export const ItemFormModal: React.FC = () => {
 
               {/* Thumbnails Gallery Preview */}
               {(photoUrl || additionalPhotos.length > 0) && (
-                <div className="space-y-1.5 pt-2 border-t border-slate-800">
-                  <span className="text-[11px] font-semibold text-slate-400 block">
+                <div className="space-y-1.5 pt-2 border-t border-[var(--border-color,#56616D)]">
+                  <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] block">
                     {isHu ? 'Feltöltött Képek Galériája:' : 'Uploaded Photos Gallery:'}
                   </span>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                     {/* Primary Photo Thumbnail */}
                     {photoUrl && (
-                      <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-emerald-500 bg-slate-950 group p-1 flex items-center justify-center">
+                      <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-[var(--color-primary-blue,#2563EB)] bg-[var(--surface-bg,#465362)]/60 group p-1 flex items-center justify-center">
                         <img src={photoUrl} alt="Primary" className="w-full h-full object-contain block" />
-                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-950/90 text-[9px] font-extrabold text-emerald-400 border border-emerald-800/60">
+                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-[var(--card-bg,#3A4551)]/90 text-[9px] font-extrabold text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)]">
                           {isHu ? 'Fő Kép' : 'Primary'}
                         </span>
                         <button
                           type="button"
                           onClick={() => setPhotoUrl('')}
-                          className="absolute top-1 right-1 p-1 rounded-lg bg-slate-950/80 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                          className="absolute top-1 right-1 p-1 rounded-lg bg-[var(--card-bg,#3A4551)]/90 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
                           title={isHu ? 'Kép eltávolítása' : 'Remove photo'}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -439,7 +439,7 @@ export const ItemFormModal: React.FC = () => {
 
                     {/* Additional Photos Thumbnails */}
                     {additionalPhotos.map((url, idx) => (
-                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-950 group p-1 flex items-center justify-center">
+                      <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/60 group p-1 flex items-center justify-center">
                         <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-contain block" />
                         <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
@@ -452,7 +452,7 @@ export const ItemFormModal: React.FC = () => {
                                 return oldPrimary ? [...filtered, oldPrimary] : filtered;
                               });
                             }}
-                            className="p-1 rounded-lg bg-slate-950/80 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-colors"
+                            className="p-1 rounded-lg bg-[var(--card-bg,#3A4551)]/90 text-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)] hover:text-white transition-colors"
                             title={isHu ? 'Beállítás fő képként' : 'Set as primary photo'}
                           >
                             <Star className="w-3.5 h-3.5" />
@@ -460,7 +460,7 @@ export const ItemFormModal: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setAdditionalPhotos(prev => prev.filter((_, i) => i !== idx))}
-                            className="p-1 rounded-lg bg-slate-950/80 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors"
+                            className="p-1 rounded-lg bg-[var(--card-bg,#3A4551)]/90 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors"
                             title={isHu ? 'Törlés' : 'Remove'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -475,7 +475,7 @@ export const ItemFormModal: React.FC = () => {
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                 {isHu ? 'Leírás (Opcionális)' : 'Description (Optional)'}
               </label>
               <textarea
@@ -483,20 +483,20 @@ export const ItemFormModal: React.FC = () => {
                 placeholder={isHu ? 'Rövid leírás, tulajdonságok vagy adatlap...' : 'Brief description or spec sheet...'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500 focus:outline-none"
+                className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
               />
             </div>
           </div>
 
           {/* SECTION 2: PURCHASE & VALUATION */}
-          <div className="space-y-4 pt-4 border-t border-slate-800">
-            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+          <div className="space-y-4 pt-4 border-t border-[var(--border-color,#56616D)]">
+            <h3 className="text-xs font-bold text-[var(--color-primary-blue,#2563EB)] uppercase tracking-wider">
               {isHu ? '2. Vásárlási és Érték Adatok' : '2. Purchase & Current Valuation'}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Vásárlás Dátuma' : 'Purchase Date'}
                 </label>
                 <input
@@ -505,12 +505,12 @@ export const ItemFormModal: React.FC = () => {
                   onChange={(e) => setPurchaseDate(e.target.value)}
                   onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
                   onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500 cursor-pointer min-h-[42px] font-medium"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none cursor-pointer min-h-[42px] font-medium transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Vételár (Ft)' : 'Purchase Price (€)'}
                 </label>
                 <input
@@ -519,12 +519,12 @@ export const ItemFormModal: React.FC = () => {
                   placeholder="180"
                   value={purchasePrice}
                   onChange={(e) => setPurchasePrice(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Jelenlegi Becsült Érték (Ft)' : 'Current Value (€)'}
                 </label>
                 <input
@@ -533,14 +533,14 @@ export const ItemFormModal: React.FC = () => {
                   placeholder="180"
                   value={currentValue}
                   onChange={(e) => setCurrentValue(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
                 </label>
                 <input
@@ -548,18 +548,18 @@ export const ItemFormModal: React.FC = () => {
                   placeholder={isHu ? 'pl. Praktiker, MediaMarkt, Alza, Helyi bolt...' : 'e.g. Makita Store, Amazon, Local shop'}
                   value={storeSeller}
                   onChange={(e) => setStoreSeller(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Állapot *' : 'Condition *'}
                 </label>
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value as ItemCondition)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 >
                   {CONDITION_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>
@@ -572,14 +572,14 @@ export const ItemFormModal: React.FC = () => {
           </div>
 
           {/* SECTION 3: WARRANTY & NOTES */}
-          <div className="space-y-4 pt-4 border-t border-slate-800">
-            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+          <div className="space-y-4 pt-4 border-t border-[var(--border-color,#56616D)]">
+            <h3 className="text-xs font-bold text-[var(--color-primary-blue,#2563EB)] uppercase tracking-wider">
               {isHu ? '3. Garancia és Megjegyzések' : '3. Warranty & Notes'}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Garancia Kezdete' : 'Warranty Start'}
                 </label>
                 <input
@@ -588,12 +588,12 @@ export const ItemFormModal: React.FC = () => {
                   onChange={(e) => setWarrantyStart(e.target.value)}
                   onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
                   onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500 cursor-pointer min-h-[42px] font-medium"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none cursor-pointer min-h-[42px] font-medium transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                   {isHu ? 'Garancia Lejárata' : 'Warranty Expiration'}
                 </label>
                 <input
@@ -602,13 +602,13 @@ export const ItemFormModal: React.FC = () => {
                   onChange={(e) => setWarrantyEnd(e.target.value)}
                   onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
                   onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs focus:border-emerald-500 cursor-pointer min-h-[42px] font-medium"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-xs focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none cursor-pointer min-h-[42px] font-medium transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">
                 {isHu ? 'Megjegyzések & Gyári Számok' : 'Notes & Serial Numbers'}
               </label>
               <textarea
@@ -616,23 +616,23 @@ export const ItemFormModal: React.FC = () => {
                 placeholder={isHu ? 'Gyári szám, szerviz napló, mellékelt tartozékok...' : 'Serial numbers, maintenance logs, accessories included...'}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500"
+                className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
               />
             </div>
           </div>
 
           {/* Footer Submit */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-[var(--border-color,#56616D)] flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm font-semibold"
+              className="px-4 py-2 rounded-xl text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)] text-sm font-semibold transition-colors"
             >
               {isHu ? 'Mégse' : 'Cancel'}
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40"
+              className="px-6 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm shadow-md transition-colors"
             >
               {editingItem
                 ? (isHu ? 'Módosítások Mentése' : 'Save Changes')

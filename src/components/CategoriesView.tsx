@@ -36,17 +36,17 @@ export const CategoriesView: React.FC = () => {
     <div className="space-y-6 pb-20">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-color,#56616D)] pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main,#E0E3E6)] tracking-tight">
               {t('categories')}
             </h1>
-            <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-emerald-400 font-bold text-xs">
+            <span className="px-3 py-1 rounded-full bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)] font-bold text-xs">
               {categories.length} {language === 'hu' ? 'kategória' : 'categories'}
             </span>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
             {language === 'hu'
               ? 'Rendszerezd a tárgyaidat kategóriák szerint (Szerszámok, Elektronika, Sport, Egyedi kategóriák).'
               : 'Group your items by classification (Tools, Electronics, Sports, Custom categories).'}
@@ -55,7 +55,7 @@ export const CategoriesView: React.FC = () => {
 
         <button
           onClick={() => setIsCategoryModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02]"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm shadow-md transition-all hover:scale-[1.02]"
         >
           {language === 'hu' ? 'Egyedi kategória' : 'Custom Category'}
         </button>
@@ -63,21 +63,21 @@ export const CategoriesView: React.FC = () => {
 
       {/* CREATE CATEGORY MODAL */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Tag className="h-5 w-5 text-emerald-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--border-color,#56616D)] pb-3">
+              <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                <Tag className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                 {language === 'hu' ? 'Egyedi kategória létrehozása' : 'Create Custom Category'}
               </h3>
-              <button onClick={() => setIsCategoryModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setIsCategoryModalOpen(false)} className="text-[var(--text-sub,#B5BDC6)] hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateCategory} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
+                <label className="block text-[var(--text-sub,#B5BDC6)] font-semibold mb-1">
                   {language === 'hu' ? 'Kategória neve *' : 'Category Name *'}
                 </label>
                 <input
@@ -86,7 +86,7 @@ export const CategoriesView: React.FC = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white placeholder-slate-500 text-sm focus:border-emerald-500"
+                  className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                 />
               </div>
 
@@ -94,13 +94,13 @@ export const CategoriesView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCategoryModalOpen(false)}
-                  className="px-3 py-2 text-slate-400 hover:text-white"
+                  className="px-3 py-2 text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] font-semibold"
                 >
                   {t('cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 font-bold bg-emerald-500 text-slate-950 rounded-xl"
+                  className="px-5 py-2 font-bold bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white rounded-xl shadow-md transition-colors"
                 >
                   {language === 'hu' ? 'Kategória hozzáadása' : 'Add Category'}
                 </button>
@@ -122,18 +122,18 @@ export const CategoriesView: React.FC = () => {
             <div
               key={cat.id}
               onClick={() => handleSelectCategory(cat.id)}
-              className="group p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-slate-700 transition-all cursor-pointer flex flex-col justify-between"
+              className="group p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--color-primary-blue,#2563EB)]/60 transition-all cursor-pointer flex flex-col justify-between"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-slate-950 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
+                  <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] group-hover:bg-[var(--color-primary-blue,#2563EB)] group-hover:text-white transition-colors">
                     <Tag className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-base group-hover:text-emerald-400 transition-colors">
+                    <h3 className="font-bold text-[var(--text-main,#E0E3E6)] text-base group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
                       {displayName}
                     </h3>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
                       {cat.is_custom
                         ? (language === 'hu' ? 'Egyedi kategória' : 'Custom Category')
                         : (language === 'hu' ? 'Alapértelmezett kategória' : 'Default Category')}
@@ -141,14 +141,14 @@ export const CategoriesView: React.FC = () => {
                   </div>
                 </div>
 
-                <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                <ChevronRight className="h-5 w-5 text-[var(--text-sub,#B5BDC6)] group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors" />
               </div>
 
-              <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                <span className="text-slate-400">
+              <div className="pt-4 border-t border-[var(--border-color,#56616D)]/60 flex items-center justify-between text-xs">
+                <span className="text-[var(--text-sub,#B5BDC6)]">
                   {totalCount} {language === 'hu' ? 'tárgy rögzítve' : 'items logged'}
                 </span>
-                <span className="font-bold text-white">{language === 'hu' ? `${totalVal.toLocaleString('hu-HU')} Ft` : `€${totalVal.toLocaleString('en-US')}`}</span>
+                <span className="font-bold text-emerald-400">{language === 'hu' ? `${totalVal.toLocaleString('hu-HU')} Ft` : `€${totalVal.toLocaleString('en-US')}`}</span>
               </div>
             </div>
           );

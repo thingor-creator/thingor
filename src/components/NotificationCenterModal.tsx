@@ -81,25 +81,25 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)]">
           <div className="flex items-center gap-3">
-            <div className="relative p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <Bell className="h-5 w-5 text-emerald-400" />
+            <div className="relative p-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+              <Bell className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
               {unreadNotificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-slate-950">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-primary-blue,#2563EB)] text-[10px] font-bold text-white shadow-sm">
                   {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                 </span>
               )}
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
                 {isHu ? 'Értesítési Központ' : 'Notification Center'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                 {unreadNotificationCount > 0
                   ? isHu
                     ? `${unreadNotificationCount} olvasatlan értesítés`
@@ -113,21 +113,21 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-900/50">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/30">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'all'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm font-bold'
+                  : 'text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)]'
               }`}
             >
               {isHu ? 'Összes' : 'All'} ({notifications.length})
@@ -136,8 +136,8 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
               onClick={() => setActiveTab('unread')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'unread'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm font-bold'
+                  : 'text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)]'
               }`}
             >
               {isHu ? 'Olvasatlan' : 'Unread'} ({unreadNotificationCount})
@@ -146,8 +146,8 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
               onClick={() => setActiveTab('settings')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'settings'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm font-bold'
+                  : 'text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)]'
               }`}
             >
               <Settings className="h-3.5 w-3.5" />
@@ -158,7 +158,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           {activeTab !== 'settings' && notifications.length > 0 && (
             <button
               onClick={() => markAllNotificationsAsRead()}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-400 hover:text-emerald-400 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-[var(--text-sub,#B5BDC6)] hover:text-[var(--color-primary-blue,#2563EB)] transition-colors"
               title={isHu ? 'Összes megjelölése olvasottként' : 'Mark all as read'}
             >
               <CheckCheck className="h-4 w-4" />
@@ -173,10 +173,10 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             /* User Notification Settings Tab */
             <div className="space-y-6">
               <div>
-                <h4 className="text-sm font-semibold text-white mb-1">
+                <h4 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] mb-1">
                   {isHu ? 'Értesítési preferenciák' : 'Notification Preferences'}
                 </h4>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                   {isHu
                     ? 'Szabályozd, hogy milyen típusú figyelmeztetéseket szeretnél kapni.'
                     : 'Control what types of alerts you want to receive.'}
@@ -185,14 +185,14 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
               <div className="space-y-3">
                 {/* Garancia toggle */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-800">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] shadow-sm">
                   <div className="flex items-center gap-3">
                     <ShieldAlert className="h-5 w-5 text-amber-400" />
                     <div>
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
                         {isHu ? 'Garancia lejárati értesítések' : 'Warranty Expiry Alerts'}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? '30, 14, 3 nappal lejárhatóság előtt' : '30, 14, 3 days before expiry'}
                       </div>
                     </div>
@@ -201,19 +201,19 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                     type="checkbox"
                     checked={userNotificationSettings?.warranty_enabled ?? true}
                     onChange={e => updateNotificationSettings({ warranty_enabled: e.target.checked })}
-                    className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+                    className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] cursor-pointer"
                   />
                 </div>
 
                 {/* Finanszírozás toggle */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-800">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] shadow-sm">
                   <div className="flex items-center gap-3">
                     <CreditCard className="h-5 w-5 text-emerald-400" />
                     <div>
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
                         {isHu ? 'Finanszírozás / Részletfizetés esedékességek' : 'Financing & Installment Due Dates'}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? '7, 3 nappal és esedékesség napján' : '7, 3 days before and on due date'}
                       </div>
                     </div>
@@ -222,19 +222,19 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                     type="checkbox"
                     checked={userNotificationSettings?.financing_enabled ?? true}
                     onChange={e => updateNotificationSettings({ financing_enabled: e.target.checked })}
-                    className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+                    className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] cursor-pointer"
                   />
                 </div>
 
                 {/* Javítások toggle */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-800">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] shadow-sm">
                   <div className="flex items-center gap-3">
                     <Wrench className="h-5 w-5 text-sky-400" />
                     <div>
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
                         {isHu ? 'Javítási státuszfrissítések' : 'Repair Status Updates'}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? 'Javítás indításakor, elkészültekor és lezárásakor' : 'On repair status changes'}
                       </div>
                     </div>
@@ -243,19 +243,19 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                     type="checkbox"
                     checked={userNotificationSettings?.repair_enabled ?? true}
                     onChange={e => updateNotificationSettings({ repair_enabled: e.target.checked })}
-                    className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+                    className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] cursor-pointer"
                   />
                 </div>
 
                 {/* In-app toggle */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-800">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] shadow-sm">
                   <div className="flex items-center gap-3">
                     <Smartphone className="h-5 w-5 text-indigo-400" />
                     <div>
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
                         {isHu ? 'In-App Értesítések' : 'In-App Notifications'}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? 'Értesítési harang és lista az alkalmazásban' : 'Notification bell & list inside app'}
                       </div>
                     </div>
@@ -264,19 +264,19 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                     type="checkbox"
                     checked={userNotificationSettings?.inapp_enabled ?? true}
                     onChange={e => updateNotificationSettings({ inapp_enabled: e.target.checked })}
-                    className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+                    className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] cursor-pointer"
                   />
                 </div>
 
                 {/* Email toggle */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-800">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] shadow-sm">
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-purple-400" />
                     <div>
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
                         {isHu ? 'Email Értesítések' : 'Email Notifications'}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? 'Időzített email emlékeztetők küldése' : 'Scheduled email reminders'}
                       </div>
                     </div>
@@ -285,7 +285,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                     type="checkbox"
                     checked={userNotificationSettings?.email_enabled ?? true}
                     onChange={e => updateNotificationSettings({ email_enabled: e.target.checked })}
-                    className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+                    className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] cursor-pointer"
                   />
                 </div>
               </div>
@@ -293,13 +293,13 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           ) : filteredNotifications.length === 0 ? (
             /* Empty state */
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="p-4 rounded-full bg-slate-800/60 mb-3 text-slate-500">
+              <div className="p-4 rounded-full bg-[var(--surface-bg,#465362)] mb-3 text-[var(--text-sub,#B5BDC6)]/60 border border-[var(--border-color,#56616D)]">
                 <Bell className="h-8 w-8" />
               </div>
-              <h4 className="text-base font-semibold text-slate-300 mb-1">
+              <h4 className="text-base font-bold text-[var(--text-main,#E0E3E6)] mb-1">
                 {isHu ? 'Nincs megjeleníthető értesítés' : 'No notifications found'}
               </h4>
-              <p className="text-xs text-slate-500 max-w-xs">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] max-w-xs">
                 {activeTab === 'unread'
                   ? isHu
                     ? 'Minden értesítést elolvastál!'
@@ -317,35 +317,35 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                 onClick={() => handleNotificationClick(notification)}
                 className={`group relative flex items-start justify-between gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
                   notification.is_read
-                    ? 'bg-slate-900/40 border-slate-800/60 opacity-75 hover:opacity-100 hover:border-slate-700'
-                    : 'bg-slate-800/60 border-slate-700/80 shadow-md hover:bg-slate-800 hover:border-emerald-500/40'
+                    ? 'bg-[var(--surface-bg,#465362)]/40 border-[var(--border-color,#56616D)]/60 opacity-75 hover:opacity-100 hover:border-[var(--border-color,#56616D)]'
+                    : 'bg-[var(--surface-bg,#465362)] border-[var(--border-color,#56616D)] shadow-md hover:border-[var(--color-primary-blue,#2563EB)]'
                 }`}
               >
                 {!notification.is_read && (
-                  <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-[var(--color-primary-blue,#2563EB)] animate-pulse" />
                 )}
 
                 <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                  <div className="p-2 rounded-lg bg-slate-800/80 border border-slate-700/50 mt-0.5">
+                  <div className="p-2 rounded-lg bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] mt-0.5">
                     {getNotificationIcon(notification.type)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h4
                         className={`text-sm font-semibold truncate ${
-                          notification.is_read ? 'text-slate-300' : 'text-white'
+                          notification.is_read ? 'text-[var(--text-sub,#B5BDC6)]' : 'text-[var(--text-main,#E0E3E6)]'
                         }`}
                       >
                         {notification.title}
                       </h4>
                       {notification.reference_id && (
-                        <ExternalLink className="h-3.5 w-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors shrink-0" />
+                        <ExternalLink className="h-3.5 w-3.5 text-[var(--text-sub,#B5BDC6)] group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed break-words">
+                    <p className="text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed break-words">
                       {notification.description}
                     </p>
-                    <span className="inline-block text-[11px] text-slate-500 mt-2 font-mono">
+                    <span className="inline-block text-[11px] text-[var(--text-sub,#B5BDC6)]/80 mt-2 font-mono">
                       {new Date(notification.created_at).toLocaleDateString(isHu ? 'hu-HU' : 'en-US', {
                         year: 'numeric',
                         month: 'short',
@@ -364,7 +364,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                         e.stopPropagation();
                         markNotificationAsRead(notification.id);
                       }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition-colors"
+                      className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--card-bg,#3A4551)] transition-colors"
                       title={isHu ? 'Megjelölés olvasottként' : 'Mark as read'}
                     >
                       <Check className="h-4 w-4" />
@@ -375,7 +375,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                       e.stopPropagation();
                       deleteNotification(notification.id);
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
                     title={isHu ? 'Törlés' : 'Delete'}
                   >
                     <Trash2 className="h-4 w-4" />

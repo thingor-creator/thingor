@@ -156,12 +156,12 @@ export const DashboardView: React.FC = () => {
     <div className="space-y-8 pb-16">
       
       {/* Header with Sub-tab Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-color,#56616D)] pb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main,#E0E3E6)] tracking-tight">
             {t('dashboard')}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
             {isHu
               ? 'Személyes és családi vagyontárgyaid, javítások és pénzügyi analitika áttekintése.'
               : 'Overview of personal & household assets, maintenance tasks, and financial analytics.'}
@@ -169,13 +169,13 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* Tab Switcher Buttons */}
-        <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 self-start sm:self-auto shrink-0">
+        <div className="flex items-center p-1 rounded-[14px] bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] self-start sm:self-auto shrink-0 shadow-sm">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-[10px] text-xs font-bold transition-all ${
               activeTab === 'overview'
-                ? 'bg-emerald-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-md'
+                : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
             }`}
           >
             <BarChart3 className="h-4 w-4 shrink-0" />
@@ -183,10 +183,10 @@ export const DashboardView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-[10px] text-xs font-bold transition-all ${
               activeTab === 'analytics'
-                ? 'bg-emerald-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-md'
+                : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
             }`}
           >
             <PieChart className="h-4 w-4 shrink-0" />
@@ -203,19 +203,19 @@ export const DashboardView: React.FC = () => {
             {/* Card 1: Total Items */}
             <div 
               onClick={() => setCurrentView('items')}
-              className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-slate-700 transition-all cursor-pointer group"
+              className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--color-primary-blue,#2563EB)]/60 transition-all cursor-pointer group shadow-sm"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('total_items')}</span>
-                <div className="p-2.5 rounded-xl bg-slate-800 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
+                <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">{t('total_items')}</span>
+                <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] group-hover:bg-[var(--color-primary-blue,#2563EB)] group-hover:text-white transition-colors">
                   <Boxes className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4">
-                <span className="text-3xl font-black text-white tracking-tight">{totalItems}</span>
-                <span className="text-xs text-slate-400 ml-2">{t('items_logged')}</span>
+                <span className="text-3xl font-black text-[var(--text-main,#E0E3E6)] tracking-tight">{totalItems}</span>
+                <span className="text-xs text-[var(--text-sub,#B5BDC6)] ml-2">{t('items_logged')}</span>
               </div>
-              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 group-hover:text-emerald-400 transition-colors">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-2 flex items-center gap-1 group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
                 {isHu ? 'Összes tárgy megtekintése' : 'View all items'} <ChevronRight className="h-3.5 w-3.5" />
               </p>
             </div>
@@ -223,20 +223,20 @@ export const DashboardView: React.FC = () => {
             {/* Card 2: Total Value */}
             <div 
               onClick={() => setActiveTab('analytics')}
-              className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-emerald-500/50 transition-all cursor-pointer group"
+              className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--status-success,#34D399)]/60 transition-all cursor-pointer group shadow-sm"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('total_value')}</span>
-                <div className="p-2.5 rounded-xl bg-slate-800 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
+                <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">{t('total_value')}</span>
+                <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--status-success,#34D399)] group-hover:bg-[var(--status-success,#34D399)] group-hover:text-slate-950 transition-colors">
                   <Euro className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4">
-                <span className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">
+                <span className="text-2xl sm:text-3xl font-black text-[var(--status-success,#34D399)] tracking-tight">
                   {formatCurrency(totalCurrentValue)}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 group-hover:text-emerald-400 transition-colors">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-2 flex items-center gap-1 group-hover:text-[var(--status-success,#34D399)] transition-colors">
                 {isHu ? 'Analitika megtekintése' : 'View Analytics'} <ChevronRight className="h-3.5 w-3.5" />
               </p>
             </div>
@@ -244,18 +244,18 @@ export const DashboardView: React.FC = () => {
             {/* Card 3: Monthly Installments */}
             <div 
               onClick={() => setCurrentView('financing')}
-              className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-indigo-500/50 transition-all cursor-pointer group"
+              className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--cat-books,#818CF8)]/60 transition-all cursor-pointer group shadow-sm"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{isHu ? 'Havi részletek' : 'Monthly Installments'}</span>
-                <div className="p-2.5 rounded-xl bg-indigo-950 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">{isHu ? 'Havi részletek' : 'Monthly Installments'}</span>
+                <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--cat-books,#818CF8)] group-hover:bg-[var(--cat-books,#818CF8)] group-hover:text-white transition-colors">
                   <CreditCard className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4">
-                <span className="text-2xl font-black text-indigo-300 tracking-tight">{formatCurrency(totalMonthlyInstallment)}</span>
+                <span className="text-2xl font-black text-[var(--cat-books,#818CF8)] tracking-tight">{formatCurrency(totalMonthlyInstallment)}</span>
               </div>
-              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 group-hover:text-indigo-400 transition-colors">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-2 flex items-center gap-1 group-hover:text-[var(--cat-books,#818CF8)] transition-colors">
                 {isHu ? 'Részletfizetések kezelése' : 'Manage financing'} <ChevronRight className="h-3.5 w-3.5" />
               </p>
             </div>
@@ -263,19 +263,19 @@ export const DashboardView: React.FC = () => {
             {/* Card 4: Repairs Pending */}
             <div 
               onClick={() => setCurrentView('repairs')}
-              className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-amber-500/50 transition-all cursor-pointer group"
+              className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--status-warning,#F59E0B)]/60 transition-all cursor-pointer group shadow-sm"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{isHu ? 'Javításra vár' : 'Awaiting Repair'}</span>
-                <div className="p-2.5 rounded-xl bg-amber-950 text-amber-400 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">{isHu ? 'Javításra vár' : 'Awaiting Repair'}</span>
+                <div className="p-2.5 rounded-xl bg-[var(--status-warning,#F59E0B)]/15 text-[var(--status-warning,#F59E0B)] group-hover:bg-[var(--status-warning,#F59E0B)] group-hover:text-slate-950 transition-colors">
                   <Wrench className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-black text-white tracking-tight">{pendingRepairsCount}</span>
-                <span className="text-xs text-slate-400">{isHu ? 'hibás/szervizben' : 'faulty/in service'}</span>
+                <span className="text-3xl font-black text-[var(--status-warning,#F59E0B)] tracking-tight">{pendingRepairsCount}</span>
+                <span className="text-xs text-[var(--text-sub,#B5BDC6)]">{isHu ? 'hibás/szervizben' : 'faulty/in service'}</span>
               </div>
-              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 group-hover:text-amber-400 transition-colors">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-2 flex items-center gap-1 group-hover:text-[var(--status-warning,#F59E0B)] transition-colors">
                 {isHu ? 'Javítások megtekintése' : 'View repairs'} <ChevronRight className="h-3.5 w-3.5" />
               </p>
             </div>
@@ -288,28 +288,28 @@ export const DashboardView: React.FC = () => {
             {/* Left 2 Cols: Recent Items */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Boxes className="h-5 w-5 text-emerald-400" />
+                <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                  <Boxes className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                   {t('recently_added')}
                 </h2>
                 <button
                   onClick={() => setCurrentView('items')}
-                  className="text-xs font-medium text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                  className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:underline flex items-center gap-1"
                 >
                   {isHu ? 'Összes megtekintése' : 'View all'} ({items.length}) <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
 
               {items.length === 0 ? (
-                <div className="p-12 text-center rounded-2xl border border-slate-800 bg-slate-900/40">
-                  <Boxes className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                  <h3 className="text-base font-semibold text-white">{t('no_items_yet')}</h3>
-                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                <div className="p-8 sm:p-12 text-center rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)]">
+                  <Boxes className="h-12 w-12 text-[var(--text-sub,#B5BDC6)]/50 mx-auto mb-3" />
+                  <h3 className="text-base font-semibold text-[var(--text-main,#E0E3E6)]">{t('no_items_yet')}</h3>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-1 max-w-sm mx-auto">
                     {isHu ? 'Kezdd el a leltározást szerszámaid, elektronikád vagy értékeid rögzítésével.' : 'Start building your personal inventory by recording your tools, electronics, or equipment.'}
                   </p>
                   <button
                     onClick={handleOpenAddThing}
-                    className="mt-4 px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-semibold text-xs inline-flex items-center gap-1.5"
+                    className="mt-4 px-4 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors shadow"
                   >
                     <Plus className="h-4 w-4" /> {t('add_first_thing')}
                   </button>
@@ -327,14 +327,14 @@ export const DashboardView: React.FC = () => {
             <div className="space-y-6">
               
               {/* Warranty Alert Box */}
-              <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[var(--status-success,#34D399)]" />
                   {t('warranty_tracker')}
                 </h3>
 
                 {activeWarranties.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-2">{t('no_warranty')}</p>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] py-2">{t('no_warranty')}</p>
                 ) : (
                   <div className="space-y-3">
                     {activeWarranties.slice(0, 4).map(item => {
@@ -345,19 +345,19 @@ export const DashboardView: React.FC = () => {
                         <div
                           key={item.id}
                           onClick={() => setSelectedItemId(item.id)}
-                          className="p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-700 cursor-pointer transition-colors flex items-center justify-between"
+                          className="p-3 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] hover:border-[var(--color-primary-blue,#2563EB)]/50 cursor-pointer transition-colors flex items-center justify-between"
                         >
                           <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-xs font-semibold text-white truncate">{item.name}</p>
-                            <p className="text-[11px] text-slate-400 truncate">
+                            <p className="text-xs font-semibold text-[var(--text-main,#E0E3E6)] truncate">{item.name}</p>
+                            <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] truncate">
                               {getLocationPath(item.location_id)}
                             </p>
                           </div>
                           <div className="text-right">
                             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               isExpiringSoon
-                                ? 'bg-amber-950 text-amber-400 border border-amber-800/60'
-                                : 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                                ? 'bg-[var(--status-warning,#F59E0B)]/20 text-[var(--status-warning,#F59E0B)] border border-[var(--status-warning,#F59E0B)]/40'
+                                : 'bg-[var(--status-success,#34D399)]/20 text-[var(--status-success,#34D399)] border border-[var(--status-success,#34D399)]/40'
                             }`}>
                               {isExpiringSoon ? (
                                 <>
@@ -371,7 +371,7 @@ export const DashboardView: React.FC = () => {
                                 </>
                               )}
                             </span>
-                            <p className="text-[10px] text-slate-400 mt-1">
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-1">
                               {expDate.toLocaleDateString()}
                             </p>
                           </div>
@@ -383,15 +383,15 @@ export const DashboardView: React.FC = () => {
               </div>
 
               {/* Quick Categories Overview */}
-              <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-4">
+              <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-4 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-emerald-400" />
+                  <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                     {t('categories_summary')}
                   </h3>
                   <button
                     onClick={() => setCurrentView('categories')}
-                    className="text-xs text-emerald-400 hover:text-emerald-300"
+                    className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:underline"
                   >
                     {isHu ? 'Összes megtekintése' : 'View all'}
                   </button>
@@ -407,12 +407,12 @@ export const DashboardView: React.FC = () => {
                       <div
                         key={cat.id}
                         onClick={() => setCurrentView('categories')}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/50 cursor-pointer transition-colors text-xs"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 border border-[var(--border-color,#56616D)]/40 cursor-pointer transition-colors text-xs"
                       >
-                        <span className="font-medium text-slate-200">{getCategoryName(cat.id)}</span>
-                        <div className="flex items-center gap-3 text-slate-400">
+                        <span className="font-medium text-[var(--text-main,#E0E3E6)]">{getCategoryName(cat.id)}</span>
+                        <div className="flex items-center gap-3 text-[var(--text-sub,#B5BDC6)]">
                           <span>{count} {isHu ? 'tárgy' : 'items'}</span>
-                          <span className="font-semibold text-emerald-400">{formatCurrency(value)}</span>
+                          <span className="font-semibold text-[var(--status-success,#34D399)]">{formatCurrency(value)}</span>
                         </div>
                       </div>
                     );
@@ -432,50 +432,50 @@ export const DashboardView: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             
             {/* Card 1: Estimated Inventory Value */}
-            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-2">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-2 shadow-sm">
+              <div className="flex items-center justify-between text-[var(--text-sub,#B5BDC6)] text-xs font-semibold uppercase tracking-wider">
                 <span>{isHu ? 'Aktuális Leltárérték' : 'Estimated Total Value'}</span>
-                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <div className="p-2 rounded-xl bg-[var(--status-success,#34D399)]/10 border border-[var(--status-success,#34D399)]/20 text-[var(--status-success,#34D399)]">
                   <Euro className="h-4 w-4" />
                 </div>
               </div>
               <div className="pt-2">
-                <span className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">
+                <span className="text-2xl sm:text-3xl font-black text-[var(--status-success,#34D399)] tracking-tight">
                   {formatCurrency(totalCurrentValue)}
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
+              <div className="text-[11px] text-[var(--text-sub,#B5BDC6)] flex items-center justify-between pt-1">
                 <span>{isHu ? 'Értékelt tárgyak:' : 'Valued items:'}</span>
-                <span className="font-bold text-slate-200">{itemsWithValueCount} / {totalItems} db</span>
+                <span className="font-bold text-[var(--text-main,#E0E3E6)]">{itemsWithValueCount} / {totalItems} db</span>
               </div>
             </div>
 
             {/* Card 2: Original Purchase Price */}
-            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-2">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-2 shadow-sm">
+              <div className="flex items-center justify-between text-[var(--text-sub,#B5BDC6)] text-xs font-semibold uppercase tracking-wider">
                 <span>{isHu ? 'Összes Vásárlási Ár' : 'Total Purchase Price'}</span>
-                <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <div className="p-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)]/10 border border-[var(--color-primary-blue,#2563EB)]/20 text-[var(--color-primary-blue,#2563EB)]">
                   <Coins className="h-4 w-4" />
                 </div>
               </div>
               <div className="pt-2">
-                <span className="text-2xl sm:text-3xl font-black text-blue-400 tracking-tight">
+                <span className="text-2xl sm:text-3xl font-black text-[var(--color-primary-blue,#2563EB)] tracking-tight">
                   {formatCurrency(totalPurchasePrice)}
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
+              <div className="text-[11px] text-[var(--text-sub,#B5BDC6)] flex items-center justify-between pt-1">
                 <span>{isHu ? 'Ismert vételár:' : 'Known purchase price:'}</span>
-                <span className="font-bold text-slate-200">{items.filter(i => (i.purchase_price || 0) > 0).length} tárgy</span>
+                <span className="font-bold text-[var(--text-main,#E0E3E6)]">{items.filter(i => (i.purchase_price || 0) > 0).length} tárgy</span>
               </div>
             </div>
 
             {/* Card 3: Value Change (Difference) */}
-            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-2">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-2 shadow-sm">
+              <div className="flex items-center justify-between text-[var(--text-sub,#B5BDC6)] text-xs font-semibold uppercase tracking-wider">
                 <span>{isHu ? 'Értékváltozás' : 'Value Change'}</span>
                 <div className={`p-2 rounded-xl ${
                   valueDifference >= 0
-                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                    ? 'bg-[var(--status-success,#34D399)]/10 border border-[var(--status-success,#34D399)]/20 text-[var(--status-success,#34D399)]'
                     : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
                 }`}>
                   {valueDifference >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
@@ -483,14 +483,14 @@ export const DashboardView: React.FC = () => {
               </div>
               <div className="pt-2 flex items-baseline gap-2">
                 <span className={`text-2xl sm:text-3xl font-black tracking-tight ${
-                  valueDifference >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  valueDifference >= 0 ? 'text-[var(--status-success,#34D399)]' : 'text-rose-400'
                 }`}>
                   {valueDifference >= 0 ? '+' : ''}{formatCurrency(valueDifference)}
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
+              <div className="text-[11px] text-[var(--text-sub,#B5BDC6)] flex items-center justify-between pt-1">
                 <span>{isHu ? 'Százalékos elmozdulás:' : 'Percentage shift:'}</span>
-                <span className={`font-bold flex items-center gap-0.5 ${valueDifference >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <span className={`font-bold flex items-center gap-0.5 ${valueDifference >= 0 ? 'text-[var(--status-success,#34D399)]' : 'text-rose-400'}`}>
                   {valueDifference >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                   {valueChangePercent.toFixed(1)}%
                 </span>
@@ -498,21 +498,21 @@ export const DashboardView: React.FC = () => {
             </div>
 
             {/* Card 4: Net Asset Valuation */}
-            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-2">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-2 shadow-sm">
+              <div className="flex items-center justify-between text-[var(--text-sub,#B5BDC6)] text-xs font-semibold uppercase tracking-wider">
                 <span>{isHu ? 'Nettó Vagyontárgy Érték' : 'Net Asset Value'}</span>
-                <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                <div className="p-2 rounded-xl bg-[var(--cat-books,#818CF8)]/15 border border-[var(--cat-books,#818CF8)]/30 text-[var(--cat-books,#818CF8)]">
                   <Wallet className="h-4 w-4" />
                 </div>
               </div>
               <div className="pt-2">
-                <span className="text-2xl sm:text-3xl font-black text-purple-300 tracking-tight">
+                <span className="text-2xl sm:text-3xl font-black text-[var(--text-main,#E0E3E6)] tracking-tight">
                   {formatCurrency(netInventoryValue)}
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
+              <div className="text-[11px] text-[var(--text-sub,#B5BDC6)] flex items-center justify-between pt-1">
                 <span>{isHu ? 'Fennmaradó tartozás:' : 'Remaining debt:'}</span>
-                <span className="font-bold text-amber-400">-{formatCurrency(totalRemainingDebt)}</span>
+                <span className="font-bold text-[var(--status-warning,#F59E0B)]">-{formatCurrency(totalRemainingDebt)}</span>
               </div>
             </div>
 
@@ -520,13 +520,13 @@ export const DashboardView: React.FC = () => {
 
           {/* Data Coverage Notice Banner */}
           {isPartialData && (
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-start gap-3">
-              <HelpCircle className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="p-4 rounded-[14px] bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] flex items-start gap-3 shadow-sm">
+              <HelpCircle className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)] shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-bold text-white">
+                <p className="font-bold text-[var(--text-main,#E0E3E6)]">
                   {isHu ? 'Részleges pénzügyi lefedettség' : 'Partial Financial Coverage Notice'}
                 </p>
-                <p className="text-slate-400 leading-relaxed">
+                <p className="text-[var(--text-sub,#B5BDC6)] leading-relaxed">
                   {isHu
                     ? `A leltáradban ${itemsWithoutValueCount} tárgynál nincs megadva vásárlási ár vagy becsült érték. Az analitika kizárólag a meglévő ismert értékadatok alapján számol, a hiányzó értékeket nem veszi figyelembe nullaként.`
                     : `${itemsWithoutValueCount} items in your inventory currently lack purchase price or current valuation. Analytics calculates strictly based on provided financial figures without falsely assuming zero.`}
@@ -539,40 +539,40 @@ export const DashboardView: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             {/* Left Col: Category Financial Distribution */}
-            <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2.5">
-                  <Tag className="h-5 w-5 text-emerald-400" />
+            <div className="p-6 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-6 shadow-sm">
+              <div className="flex items-center justify-between border-b border-[var(--border-color,#56616D)] pb-4">
+                <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2.5">
+                  <Tag className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                   <span>{isHu ? 'Kategóriánkénti Megoszlás' : 'Category Valuation Breakdown'}</span>
                 </h3>
-                <span className="text-xs font-semibold text-slate-400">
+                <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">
                   {categoryStats.length} {isHu ? 'kategória' : 'categories'}
                 </span>
               </div>
 
               {categoryStats.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-8">{isHu ? 'Nincs megjeleníthető kategória adat.' : 'No category valuation data available.'}</p>
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)] text-center py-8">{isHu ? 'Nincs megjeleníthető kategória adat.' : 'No category valuation data available.'}</p>
               ) : (
                 <div className="space-y-4">
                   {categoryStats.map(cat => (
                     <div key={cat.id} className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-semibold text-white truncate">{cat.name}</span>
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] font-bold">
+                          <span className="font-semibold text-[var(--text-main,#E0E3E6)] truncate">{cat.name}</span>
+                          <span className="px-2 py-0.5 rounded-md bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] text-[10px] font-bold">
                             {cat.count} db
                           </span>
                         </div>
                         <div className="text-right whitespace-nowrap">
-                          <span className="font-bold text-emerald-400 mr-2">{formatCurrency(cat.value)}</span>
-                          <span className="text-slate-400 text-[11px]">({cat.percentage.toFixed(1)}%)</span>
+                          <span className="font-bold text-[var(--status-success,#34D399)] mr-2">{formatCurrency(cat.value)}</span>
+                          <span className="text-[var(--text-sub,#B5BDC6)] text-[11px]">({cat.percentage.toFixed(1)}%)</span>
                         </div>
                       </div>
                       
                       {/* Visual Percentage Progress Bar */}
-                      <div className="w-full h-2 rounded-full bg-slate-950 overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-[var(--surface-bg,#465362)] overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--status-success,#34D399)] to-teal-400 transition-all duration-500"
                           style={{ width: `${Math.max(2, Math.min(100, cat.percentage))}%` }}
                         />
                       </div>
@@ -583,40 +583,40 @@ export const DashboardView: React.FC = () => {
             </div>
 
             {/* Right Col: Location Financial Distribution */}
-            <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2.5">
-                  <Building2 className="h-5 w-5 text-blue-400" />
+            <div className="p-6 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-6 shadow-sm">
+              <div className="flex items-center justify-between border-b border-[var(--border-color,#56616D)] pb-4">
+                <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2.5">
+                  <Building2 className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
                   <span>{isHu ? 'Helyszínenkénti Megoszlás' : 'Location Valuation Breakdown'}</span>
                 </h3>
-                <span className="text-xs font-semibold text-slate-400">
+                <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">
                   {locationStats.length} {isHu ? 'helyszín' : 'locations'}
                 </span>
               </div>
 
               {locationStats.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-8">{isHu ? 'Nincs megjeleníthető helyszín adat.' : 'No location valuation data available.'}</p>
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)] text-center py-8">{isHu ? 'Nincs megjeleníthető helyszín adat.' : 'No location valuation data available.'}</p>
               ) : (
                 <div className="space-y-4">
                   {locationStats.map(loc => (
                     <div key={loc.id} className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-semibold text-white truncate">{loc.name}</span>
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] font-bold">
+                          <span className="font-semibold text-[var(--text-main,#E0E3E6)] truncate">{loc.name}</span>
+                          <span className="px-2 py-0.5 rounded-md bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] text-[10px] font-bold">
                             {loc.count} db
                           </span>
                         </div>
                         <div className="text-right whitespace-nowrap">
-                          <span className="font-bold text-blue-400 mr-2">{formatCurrency(loc.value)}</span>
-                          <span className="text-slate-400 text-[11px]">({loc.percentage.toFixed(1)}%)</span>
+                          <span className="font-bold text-[var(--color-primary-blue,#2563EB)] mr-2">{formatCurrency(loc.value)}</span>
+                          <span className="text-[var(--text-sub,#B5BDC6)] text-[11px]">({loc.percentage.toFixed(1)}%)</span>
                         </div>
                       </div>
                       
                       {/* Visual Percentage Progress Bar */}
-                      <div className="w-full h-2 rounded-full bg-slate-950 overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-[var(--surface-bg,#465362)] overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-400 transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--color-primary-blue,#2563EB)] to-indigo-400 transition-all duration-500"
                           style={{ width: `${Math.max(2, Math.min(100, loc.percentage))}%` }}
                         />
                       </div>
@@ -632,53 +632,53 @@ export const DashboardView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Installments Debt Breakdown */}
-            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-3">
+            <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-indigo-400" />
+                <h4 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-[var(--cat-books,#818CF8)]" />
                   <span>{isHu ? 'Részletfizetési Kötelezettségek' : 'Financing & Debt Commitments'}</span>
                 </h4>
                 <button
                   onClick={() => setCurrentView('financing')}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                  className="text-xs text-[var(--cat-books,#818CF8)] hover:underline font-semibold"
                 >
                   {isHu ? 'Kezelés' : 'Manage'}
                 </button>
               </div>
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between text-xs">
+              <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between text-xs">
                 <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">{isHu ? 'Fennmaradó tartozás' : 'Remaining Debt'}</span>
-                  <span className="text-lg font-black text-indigo-300 mt-0.5 block">{formatCurrency(totalRemainingDebt)}</span>
+                  <span className="block text-[10px] text-[var(--text-sub,#B5BDC6)] uppercase font-bold">{isHu ? 'Fennmaradó tartozás' : 'Remaining Debt'}</span>
+                  <span className="text-lg font-black text-[var(--status-warning,#F59E0B)] mt-0.5 block">{formatCurrency(totalRemainingDebt)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">{isHu ? 'Havi teher' : 'Monthly Liability'}</span>
-                  <span className="text-lg font-black text-white mt-0.5 block">{formatCurrency(totalMonthlyInstallment)}</span>
+                  <span className="block text-[10px] text-[var(--text-sub,#B5BDC6)] uppercase font-bold">{isHu ? 'Havi teher' : 'Monthly Liability'}</span>
+                  <span className="text-lg font-black text-[var(--text-main,#E0E3E6)] mt-0.5 block">{formatCurrency(totalMonthlyInstallment)}</span>
                 </div>
               </div>
             </div>
 
             {/* Maintenance Costs Breakdown */}
-            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/90 space-y-3">
+            <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Wrench className="h-4 w-4 text-amber-400" />
+                <h4 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-[var(--status-warning,#F59E0B)]" />
                   <span>{isHu ? 'Szerviz- és Ráfordítási Költségek' : 'Maintenance & Repair Costs'}</span>
                 </h4>
                 <button
                   onClick={() => setCurrentView('repairs')}
-                  className="text-xs text-amber-400 hover:text-amber-300 font-semibold"
+                  className="text-xs text-[var(--status-warning,#F59E0B)] hover:underline font-semibold"
                 >
                   {isHu ? 'Kezelés' : 'Manage'}
                 </button>
               </div>
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between text-xs">
+              <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between text-xs">
                 <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">{isHu ? 'Összes szervizköltség' : 'Total Repair Costs'}</span>
-                  <span className="text-lg font-black text-amber-300 mt-0.5 block">{formatCurrency(totalRepairCosts)}</span>
+                  <span className="block text-[10px] text-[var(--text-sub,#B5BDC6)] uppercase font-bold">{isHu ? 'Összes szervizköltség' : 'Total Repair Costs'}</span>
+                  <span className="text-lg font-black text-[var(--status-warning,#F59E0B)] mt-0.5 block">{formatCurrency(totalRepairCosts)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">{isHu ? 'Folyamatban lévő szerviz' : 'Active Repairs'}</span>
-                  <span className="text-lg font-black text-white mt-0.5 block">{pendingRepairsCount} {isHu ? 'tárgy' : 'items'}</span>
+                  <span className="block text-[10px] text-[var(--text-sub,#B5BDC6)] uppercase font-bold">{isHu ? 'Folyamatban lévő szerviz' : 'Active Repairs'}</span>
+                  <span className="text-lg font-black text-[var(--status-warning,#F59E0B)] mt-0.5 block">{pendingRepairsCount} {isHu ? 'tárgy' : 'items'}</span>
                 </div>
               </div>
             </div>

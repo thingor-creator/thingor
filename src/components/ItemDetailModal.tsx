@@ -179,12 +179,12 @@ export const ItemDetailModal: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 pb-16 w-full text-slate-100 animate-in fade-in duration-200">
+    <div className="space-y-6 pb-16 w-full text-[var(--text-main,#E0E3E6)] animate-in fade-in duration-200">
       {/* Top Back Navigation Bar */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => setSelectedItemId(null)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 hover:text-white hover:bg-slate-800 hover:border-slate-700 font-bold text-xs transition-all shadow-sm group"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] hover:border-[var(--border-color,#56616D)] font-bold text-xs transition-all shadow-sm group"
         >
           <ArrowLeft className="h-4 w-4 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
           <span>{isHu ? '← Vissza a tárgyaimhoz' : '← Back to My Items'}</span>
@@ -192,14 +192,14 @@ export const ItemDetailModal: React.FC = () => {
       </div>
 
       {/* Main Full Page Card Container */}
-      <div className="w-full flex flex-col rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+      <div className="w-full flex flex-col rounded-3xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] shadow-2xl overflow-hidden">
 
         {/* Header with Hero Banner */}
-        <div className="relative border-b border-slate-800 bg-slate-950">
+        <div className="relative border-b border-[var(--border-color,#56616D)] bg-[var(--bg-main,#303943)]/80">
           <div className="flex flex-col md:flex-row gap-6 p-6">
 
             {/* Main Photo */}
-            <div className="h-52 w-full md:w-64 rounded-2xl bg-slate-950/80 overflow-hidden flex-shrink-0 border border-slate-800/80 relative flex items-center justify-center p-3 shadow-lg">
+            <div className="h-52 w-full md:w-64 rounded-2xl bg-[var(--card-bg,#3A4551)] overflow-hidden flex-shrink-0 border border-[var(--border-color,#56616D)] relative flex items-center justify-center p-3 shadow-lg">
               {item.photo_url ? (
                 <img
                   src={item.photo_url}
@@ -210,7 +210,7 @@ export const ItemDetailModal: React.FC = () => {
                   }}
                 />
               ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center text-slate-600">
+                <div className="h-full w-full flex flex-col items-center justify-center text-[var(--text-sub,#B5BDC6)]/60">
                   <ImageIcon className="h-8 w-8 mb-1" />
                   <span className="text-xs">{isHu ? 'Nincs kép' : 'No photo'}</span>
                 </div>
@@ -227,7 +227,7 @@ export const ItemDetailModal: React.FC = () => {
                       <select
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="px-2 py-1 rounded-lg text-xs font-semibold bg-slate-950 text-white border border-emerald-500 focus:outline-none"
+                        className="px-2 py-1 rounded-lg text-xs font-semibold bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border border-emerald-500 focus:outline-none"
                         autoFocus
                       >
                         {categories.map(cat => (
@@ -237,7 +237,7 @@ export const ItemDetailModal: React.FC = () => {
                       <button onClick={(e) => saveInlineField(e, 'category_id')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -258,7 +258,7 @@ export const ItemDetailModal: React.FC = () => {
                       <select
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="px-2 py-1 rounded-lg text-xs font-medium bg-slate-950 text-white border border-emerald-500 focus:outline-none"
+                        className="px-2 py-1 rounded-lg text-xs font-medium bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border border-emerald-500 focus:outline-none"
                         autoFocus
                       >
                         <option value="New">{isHu ? 'Új' : 'New'}</option>
@@ -271,21 +271,21 @@ export const ItemDetailModal: React.FC = () => {
                       <button onClick={(e) => saveInlineField(e, 'condition')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
                     <span
                       onClick={(e) => startInlineEdit(e, 'condition', item.condition)}
-                      className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 hover:text-white transition-all"
+                      className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)]/50 cursor-pointer hover:bg-[var(--border-color,#56616D)]/50 hover:text-white transition-all"
                       title={isHu ? 'Kattints az állapot módosításához' : 'Click to edit condition'}
                     >
                       {isHu ? `${item.condition} állapot` : `${item.condition} condition`}
                     </span>
                   )}
 
-                  <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1 ml-auto">
+                  <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-medium flex items-center gap-1 ml-auto">
                     <Edit3 className="h-3 w-3 text-emerald-400" />
                     {isHu ? 'Kattints az adatra a gyors szerkesztéshez' : 'Click field for inline edit'}
                   </span>
@@ -298,7 +298,7 @@ export const ItemDetailModal: React.FC = () => {
                       type="text"
                       value={inlineValue}
                       onChange={(e) => setInlineValue(e.target.value)}
-                      className="text-xl font-extrabold bg-slate-950 border border-emerald-500 text-white rounded-xl px-3 py-1.5 w-full focus:outline-none"
+                      className="text-xl font-extrabold bg-[var(--surface-bg,#465362)] border border-emerald-500 text-[var(--text-main,#E0E3E6)] rounded-xl px-3 py-1.5 w-full focus:outline-none"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') saveInlineField(e, 'name');
@@ -315,7 +315,7 @@ export const ItemDetailModal: React.FC = () => {
                     </button>
                     <button
                       onClick={cancelInlineEdit}
-                      className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white shrink-0"
+                      className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white shrink-0"
                       title={isHu ? 'Mégse' : 'Cancel'}
                     >
                       <X className="w-4 h-4" />
@@ -324,10 +324,10 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'name', item.name)}
-                    className="group/title cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-900/80 hover:border hover:border-emerald-500/40 transition-all relative flex items-center justify-between"
+                    className="group/title cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-[var(--surface-bg,#465362)]/60 hover:border hover:border-emerald-500/40 transition-all relative flex items-center justify-between"
                     title={isHu ? 'Kattints a név módosításához' : 'Click to edit name'}
                   >
-                    <h2 className="text-2xl font-extrabold text-white tracking-tight group-hover/title:text-emerald-300 transition-colors">
+                    <h2 className="text-2xl font-extrabold text-[var(--text-main,#E0E3E6)] tracking-tight group-hover/title:text-emerald-300 transition-colors">
                       {item.name}
                     </h2>
                     <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/title:opacity-100 transition-opacity ml-2 shrink-0" />
@@ -340,7 +340,7 @@ export const ItemDetailModal: React.FC = () => {
                     <select
                       value={inlineValue}
                       onChange={(e) => setInlineValue(e.target.value)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-950 text-white border border-emerald-500 focus:outline-none"
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border border-emerald-500 focus:outline-none"
                       autoFocus
                     >
                       {locations.map(loc => (
@@ -350,18 +350,18 @@ export const ItemDetailModal: React.FC = () => {
                     <button onClick={(e) => saveInlineField(e, 'location_id')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                       <Check className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                    <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'location_id', item.location_id)}
-                    className="mt-2 flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer group/loc hover:text-emerald-300 transition-colors"
+                    className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-sub,#B5BDC6)] cursor-pointer group/loc hover:text-emerald-300 transition-colors"
                     title={isHu ? 'Kattints a helyszín módosításához' : 'Click to edit location'}
                   >
                     <MapPin className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                    <span className="font-medium text-slate-300 group-hover/loc:text-emerald-300 transition-colors">{locationPath}</span>
+                    <span className="font-medium text-[var(--text-main,#E0E3E6)] group-hover/loc:text-emerald-300 transition-colors">{locationPath}</span>
                     <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/loc:opacity-100 transition-opacity ml-1" />
                   </div>
                 )}
@@ -379,7 +379,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 <button
                   onClick={() => setIsShareModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[var(--primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs shadow transition-all"
                 >
                   <Share2 className="h-3.5 w-3.5" />
                   {isHu ? 'Megosztás' : 'Share'}
@@ -403,7 +403,7 @@ export const ItemDetailModal: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setIsDeleting(false)}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white text-xs"
                     >
                       {isHu ? 'Mégse' : 'Cancel'}
                     </button>
@@ -411,7 +411,7 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => setIsDeleting(true)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-rose-950 hover:text-rose-300 hover:border-rose-800/60 text-slate-400 text-xs transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] hover:bg-rose-950 hover:text-rose-300 hover:border-rose-800/60 text-[var(--text-sub,#B5BDC6)] text-xs transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     {isHu ? 'Törlés' : 'Delete'}
@@ -423,12 +423,12 @@ export const ItemDetailModal: React.FC = () => {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-t border-slate-800 px-6 gap-2 text-xs font-semibold overflow-x-auto">
+          <div className="flex border-t border-[var(--border-color,#56616D)] px-6 gap-2 text-xs font-semibold overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
               className={`py-3 px-3 border-b-2 transition-colors ${activeTab === 'overview'
                   ? 'border-emerald-400 text-emerald-400'
-                  : 'border-transparent text-slate-400 hover:text-white'
+                  : 'border-transparent text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
                 }`}
             >
               {isHu ? 'Áttekintés' : 'Overview'}
@@ -437,7 +437,7 @@ export const ItemDetailModal: React.FC = () => {
               onClick={() => setActiveTab('documents')}
               className={`py-3 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'documents'
                   ? 'border-emerald-400 text-emerald-400'
-                  : 'border-transparent text-slate-400 hover:text-white'
+                  : 'border-transparent text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
                 }`}
             >
               {isHu ? 'Dokumentumok' : 'Documents'} ({itemDocs.length})
@@ -446,7 +446,7 @@ export const ItemDetailModal: React.FC = () => {
               onClick={() => setActiveTab('photos')}
               className={`py-3 px-3 border-b-2 transition-colors ${activeTab === 'photos'
                   ? 'border-emerald-400 text-emerald-400'
-                  : 'border-transparent text-slate-400 hover:text-white'
+                  : 'border-transparent text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
                 }`}
             >
               {isHu ? 'Fényképek' : 'Photos'} ({(item.additional_photos?.length || 0) + (item.photo_url ? 1 : 0)})
@@ -455,7 +455,7 @@ export const ItemDetailModal: React.FC = () => {
               onClick={() => setActiveTab('notes')}
               className={`py-3 px-3 border-b-2 transition-colors ${activeTab === 'notes'
                   ? 'border-emerald-400 text-emerald-400'
-                  : 'border-transparent text-slate-400 hover:text-white'
+                  : 'border-transparent text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
                 }`}
             >
               {isHu ? 'Megjegyzések' : 'Notes'}
@@ -472,13 +472,13 @@ export const ItemDetailModal: React.FC = () => {
 
               {/* Description Inline Edit */}
               {editingField === 'description' ? (
-                <div className="p-3.5 rounded-xl border border-emerald-500 bg-slate-950 space-y-2" onClick={(e) => e.stopPropagation()}>
+                <div className="p-3.5 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-2" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
                       {isHu ? 'Leírás szerkesztése' : 'Edit Description'}
                     </h3>
                     <div className="flex items-center gap-1">
-                      <button onClick={cancelInlineEdit} className="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">
+                      <button onClick={cancelInlineEdit} className="px-2.5 py-1 rounded-lg bg-[var(--surface-bg,#465362)] text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? 'Mégse' : 'Cancel'}
                       </button>
                       <button onClick={(e) => saveInlineField(e, 'description')} className="px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1">
@@ -490,24 +490,24 @@ export const ItemDetailModal: React.FC = () => {
                     rows={3}
                     value={inlineValue}
                     onChange={(e) => setInlineValue(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-sm focus:outline-none"
+                    className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-main,#E0E3E6)] text-sm focus:outline-none"
                     autoFocus
                   />
                 </div>
               ) : (
                 <div
                   onClick={(e) => startInlineEdit(e, 'description', item.description || '')}
-                  className="group/desc cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all relative"
+                  className="group/desc cursor-pointer p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all relative"
                   title={isHu ? 'Kattints a leírás inline szerkesztéséhez' : 'Click to edit description'}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">
                       {isHu ? 'Leírás' : 'Description'}
                     </h3>
                     <Edit3 className="h-3.5 w-3.5 text-emerald-400 opacity-0 group-hover/desc:opacity-100 transition-opacity" />
                   </div>
-                  <p className="text-sm text-slate-300 leading-relaxed">
-                    {item.description || <span className="text-slate-500 italic">{isHu ? 'Kattints ide leírás hozzáadásához...' : 'Click to add description...'}</span>}
+                  <p className="text-sm text-[var(--text-main,#E0E3E6)] leading-relaxed">
+                    {item.description || <span className="text-[var(--text-sub,#B5BDC6)]/60 italic">{isHu ? 'Kattints ide leírás hozzáadásához...' : 'Click to add description...'}</span>}
                   </p>
                 </div>
               )}
@@ -516,7 +516,7 @@ export const ItemDetailModal: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {/* Purchase Date */}
                 {editingField === 'purchase_date' ? (
-                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
                     </span>
@@ -527,13 +527,13 @@ export const ItemDetailModal: React.FC = () => {
                         onChange={(e) => setInlineValue(e.target.value)}
                         onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
                         onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
-                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg cursor-pointer font-medium"
+                        className="w-full p-1 text-xs bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg cursor-pointer font-medium"
                         autoFocus
                       />
                       <button onClick={(e) => saveInlineField(e, 'purchase_date')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -541,16 +541,16 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'purchase_date', item.purchase_date || '')}
-                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    className="group/spec p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all cursor-pointer relative"
                     title={isHu ? 'Kattints a vásárlási dátum szerkesztéséhez' : 'Click to edit purchase date'}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vásárlás dátuma' : 'Purchase Date'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
-                    <span className="text-sm font-bold text-white mt-1 block">
+                    <span className="text-sm font-bold text-[var(--text-main,#E0E3E6)] mt-1 block">
                       {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
                     </span>
                   </div>
@@ -558,7 +558,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 {/* Purchase Price */}
                 {editingField === 'purchase_price' ? (
-                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
                       <Coins className="h-3.5 w-3.5" /> {isHu ? 'Vételár (Ft)' : 'Purchase Price (€)'}
                     </span>
@@ -569,7 +569,7 @@ export const ItemDetailModal: React.FC = () => {
                         placeholder="0.00"
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        className="w-full p-1 text-xs bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') saveInlineField(e, 'purchase_price');
@@ -579,7 +579,7 @@ export const ItemDetailModal: React.FC = () => {
                       <button onClick={(e) => saveInlineField(e, 'purchase_price')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -587,16 +587,16 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'purchase_price', item.purchase_price ?? '')}
-                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    className="group/spec p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all cursor-pointer relative"
                     title={isHu ? 'Kattints a vételár szerkesztéséhez' : 'Click to edit purchase price'}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1">
                         <Coins className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Vételár' : 'Purchase Price'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
-                    <span className="text-sm font-bold text-white mt-1 block">
+                    <span className="text-sm font-bold text-[var(--text-main,#E0E3E6)] mt-1 block">
                       {item.purchase_price ? (isHu ? `${Number(item.purchase_price).toLocaleString('hu-HU')} Ft` : `€${item.purchase_price}`) : 'N/A'}
                     </span>
                   </div>
@@ -604,7 +604,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 {/* Current Value */}
                 {editingField === 'current_value' ? (
-                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
                       <Coins className="h-3.5 w-3.5" /> {isHu ? 'Jelenlegi érték (Ft)' : 'Current Value (€)'}
                     </span>
@@ -615,7 +615,7 @@ export const ItemDetailModal: React.FC = () => {
                         placeholder="0.00"
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        className="w-full p-1 text-xs bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') saveInlineField(e, 'current_value');
@@ -625,7 +625,7 @@ export const ItemDetailModal: React.FC = () => {
                       <button onClick={(e) => saveInlineField(e, 'current_value')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -633,11 +633,11 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'current_value', item.current_value ?? '')}
-                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    className="group/spec p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all cursor-pointer relative"
                     title={isHu ? 'Kattints a jelenlegi érték szerkesztéséhez' : 'Click to edit current value'}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1">
                         <Coins className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Jelenlegi érték' : 'Current Value'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
@@ -650,7 +650,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 {/* Store Seller */}
                 {editingField === 'store_seller' ? (
-                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
                       <Store className="h-3.5 w-3.5" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
                     </span>
@@ -660,7 +660,7 @@ export const ItemDetailModal: React.FC = () => {
                         placeholder={isHu ? 'pl. MediaMarkt' : 'e.g. MediaMarkt'}
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        className="w-full p-1 text-xs bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') saveInlineField(e, 'store_seller');
@@ -670,7 +670,7 @@ export const ItemDetailModal: React.FC = () => {
                       <button onClick={(e) => saveInlineField(e, 'store_seller')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -678,16 +678,16 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'store_seller', item.store_seller || '')}
-                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    className="group/spec p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all cursor-pointer relative"
                     title={isHu ? 'Kattints az üzlet szerkesztéséhez' : 'Click to edit store'}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1">
                         <Store className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Üzlet / Eladó' : 'Store / Seller'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
-                    <span className="text-sm font-semibold text-white mt-1 block truncate">
+                    <span className="text-sm font-semibold text-[var(--text-main,#E0E3E6)] mt-1 block truncate">
                       {item.store_seller || (isHu ? 'Nincs megadva' : 'Unspecified')}
                     </span>
                   </div>
@@ -695,7 +695,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 {/* Location Path */}
                 {editingField === 'location_id' ? (
-                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" /> {isHu ? 'Helyszín' : 'Location'}
                     </span>
@@ -703,7 +703,7 @@ export const ItemDetailModal: React.FC = () => {
                       <select
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        className="w-full p-1 text-xs bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg"
                         autoFocus
                       >
                         {locations.map(loc => (
@@ -713,7 +713,7 @@ export const ItemDetailModal: React.FC = () => {
                       <button onClick={(e) => saveInlineField(e, 'location_id')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -721,16 +721,16 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'location_id', item.location_id)}
-                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    className="group/spec p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all cursor-pointer relative"
                     title={isHu ? 'Kattints a helyszín szerkesztéséhez' : 'Click to edit location'}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1">
                         <MapPin className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Helyszín' : 'Location'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
-                    <span className="text-xs font-semibold text-white mt-1 block truncate">
+                    <span className="text-xs font-semibold text-[var(--text-main,#E0E3E6)] mt-1 block truncate">
                       {locationPath}
                     </span>
                   </div>
@@ -738,7 +738,7 @@ export const ItemDetailModal: React.FC = () => {
 
                 {/* Condition */}
                 {editingField === 'condition' ? (
-                  <div className="p-3 rounded-xl border border-emerald-500 bg-slate-950 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="p-3 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
                       <Tag className="h-3.5 w-3.5" /> {isHu ? 'Állapot' : 'Condition'}
                     </span>
@@ -746,7 +746,7 @@ export const ItemDetailModal: React.FC = () => {
                       <select
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
-                        className="w-full p-1 text-xs bg-slate-900 border border-slate-800 text-white rounded-lg"
+                        className="w-full p-1 text-xs bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg"
                         autoFocus
                       >
                         <option value="New">{isHu ? 'Új' : 'New'}</option>
@@ -759,7 +759,7 @@ export const ItemDetailModal: React.FC = () => {
                       <button onClick={(e) => saveInlineField(e, 'condition')} className="p-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-slate-800 text-slate-400">
+                      <button onClick={cancelInlineEdit} className="p-1 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -767,16 +767,16 @@ export const ItemDetailModal: React.FC = () => {
                 ) : (
                   <div
                     onClick={(e) => startInlineEdit(e, 'condition', item.condition)}
-                    className="group/spec p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer relative"
+                    className="group/spec p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all cursor-pointer relative"
                     title={isHu ? 'Kattints az állapot szerkesztéséhez' : 'Click to edit condition'}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1">
                         <Tag className="h-3.5 w-3.5 text-emerald-400" /> {isHu ? 'Állapot' : 'Condition'}
                       </span>
                       <Edit3 className="h-3 w-3 text-emerald-400 opacity-0 group-hover/spec:opacity-100 transition-opacity" />
                     </div>
-                    <span className="text-sm font-bold text-white mt-1 block">
+                    <span className="text-sm font-bold text-[var(--text-main,#E0E3E6)] mt-1 block">
                       {item.condition}
                     </span>
                   </div>
@@ -785,14 +785,14 @@ export const ItemDetailModal: React.FC = () => {
 
               {/* WARRANTY CARD (Section 11) */}
               {editingField === 'warranty' ? (
-                <div className="p-4 rounded-2xl border border-emerald-500 bg-slate-950 space-y-3" onClick={(e) => e.stopPropagation()}>
+                <div className="p-4 rounded-2xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4" />
                       {isHu ? 'Garanciális Dátumok Szerkesztése' : 'Edit Warranty Dates'}
                     </h3>
                     <div className="flex items-center gap-1">
-                      <button onClick={cancelInlineEdit} className="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">
+                      <button onClick={cancelInlineEdit} className="px-2.5 py-1 rounded-lg bg-[var(--surface-bg,#465362)] text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? 'Mégse' : 'Cancel'}
                       </button>
                       <button onClick={(e) => saveInlineField(e, 'warranty')} className="px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1">
@@ -802,25 +802,25 @@ export const ItemDetailModal: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-slate-400 mb-1">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</label>
+                      <label className="block text-[var(--text-sub,#B5BDC6)] mb-1">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</label>
                       <input
                         type="date"
                         value={inlineValue}
                         onChange={(e) => setInlineValue(e.target.value)}
                         onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
                         onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
-                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg cursor-pointer font-medium"
+                        className="w-full p-1.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg cursor-pointer font-medium"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 mb-1">{isHu ? 'Garancia lejárata' : 'Warranty End'}</label>
+                      <label className="block text-[var(--text-sub,#B5BDC6)] mb-1">{isHu ? 'Garancia lejárata' : 'Warranty End'}</label>
                       <input
                         type="date"
                         value={inlineSecondValue}
                         onChange={(e) => setInlineSecondValue(e.target.value)}
                         onClick={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
                         onFocus={(e) => { try { (e.currentTarget as any).showPicker(); } catch (err) {} }}
-                        className="w-full p-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg cursor-pointer font-medium"
+                        className="w-full p-1.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] rounded-lg cursor-pointer font-medium"
                       />
                     </div>
                   </div>
@@ -828,11 +828,11 @@ export const ItemDetailModal: React.FC = () => {
               ) : (
                 <div
                   onClick={(e) => startInlineEdit(e, 'warranty', item.warranty_start || '', item.warranty_end || '')}
-                  className="group/war p-4 rounded-2xl border border-slate-800 bg-slate-950/80 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all cursor-pointer space-y-3 relative"
+                  className="group/war p-4 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all cursor-pointer space-y-3 relative"
                   title={isHu ? 'Kattints a garancia szerkesztéséhez' : 'Click to edit warranty'}
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-emerald-400" />
                       {isHu ? 'Garancia információk' : 'Warranty Info'}
                     </h3>
@@ -854,23 +854,23 @@ export const ItemDetailModal: React.FC = () => {
                       </span>
                     )}
                     {warrantyStatus === 'none' && (
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-[var(--text-sub,#B5BDC6)]/60">
                         {isHu ? 'Nincs megadva garanciális dátum' : 'No warranty dates set'}
                       </span>
                     )}
                   </div>
 
                   {item.warranty_end && (
-                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-800/80 text-xs">
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[var(--border-color,#56616D)] text-xs">
                       <div>
-                        <span className="text-slate-400 block">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</span>
-                        <span className="font-semibold text-white">
+                        <span className="text-[var(--text-sub,#B5BDC6)] block">{isHu ? 'Garancia kezdete' : 'Warranty Start'}</span>
+                        <span className="font-semibold text-[var(--text-main,#E0E3E6)]">
                           {item.warranty_start ? new Date(item.warranty_start).toLocaleDateString(isHu ? 'hu-HU' : 'en-US') : 'N/A'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block">{isHu ? 'Lejárat' : 'Expires'}</span>
-                        <span className="font-semibold text-white">
+                        <span className="text-[var(--text-sub,#B5BDC6)] block">{isHu ? 'Lejárat' : 'Expires'}</span>
+                        <span className="font-semibold text-[var(--text-main,#E0E3E6)]">
                           {new Date(item.warranty_end).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')}
                         </span>
                       </div>
@@ -898,29 +898,29 @@ export const ItemDetailModal: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between font-semibold text-slate-300">
+                      <div className="flex justify-between font-semibold text-[var(--text-main,#E0E3E6)]">
                         <span>{isHu ? 'Törlesztés:' : 'Progress:'}</span>
                         <span className="text-indigo-400">{itemFinancing.paid_installments} / {itemFinancing.total_installments} {isHu ? 'részlet' : 'months'} ({progress}%)</span>
                       </div>
-                      <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                      <div className="w-full bg-[var(--card-bg,#3A4551)] h-2 rounded-full overflow-hidden">
                         <div className="bg-indigo-500 h-full rounded-full transition-all" style={{ width: `${progress}%` }} />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
                       <div>
-                        <span className="text-slate-400 block">{isHu ? 'Havi részlet:' : 'Monthly:'}</span>
+                        <span className="text-[var(--text-sub,#B5BDC6)] block">{isHu ? 'Havi részlet:' : 'Monthly:'}</span>
                         <span className="font-bold text-indigo-300 text-sm">{itemFinancing.monthly_installment.toLocaleString()} Ft</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block">{isHu ? 'Fennálló tartozás:' : 'Remaining Debt:'}</span>
+                        <span className="text-[var(--text-sub,#B5BDC6)] block">{isHu ? 'Fennálló tartozás:' : 'Remaining Debt:'}</span>
                         <span className="font-bold text-rose-400 text-sm">{itemFinancing.remaining_debt.toLocaleString()} Ft</span>
                       </div>
                     </div>
 
                     {itemFinancing.remaining_installments > 0 && (
                       <div className="pt-2 border-t border-indigo-900/40 flex justify-between items-center">
-                        <span className="text-xs text-slate-400">{isHu ? 'Esedékes:' : 'Due:'} <strong>{itemFinancing.next_payment_date}</strong></span>
+                        <span className="text-xs text-[var(--text-sub,#B5BDC6)]">{isHu ? 'Esedékes:' : 'Due:'} <strong>{itemFinancing.next_payment_date}</strong></span>
                         <button
                           onClick={() => recordInstallmentPayment(itemFinancing.id)}
                           className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg transition"
@@ -940,9 +940,9 @@ export const ItemDetailModal: React.FC = () => {
                 const totalInvested = (item.purchase_price || 0) + totalRepairExp;
 
                 return (
-                  <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-3">
+                  <div className="p-4 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
                         <Wrench className="h-4 w-4 text-amber-400" />
                         {isHu ? 'Javítások & Ráfordítások' : 'Repairs & Maintenance Logs'}
                       </h3>
@@ -954,20 +954,20 @@ export const ItemDetailModal: React.FC = () => {
                     </div>
 
                     {itemRepairsList.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic">
+                      <p className="text-xs text-[var(--text-sub,#B5BDC6)]/60 italic">
                         {isHu ? 'Még nem rögzítettél ehhez a tárgyhoz javítási bejegyzést.' : 'No maintenance logs recorded for this item.'}
                       </p>
                     ) : (
                       <div className="space-y-2">
                         {itemRepairsList.map(rep => (
-                          <div key={rep.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between gap-2">
+                          <div key={rep.id} className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs flex items-center justify-between gap-2">
                             <div>
-                              <p className="font-semibold text-slate-200">{rep.fault_title}</p>
-                              <p className="text-slate-400 text-[11px]">{rep.reported_date} • {rep.repairer_name || (isHu ? 'Ismeretlen szerviz' : 'Service')}</p>
+                              <p className="font-semibold text-[var(--text-main,#E0E3E6)]">{rep.fault_title}</p>
+                              <p className="text-[var(--text-sub,#B5BDC6)] text-[11px]">{rep.reported_date} • {rep.repairer_name || (isHu ? 'Ismeretlen szerviz' : 'Service')}</p>
                             </div>
                             <div className="text-right">
                               <span className="font-bold text-amber-400 block">{rep.total_cost > 0 ? `${rep.total_cost.toLocaleString()} Ft` : (isHu ? 'Díjmentes' : 'Free')}</span>
-                              <span className="text-[10px] text-slate-400 uppercase font-semibold">{rep.status}</span>
+                              <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] uppercase font-semibold">{rep.status}</span>
                             </div>
                           </div>
                         ))}
@@ -1002,9 +1002,9 @@ export const ItemDetailModal: React.FC = () => {
                 };
 
                 return (
-                  <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-3">
+                  <div className="p-4 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
                         <Link2 className="h-4 w-4 text-emerald-400" />
                         {isHu ? 'Kapcsolódó Tárgyak & Tartozékok' : 'Linked Items & Accessories'}
                       </h3>
@@ -1018,15 +1018,15 @@ export const ItemDetailModal: React.FC = () => {
                     </div>
 
                     {isAddRelationOpen && (
-                      <form onSubmit={handleAddRelationSubmit} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2 text-xs">
+                      <form onSubmit={handleAddRelationSubmit} className="p-3 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-xl space-y-2 text-xs">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-slate-400 mb-1">{isHu ? 'Melyik tárggyal?' : 'Which item?'}</label>
+                            <label className="block text-[var(--text-sub,#B5BDC6)] mb-1">{isHu ? 'Melyik tárggyal?' : 'Which item?'}</label>
                             <select
                               required
                               value={targetItemIdRelation}
                               onChange={(e) => setTargetItemIdRelation(e.target.value)}
-                              className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                              className="w-full p-2 bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg text-[var(--text-main,#E0E3E6)]"
                             >
                               <option value="">{isHu ? '-- Válassz tárgyat --' : '-- Select item --'}</option>
                               {items.filter(i => i.id !== item.id).map(i => (
@@ -1036,11 +1036,11 @@ export const ItemDetailModal: React.FC = () => {
                           </div>
 
                           <div>
-                            <label className="block text-slate-400 mb-1">{isHu ? 'Kapcsolat típusa' : 'Relation type'}</label>
+                            <label className="block text-[var(--text-sub,#B5BDC6)] mb-1">{isHu ? 'Kapcsolat típusa' : 'Relation type'}</label>
                             <select
                               value={relationTypeForm}
                               onChange={(e) => setRelationTypeForm(e.target.value as any)}
-                              className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-white"
+                              className="w-full p-2 bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg text-[var(--text-main,#E0E3E6)]"
                             >
                               <option value="accessory">{isHu ? 'Tartozéka' : 'Accessory'}</option>
                               <option value="compatible">{isHu ? 'Kompatibilis vele' : 'Compatible'}</option>
@@ -1057,7 +1057,7 @@ export const ItemDetailModal: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setIsAddRelationOpen(false)}
-                            className="px-2.5 py-1 text-slate-400 hover:text-white"
+                            className="px-2.5 py-1 text-[var(--text-sub,#B5BDC6)] hover:text-white"
                           >
                             {isHu ? 'Mégse' : 'Cancel'}
                           </button>
@@ -1072,7 +1072,7 @@ export const ItemDetailModal: React.FC = () => {
                     )}
 
                     {currentRelations.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic">
+                      <p className="text-xs text-[var(--text-sub,#B5BDC6)]/60 italic">
                         {isHu ? 'Ehhez a tárgyhoz még nincs kapcsolódó tárgy vagy tartozék beállítva.' : 'No linked items or accessories configured for this item.'}
                       </p>
                     ) : (
@@ -1083,14 +1083,14 @@ export const ItemDetailModal: React.FC = () => {
                           const otherItem = items.find(i => i.id === otherItemId);
 
                           return (
-                            <div key={rel.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between gap-2">
+                            <div key={rel.id} className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
                                 <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-semibold text-[10px]">
                                   {getRelationLabel(rel.relation_type, isSource)}
                                 </span>
                                 <button
                                   onClick={() => otherItem && setSelectedItemId(otherItem.id)}
-                                  className="font-semibold text-white hover:text-emerald-400 transition"
+                                  className="font-semibold text-[var(--text-main,#E0E3E6)] hover:text-emerald-400 transition"
                                 >
                                   {otherItem ? otherItem.name : (isHu ? 'Törölt tárgy' : 'Deleted item')}
                                 </button>
@@ -1098,7 +1098,7 @@ export const ItemDetailModal: React.FC = () => {
 
                               <button
                                 onClick={() => deleteItemRelation(rel.id)}
-                                className="p-1 text-slate-400 hover:text-red-400"
+                                className="p-1 text-[var(--text-sub,#B5BDC6)] hover:text-red-400"
                                 title={isHu ? 'Kapcsolat törlése' : 'Remove link'}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1119,7 +1119,7 @@ export const ItemDetailModal: React.FC = () => {
           {activeTab === 'documents' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
                   <FileText className="h-4 w-4 text-emerald-400" />
                   {isHu ? 'Csatolt Dokumentumok' : 'Attached Documents'}
                 </h3>
@@ -1134,13 +1134,13 @@ export const ItemDetailModal: React.FC = () => {
 
               {/* Add document mini-form */}
               {isAddDocOpen && (
-                <form onSubmit={handleAddDocSubmit} className="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-3">
-                  <h4 className="text-xs font-bold text-white">
+                <form onSubmit={handleAddDocSubmit} className="p-4 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/60 space-y-3">
+                  <h4 className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">
                     {isHu ? 'Új Dokumentum Rögzítése' : 'Add New Document Record'}
                   </h4>
 
                   {/* File Upload Area */}
-                  <div className="p-3 rounded-lg border border-dashed border-slate-800 bg-slate-900/60 flex flex-col items-center justify-center gap-1.5">
+                  <div className="p-3 rounded-lg border border-dashed border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] flex flex-col items-center justify-center gap-1.5">
                     <label className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer transition-colors ${
                       isUploadingDoc ? 'opacity-50 pointer-events-none' : ''
                     }`}>
@@ -1174,7 +1174,7 @@ export const ItemDetailModal: React.FC = () => {
                         }}
                       />
                     </label>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">
                       {isHu ? 'PDF, PNG, JPG vagy DOC maximum 15MB' : 'PDF, PNG, JPG or DOC up to 15MB'}
                     </p>
                     {docUploadError && (
@@ -1184,7 +1184,7 @@ export const ItemDetailModal: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-slate-400 mb-1">
+                      <label className="block text-[var(--text-sub,#B5BDC6)] mb-1">
                         {isHu ? 'Dokumentum Neve *' : 'Document Name *'}
                       </label>
                       <input
@@ -1193,17 +1193,17 @@ export const ItemDetailModal: React.FC = () => {
                         value={newDocName}
                         onChange={(e) => setNewDocName(e.target.value)}
                         required
-                        className="w-full p-2 rounded-lg border border-slate-800 bg-slate-900 text-white"
+                        className="w-full p-2 rounded-lg border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-main,#E0E3E6)]"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 mb-1">
+                      <label className="block text-[var(--text-sub,#B5BDC6)] mb-1">
                         {isHu ? 'Dokumentum Típusa' : 'Document Type'}
                       </label>
                       <select
                         value={newDocType}
                         onChange={(e) => setNewDocType(e.target.value as ItemDocument['document_type'])}
-                        className="w-full p-2 rounded-lg border border-slate-800 bg-slate-900 text-white"
+                        className="w-full p-2 rounded-lg border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-main,#E0E3E6)]"
                       >
                         <option value="Invoice">{isHu ? 'Számla / Nyugta' : 'Invoice / Receipt'}</option>
                         <option value="Warranty">{isHu ? 'Garancialevél' : 'Warranty Certificate'}</option>
@@ -1219,7 +1219,7 @@ export const ItemDetailModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setIsAddDocOpen(false)}
-                      className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                      className="px-3 py-1.5 text-xs text-[var(--text-sub,#B5BDC6)] hover:text-white"
                     >
                       {isHu ? 'Mégse' : 'Cancel'}
                     </button>
@@ -1235,7 +1235,7 @@ export const ItemDetailModal: React.FC = () => {
 
               {/* Documents List */}
               {itemDocs.length === 0 ? (
-                <div className="p-8 text-center rounded-xl border border-slate-800 bg-slate-950/40 text-slate-400 text-xs">
+                <div className="p-8 text-center rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/30 text-[var(--text-sub,#B5BDC6)] text-xs">
                   {isHu
                     ? 'Még nincsenek csatolt dokumentumok ehhez a tárgyhoz. Kattints a "Dokumentum Feltöltése" gombra számlák vagy útmutatók hozzáadásához.'
                     : 'No documents attached to this item yet. Click "Upload Document" to add invoices or manuals.'}
@@ -1245,15 +1245,15 @@ export const ItemDetailModal: React.FC = () => {
                   {itemDocs.map(doc => (
                     <div
                       key={doc.id}
-                      className="p-3.5 rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-between hover:border-slate-700 transition-colors"
+                      className="p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] flex items-center justify-between hover:border-[var(--border-color,#56616D)]/80 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 rounded-lg bg-slate-900 text-emerald-400 flex-shrink-0">
+                        <div className="p-2 rounded-lg bg-[var(--surface-bg,#465362)] text-emerald-400 flex-shrink-0">
                           <FileText className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">{doc.file_name}</p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)] truncate">{doc.file_name}</p>
+                          <p className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
                             {(isHu ? (
                               doc.document_type === 'Invoice' ? 'Számla / Nyugta' :
                               doc.document_type === 'Warranty' ? 'Garancialevél' :
@@ -1270,13 +1270,13 @@ export const ItemDetailModal: React.FC = () => {
                           href={doc.file_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="p-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 text-xs flex items-center gap-1"
+                          className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--border-color,#56616D)]/50 text-xs flex items-center gap-1"
                         >
                           <ExternalLink className="h-3.5 w-3.5" /> {isHu ? 'Megtekintés' : 'View'}
                         </a>
                         <button
                           onClick={() => deleteDocument(doc.id)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400"
+                          className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-rose-400"
                           title={isHu ? 'Dokumentum törlése' : 'Delete document'}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1294,7 +1294,7 @@ export const ItemDetailModal: React.FC = () => {
           {activeTab === 'photos' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
                   <ImageIcon className="h-4 w-4 text-emerald-400" />
                   {isHu ? 'Fénykép galéria' : 'Photo Gallery'}
                 </h3>
@@ -1308,13 +1308,13 @@ export const ItemDetailModal: React.FC = () => {
               </div>
 
               {(!item.photo_url && (!item.additional_photos || item.additional_photos.length === 0)) ? (
-                <div className="p-8 text-center rounded-xl border border-slate-800 bg-slate-950/40 text-slate-400 text-xs">
+                <div className="p-8 text-center rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/30 text-[var(--text-sub,#B5BDC6)] text-xs">
                   {isHu ? 'Még nincsenek feltöltött képek. Kattints a "Fényképek kezelése" gombra új képek feltöltéséhez.' : 'No photos uploaded yet. Click "Manage Photos" to upload images.'}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {item.photo_url && (
-                    <div className="rounded-xl overflow-hidden border border-emerald-500/60 bg-slate-950 aspect-video relative group shadow-md p-2 flex items-center justify-center">
+                    <div className="rounded-xl overflow-hidden border border-emerald-500/60 bg-[var(--card-bg,#3A4551)] aspect-video relative group shadow-md p-2 flex items-center justify-center">
                       <img src={item.photo_url} alt="Primary" className="w-full h-full object-contain object-center block group-hover:scale-105 transition-transform duration-300" />
                       <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-emerald-950/90 text-[10px] font-bold text-emerald-400 border border-emerald-800/60">
                         {isHu ? 'Fő kép' : 'Primary Photo'}
@@ -1323,9 +1323,9 @@ export const ItemDetailModal: React.FC = () => {
                   )}
 
                   {item.additional_photos?.map((url, idx) => (
-                    <div key={idx} className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video relative group shadow-md p-2 flex items-center justify-center">
+                    <div key={idx} className="rounded-xl overflow-hidden border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] aspect-video relative group shadow-md p-2 flex items-center justify-center">
                       <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-contain object-center block group-hover:scale-105 transition-transform duration-300" />
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-bold text-slate-300">
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-[var(--card-bg,#3A4551)]/90 text-[10px] font-bold text-[var(--text-main,#E0E3E6)]">
                         {idx + 2}. {isHu ? 'kép' : 'photo'}
                       </span>
                     </div>
@@ -1339,20 +1339,20 @@ export const ItemDetailModal: React.FC = () => {
           {activeTab === 'notes' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
                   <FileCode className="h-4 w-4 text-emerald-400" />
                   {isHu ? 'Megjegyzések és karbantartási napló' : 'Item Notes & Maintenance Log'}
                 </h3>
               </div>
 
               {editingField === 'notes' ? (
-                <div className="p-4 rounded-xl border border-emerald-500 bg-slate-950 space-y-3" onClick={(e) => e.stopPropagation()}>
+                <div className="p-4 rounded-xl border border-emerald-500 bg-[var(--surface-bg,#465362)]/60 space-y-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-emerald-400 uppercase tracking-wider">
                       {isHu ? 'Megjegyzések szerkesztése:' : 'Edit Notes:'}
                     </label>
                     <div className="flex items-center gap-1.5">
-                      <button onClick={cancelInlineEdit} className="px-3 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">
+                      <button onClick={cancelInlineEdit} className="px-3 py-1 rounded-lg bg-[var(--surface-bg,#465362)] text-xs text-[var(--text-sub,#B5BDC6)]">
                         {isHu ? 'Mégse' : 'Cancel'}
                       </button>
                       <button onClick={(e) => saveInlineField(e, 'notes')} className="px-3.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1">
@@ -1364,14 +1364,14 @@ export const ItemDetailModal: React.FC = () => {
                     rows={5}
                     value={inlineValue}
                     onChange={(e) => setInlineValue(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-slate-800 bg-slate-900 text-white text-sm focus:outline-none focus:border-emerald-500"
+                    className="w-full p-3 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-main,#E0E3E6)] text-sm focus:outline-none focus:border-emerald-500"
                     autoFocus
                   />
                 </div>
               ) : (
                 <div
                   onClick={(e) => startInlineEdit(e, 'notes', item.notes || '')}
-                  className="group/notes cursor-pointer p-4 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/40 hover:bg-slate-900/80 transition-all text-sm text-slate-300 leading-relaxed font-sans whitespace-pre-wrap relative"
+                  className="group/notes cursor-pointer p-4 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:border-emerald-500/40 hover:bg-[var(--surface-bg,#465362)]/70 transition-all text-sm text-[var(--text-main,#E0E3E6)] leading-relaxed font-sans whitespace-pre-wrap relative"
                   title={isHu ? 'Kattints a megjegyzések inline szerkesztéséhez' : 'Click to edit notes'}
                 >
                   <Edit3 className="h-4 w-4 text-emerald-400 opacity-0 group-hover/notes:opacity-100 transition-opacity absolute top-3 right-3" />

@@ -66,22 +66,22 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xl p-6 sm:p-8 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl w-full max-w-xl p-6 sm:p-8 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="flex items-center justify-between border-b border-[var(--border-color,#56616D)] pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)] flex items-center justify-center shadow-sm">
               <Share2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Tárgy Megosztása</h2>
-              <p className="text-xs text-slate-400 font-medium truncate max-w-xs">{item.name}</p>
+              <h2 className="text-xl font-bold text-[var(--text-main,#E0E3E6)]">Tárgy Megosztása</h2>
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] font-medium truncate max-w-xs">{item.name}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-sub,#B5BDC6)] hover:text-white border border-[var(--border-color,#56616D)] flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -91,7 +91,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
         <form onSubmit={handleCreateShare} className="space-y-5">
           {/* Purpose Selection */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-sub,#B5BDC6)] mb-2">
               Megosztási cél
             </label>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -109,8 +109,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
                     onClick={() => setPurpose(p.id as SharePurpose)}
                     className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs font-semibold gap-1.5 transition-all ${
                       isSelected
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-md shadow-emerald-500/10'
-                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                        ? 'border-[var(--color-primary-blue,#2563EB)] bg-[var(--color-primary-blue,#2563EB)]/15 text-blue-300 font-bold shadow-sm'
+                        : 'border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:border-[var(--border-color,#56616D)]/80 hover:text-[var(--text-main,#E0E3E6)]'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -123,7 +123,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
 
           {/* Expiration Selection */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-sub,#B5BDC6)] mb-2">
               Lejárat
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -139,8 +139,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
                   onClick={() => setExpirationDays(exp.days)}
                   className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
                     expirationDays === exp.days
-                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                      : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                      ? 'border-[var(--color-primary-blue,#2563EB)] bg-[var(--color-primary-blue,#2563EB)]/15 text-blue-300 font-bold shadow-sm'
+                      : 'border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
                   }`}
                 >
                   {exp.label}
@@ -151,61 +151,61 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
 
           {/* Permissions / Allowed Fields */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-sub,#B5BDC6)] mb-2">
               Megosztható adatok (GUEST által látható)
             </label>
-            <div className="space-y-2 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-              <label className="flex items-center justify-between text-xs text-slate-300 font-medium cursor-pointer">
+            <div className="space-y-2.5 bg-[var(--surface-bg,#465362)]/60 p-4 rounded-2xl border border-[var(--border-color,#56616D)]">
+              <label className="flex items-center justify-between text-xs text-[var(--text-main,#E0E3E6)] font-medium cursor-pointer py-0.5">
                 <span>Kiegészítő képek</span>
                 <input
                   type="checkbox"
                   checked={permissions.include_additional_images}
                   onChange={e => setPermissions({ ...permissions, include_additional_images: e.target.checked })}
-                  className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                  className="rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] h-4 w-4 cursor-pointer"
                 />
               </label>
 
-              <label className="flex items-center justify-between text-xs text-slate-300 font-medium cursor-pointer">
+              <label className="flex items-center justify-between text-xs text-[var(--text-main,#E0E3E6)] font-medium cursor-pointer py-0.5">
                 <span>Garancia információk</span>
                 <input
                   type="checkbox"
                   checked={permissions.include_warranty}
                   onChange={e => setPermissions({ ...permissions, include_warranty: e.target.checked })}
-                  className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                  className="rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] h-4 w-4 cursor-pointer"
                 />
               </label>
 
-              <label className="flex items-center justify-between text-xs text-slate-300 font-medium cursor-pointer">
+              <label className="flex items-center justify-between text-xs text-[var(--text-main,#E0E3E6)] font-medium cursor-pointer py-0.5">
                 <span>Vásárlás dátuma</span>
                 <input
                   type="checkbox"
                   checked={permissions.include_purchase_date}
                   onChange={e => setPermissions({ ...permissions, include_purchase_date: e.target.checked })}
-                  className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                  className="rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] h-4 w-4 cursor-pointer"
                 />
               </label>
 
-              <label className="flex items-center justify-between text-xs text-slate-300 font-medium cursor-pointer">
+              <label className="flex items-center justify-between text-xs text-[var(--text-main,#E0E3E6)] font-medium cursor-pointer py-0.5">
                 <span>Jelenlegi becsült érték</span>
                 <input
                   type="checkbox"
                   checked={permissions.include_value}
                   onChange={e => setPermissions({ ...permissions, include_value: e.target.checked })}
-                  className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                  className="rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] h-4 w-4 cursor-pointer"
                 />
               </label>
 
-              <label className="flex items-center justify-between text-xs text-slate-300 font-medium cursor-pointer">
+              <label className="flex items-center justify-between text-xs text-[var(--text-main,#E0E3E6)] font-medium cursor-pointer py-0.5">
                 <span>Vásárlási ár</span>
                 <input
                   type="checkbox"
                   checked={permissions.include_purchase_price}
                   onChange={e => setPermissions({ ...permissions, include_purchase_price: e.target.checked })}
-                  className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                  className="rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] h-4 w-4 cursor-pointer"
                 />
               </label>
             </div>
-            <p className="text-[11px] text-slate-500 mt-2">
+            <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mt-2">
               * A privát számlák, dokumentumok, saját fiókadatok és egyéb tárgyak SOHA nem érhetők el a Guest számára.
             </p>
           </div>
@@ -213,7 +213,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.01]"
           >
             <Share2 className="w-4 h-4" /> Megosztási Link Létrehozása
           </button>
@@ -221,8 +221,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
 
         {/* Active Shares List */}
         {activeShares.length > 0 && (
-          <div className="border-t border-slate-800 pt-5 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+          <div className="border-t border-[var(--border-color,#56616D)] pt-5 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub,#B5BDC6)]">
               Aktív Megosztások ({activeShares.length})
             </h3>
             <div className="space-y-2">
@@ -231,18 +231,18 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
                 return (
                   <div
                     key={s.id}
-                    className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs"
+                    className="p-3 bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-emerald-400 uppercase tracking-wider text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        <span className="font-bold text-[var(--color-primary-blue,#2563EB)] uppercase tracking-wider text-[10px] bg-blue-950/50 px-2 py-0.5 rounded border border-blue-500/30">
                           {s.purpose}
                         </span>
-                        <span className="text-slate-400 font-medium">
+                        <span className="text-[var(--text-sub,#B5BDC6)] font-medium">
                           {s.expires_at ? `Lejár: ${new Date(s.expires_at).toLocaleDateString()}` : 'Nincs lejárati idő'}
                         </span>
                       </div>
-                      <p className="text-slate-500 text-[11px] font-mono truncate max-w-xs">
+                      <p className="text-[var(--text-sub,#B5BDC6)]/80 text-[11px] font-mono truncate max-w-xs">
                         {window.location.origin}#share/{s.token.substring(0, 10)}...
                       </p>
                     </div>
@@ -251,7 +251,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
                       <button
                         type="button"
                         onClick={() => copyShareLink(s.token)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                          isCopied
+                            ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-400'
+                            : 'bg-[var(--card-bg,#3A4551)] hover:bg-[var(--card-bg,#3A4551)]/80 text-[var(--text-main,#E0E3E6)] border-[var(--border-color,#56616D)]'
+                        }`}
                       >
                         {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                         {isCopied ? 'Másolva!' : 'Link másolása'}
@@ -260,7 +264,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ item, isOpen, onClose })
                       <button
                         type="button"
                         onClick={() => handleRevoke(s.id)}
-                        className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+                        className="p-1.5 rounded-xl bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 border border-rose-500/30 transition-colors"
                         title="Visszavonás"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

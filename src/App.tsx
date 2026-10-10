@@ -158,8 +158,8 @@ const AppContent: React.FC = () => {
   // 2. MAINTENANCE MODE SCREEN FOR NON-ADMINS
   if (siteSettings.maintenance_mode && !isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 selection:bg-emerald-500 selection:text-slate-950">
-        <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl">
+      <div className="min-h-screen bg-[var(--bg-main,#303943)] text-[var(--text-primary,var(--text-main,#E0E3E6))] flex items-center justify-center p-4 selection:bg-[var(--color-primary-blue,var(--primary-blue,#2563EB))] selection:text-white">
+        <div className="max-w-lg w-full bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-2xl">
           <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
             <Wrench className="w-8 h-8 animate-pulse" />
           </div>
@@ -171,20 +171,20 @@ const AppContent: React.FC = () => {
             <h1 className="text-2xl font-extrabold text-white tracking-tight pt-2">
               A Thingor Jelenleg Karbantartás Alatt Áll
             </h1>
-            <p className="text-slate-400 text-sm leading-relaxed">
+            <p className="text-[var(--text-secondary,var(--text-sub,#B5BDC6))] text-sm leading-relaxed">
               {siteSettings.maintenance_message || 'A rendszer jelenleg karbantartás alatt áll. Kérjük, látogass vissza később.'}
             </p>
           </div>
 
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-center">
+          <div className="pt-4 border-t border-[var(--border-color,#56616D)] flex items-center justify-center">
             <button
               onClick={() => {
                 setAuthModalMode('login');
                 setIsAuthModalOpen(true);
               }}
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-colors"
+              className="px-5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-primary,var(--text-main,#E0E3E6))] text-xs font-semibold flex items-center gap-2 transition-colors border border-[var(--border-color,#56616D)]"
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" /> Adminisztrátori Bejelentkezés
+              <ShieldCheck className="w-4 h-4 text-[var(--color-primary-blue,var(--primary-blue,#2563EB))]" /> Adminisztrátori Bejelentkezés
             </button>
           </div>
         </div>
@@ -196,7 +196,7 @@ const AppContent: React.FC = () => {
 
   // 3. NORMAL VIEW ROUTING
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
+    <div className="min-h-screen bg-[var(--bg-main,#303943)] text-[var(--text-primary,var(--text-main,#E0E3E6))] flex flex-col font-sans selection:bg-[var(--color-primary-blue,var(--primary-blue,#2563EB))] selection:text-white">
       {/* Top sticky navigation bar */}
       <Navbar />
 
@@ -246,15 +246,15 @@ const AppContent: React.FC = () => {
 
       {/* Access Denied Alert Modal */}
       {accessDeniedMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-rose-500/30 p-6 text-center space-y-4 shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md rounded-2xl bg-[var(--card-bg,#3A4551)] border border-rose-500/40 p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto shadow-sm">
               <ShieldAlert className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-white">
+            <h3 className="text-base font-bold text-[var(--text-primary,var(--text-main,#E0E3E6))]">
               {language === 'hu' ? 'Hozzáférés Megtagadva' : 'Access Denied'}
             </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-[var(--text-secondary,var(--text-sub,#B5BDC6))] leading-relaxed">
               {accessDeniedMessage}
             </p>
             <button
@@ -262,7 +262,7 @@ const AppContent: React.FC = () => {
                 setAccessDeniedMessage(null);
                 window.location.hash = '';
               }}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors"
+              className="w-full py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-primary,var(--text-main,#E0E3E6)] font-bold text-xs border border-[var(--border-color,#56616D)] transition-colors"
             >
               {language === 'hu' ? 'Rendben' : 'OK'}
             </button>

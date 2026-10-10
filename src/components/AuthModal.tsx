@@ -146,14 +146,14 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-main,#E0E3E6)] shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6">
         
         {/* Close button */}
         <button
           onClick={handleClose}
           disabled={loading}
-          className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] disabled:opacity-50 transition-colors"
           title={language === 'hu' ? 'Bezárás' : 'Close'}
         >
           <X className="h-5 w-5" />
@@ -161,18 +161,18 @@ export const AuthModal: React.FC = () => {
 
         {/* Modal Header */}
         <div className="text-center space-y-1">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-950 text-emerald-400 border border-emerald-800/40 mb-3 shadow-lg shadow-emerald-950/40">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)] mb-3 shadow-md">
             <Lock className="h-6 w-6" />
           </div>
 
-          <h2 className="text-2xl font-bold text-white tracking-tight">
+          <h2 className="text-2xl font-bold text-[var(--text-main,#E0E3E6)] tracking-tight">
             {authModalMode === 'login' && (language === 'hu' ? 'Üdv újra!' : 'Welcome back')}
             {authModalMode === 'signup' && (language === 'hu' ? 'Fiók létrehozása' : 'Create your account')}
             {authModalMode === 'reset' && (language === 'hu' ? 'Jelszó visszaállítása' : 'Reset your password')}
             {authModalMode === 'update_password' && (language === 'hu' ? 'Új jelszó megadása' : 'Set new password')}
           </h2>
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
             {authModalMode === 'login' && (language === 'hu' ? 'Jelentkezz be a saját Thingor tárgyilistád eléréséhez.' : 'Sign in to access your personal Thingor inventory.')}
             {authModalMode === 'signup' && (language === 'hu' ? 'Kezdd el rendszerezni a tárgyaidat egyetlen helyen.' : 'Start organizing all your physical assets in one place.')}
             {authModalMode === 'reset' && (language === 'hu' ? 'Add meg az e-mail címedet a jelszó-visszaállító hivatkozás fogadásához.' : 'Enter your email to receive password reset instructions.')}
@@ -181,7 +181,7 @@ export const AuthModal: React.FC = () => {
         </div>
 
         {authModalMode === 'signup' && isRegistrationSuspended && (
-          <div className="p-3.5 rounded-xl border border-amber-800/60 bg-amber-950/40 text-amber-300 text-xs text-center font-medium animate-in fade-in">
+          <div className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-950/30 text-amber-300 text-xs text-center font-medium animate-in fade-in">
             {language === 'hu'
               ? '⚠️ Az új regisztrációk jelenleg fel vannak függesztve az adminisztrátor által.'
               : '⚠️ New user registrations are currently suspended by the administrator.'}
@@ -189,54 +189,54 @@ export const AuthModal: React.FC = () => {
         )}
 
         {errorMsg && (
-          <div className="p-3 rounded-xl border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs text-center font-medium animate-in fade-in">
+          <div className="p-3 rounded-xl border border-rose-500/50 bg-rose-950/40 text-rose-300 text-xs text-center font-medium animate-in fade-in">
             {errorMsg}
           </div>
         )}
 
         {signupConfirmationSent ? (
-          <div className="p-5 rounded-xl border border-emerald-800/60 bg-emerald-950/30 text-emerald-300 text-xs text-center space-y-3">
+          <div className="p-5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-300 text-xs text-center space-y-3">
             <Mail className="h-10 w-10 text-emerald-400 mx-auto animate-bounce" />
-            <h3 className="font-bold text-sm text-white">
+            <h3 className="font-bold text-sm text-[var(--text-main,#E0E3E6)]">
               {language === 'hu' ? 'Megerősítő e-mail elküldve!' : 'Confirmation email sent!'}
             </h3>
-            <p className="text-slate-300 leading-relaxed">
+            <p className="text-[var(--text-sub,#B5BDC6)] leading-relaxed">
               {language === 'hu'
                 ? `Elküldtük a visszaigazoló linket a megadott e-mail címre (${email}). Kérjük, nyisd meg a levelet és kattints a linkre a regisztráció véglegesítéséhez!`
                 : `We dispatched a verification link to ${email}. Please check your inbox and click the link to activate your account.`}
             </p>
             <button
               onClick={() => switchMode('login')}
-              className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors"
+              className="mt-2 px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-xs font-bold text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)] transition-colors"
             >
               {language === 'hu' ? 'Vissza a bejelentkezéshez' : 'Back to Sign In'}
             </button>
           </div>
         ) : resetSent ? (
-          <div className="p-5 rounded-xl border border-emerald-800/60 bg-emerald-950/30 text-emerald-300 text-xs text-center space-y-3">
+          <div className="p-5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-300 text-xs text-center space-y-3">
             <ShieldCheck className="h-10 w-10 text-emerald-400 mx-auto" />
-            <h3 className="font-bold text-sm text-white">
+            <h3 className="font-bold text-sm text-[var(--text-main,#E0E3E6)]">
               {language === 'hu' ? 'Jelszó-visszaállító e-mail elküldve!' : 'Password reset link sent!'}
             </h3>
-            <p className="text-slate-300 leading-relaxed">
+            <p className="text-[var(--text-sub,#B5BDC6)] leading-relaxed">
               {language === 'hu'
                 ? `A jelszó visszaállító hivatkozást elküldtük a következő e-mail címre: ${email}. Kérjük, ellenőrizd az e-mail fiókodat!`
                 : `Password reset link has been dispatched to ${email}. Please check your email inbox!`}
             </p>
             <button
               onClick={() => switchMode('login')}
-              className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors"
+              className="mt-2 px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-xs font-bold text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)] transition-colors"
             >
               {language === 'hu' ? 'Vissza a bejelentkezéshez' : 'Back to Sign In'}
             </button>
           </div>
         ) : passwordUpdated ? (
-          <div className="p-5 rounded-xl border border-emerald-800/60 bg-emerald-950/30 text-emerald-300 text-xs text-center space-y-3">
+          <div className="p-5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-300 text-xs text-center space-y-3">
             <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto" />
-            <h3 className="font-bold text-sm text-white">
+            <h3 className="font-bold text-sm text-[var(--text-main,#E0E3E6)]">
               {language === 'hu' ? 'A jelszavad sikeresen frissült!' : 'Password updated successfully!'}
             </h3>
-            <p className="text-slate-300 leading-relaxed">
+            <p className="text-[var(--text-sub,#B5BDC6)] leading-relaxed">
               {language === 'hu'
                 ? 'Most már az új jelszavaddal jelentkezhetsz be a fiókodba.'
                 : 'You can now sign in using your new password.'}
@@ -247,25 +247,25 @@ export const AuthModal: React.FC = () => {
                 setCurrentView('dashboard');
                 handleClose();
               }}
-              className="mt-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors"
+              className="mt-2 px-5 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] text-white font-bold text-xs hover:bg-blue-600 shadow-md transition-colors"
             >
               {language === 'hu' ? 'Tovább a Vezérlőpultra' : 'Go to Dashboard'}
             </button>
           </div>
         ) : authModalMode === 'signup' && (isRegistrationSuspended || !siteSettings.registration_enabled) ? (
-          <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-center space-y-3">
+          <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-950/30 text-amber-300 text-center space-y-3">
             <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto" />
-            <h3 className="font-bold text-sm text-white">
+            <h3 className="font-bold text-sm text-[var(--text-main,#E0E3E6)]">
               {language === 'hu' ? 'A regisztráció jelenleg szünetel.' : 'Registration temporarily unavailable.'}
             </h3>
-            <p className="text-slate-300 text-xs leading-relaxed">
+            <p className="text-[var(--text-sub,#B5BDC6)] text-xs leading-relaxed">
               {language === 'hu'
                 ? 'A regisztráció jelenleg szünetel. Kérjük, próbáld meg később.'
                 : 'Registration temporarily unavailable. Please try again later.'}
             </p>
             <button
               onClick={() => switchMode('login')}
-              className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors"
+              className="mt-2 px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-xs font-bold text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)] transition-colors"
             >
               {language === 'hu' ? 'Vissza a bejelentkezéshez' : 'Back to Sign In'}
             </button>
@@ -275,11 +275,11 @@ export const AuthModal: React.FC = () => {
             
             {authModalMode === 'signup' && (
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">
+                <label className="block font-semibold text-xs text-[var(--text-sub,#B5BDC6)] mb-1">
                   {language === 'hu' ? 'Név' : 'Your Name'}
                 </label>
                 <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-sub,#B5BDC6)]" />
                   <input
                     type="text"
                     value={displayName}
@@ -287,7 +287,7 @@ export const AuthModal: React.FC = () => {
                     required
                     disabled={loading}
                     autoFocus
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/60 text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:ring-1 focus:ring-[var(--color-primary-blue,#2563EB)] focus:outline-none disabled:opacity-50 transition shadow-inner"
                   />
                 </div>
               </div>
@@ -295,11 +295,11 @@ export const AuthModal: React.FC = () => {
 
             {authModalMode !== 'update_password' && (
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">
+                <label className="block font-semibold text-xs text-[var(--text-sub,#B5BDC6)] mb-1">
                   {language === 'hu' ? 'E-mail cím' : 'Email Address'}
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-sub,#B5BDC6)]" />
                   <input
                     type="email"
                     inputMode="email"
@@ -312,7 +312,7 @@ export const AuthModal: React.FC = () => {
                     required
                     disabled={loading}
                     autoFocus={authModalMode !== 'signup'}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/60 text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:ring-1 focus:ring-[var(--color-primary-blue,#2563EB)] focus:outline-none disabled:opacity-50 transition shadow-inner"
                   />
                 </div>
               </div>
@@ -321,7 +321,7 @@ export const AuthModal: React.FC = () => {
             {(authModalMode === 'login' || authModalMode === 'signup' || authModalMode === 'update_password') && (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block font-semibold text-slate-300">
+                  <label className="block font-semibold text-xs text-[var(--text-sub,#B5BDC6)]">
                     {authModalMode === 'update_password'
                       ? (language === 'hu' ? 'Új jelszó' : 'New Password')
                       : (language === 'hu' ? 'Jelszó' : 'Password')}
@@ -330,14 +330,14 @@ export const AuthModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => switchMode('reset')}
-                      className="text-[11px] text-emerald-400 hover:underline"
+                      className="text-[11px] text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 hover:underline font-medium"
                     >
                       {language === 'hu' ? 'Elfelejtetted a jelszavad?' : 'Forgot password?'}
                     </button>
                   )}
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-sub,#B5BDC6)]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
@@ -346,12 +346,12 @@ export const AuthModal: React.FC = () => {
                     minLength={6}
                     disabled={loading}
                     autoFocus={authModalMode === 'update_password'}
-                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/60 text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:ring-1 focus:ring-[var(--color-primary-blue,#2563EB)] focus:outline-none disabled:opacity-50 transition shadow-inner"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 rounded-md transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-sub,#B5BDC6)] hover:text-white p-1 rounded-md transition-colors"
                     title={showPassword ? (language === 'hu' ? 'Jelszó elrejtése' : 'Hide password') : (language === 'hu' ? 'Jelszó megjelenítése' : 'Show password')}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -362,11 +362,11 @@ export const AuthModal: React.FC = () => {
 
             {(authModalMode === 'signup' || authModalMode === 'update_password') && (
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">
+                <label className="block font-semibold text-xs text-[var(--text-sub,#B5BDC6)] mb-1">
                   {language === 'hu' ? 'Jelszó megerősítése' : 'Confirm Password'}
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-sub,#B5BDC6)]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
@@ -374,7 +374,7 @@ export const AuthModal: React.FC = () => {
                     required
                     minLength={6}
                     disabled={loading}
-                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/60 text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:ring-1 focus:ring-[var(--color-primary-blue,#2563EB)] focus:outline-none disabled:opacity-50 transition shadow-inner"
                   />
                 </div>
               </div>
@@ -383,7 +383,7 @@ export const AuthModal: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-md shadow-emerald-950/40 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              className="w-full mt-2 py-3 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:scale-[1.01]"
             >
               {loading ? (
                 <>
@@ -405,13 +405,13 @@ export const AuthModal: React.FC = () => {
 
         {/* Footer mode toggles */}
         {!signupConfirmationSent && !resetSent && !passwordUpdated && authModalMode !== 'update_password' && (
-          <div className="pt-3 border-t border-slate-800/80 text-center text-xs text-slate-400">
+          <div className="pt-3 border-t border-[var(--border-color,#56616D)] text-center text-xs text-[var(--text-sub,#B5BDC6)]">
             {authModalMode === 'login' ? (
               <p>
                 {language === 'hu' ? 'Még nincs fiókod? ' : "Don't have an account? "}
                 <button
                   onClick={() => switchMode('signup')}
-                  className="font-bold text-emerald-400 hover:underline"
+                  className="font-bold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 hover:underline"
                 >
                   {language === 'hu' ? 'Regisztráció' : 'Sign up'}
                 </button>
@@ -421,7 +421,7 @@ export const AuthModal: React.FC = () => {
                 {language === 'hu' ? 'Már van fiókod? ' : 'Already have an account? '}
                 <button
                   onClick={() => switchMode('login')}
-                  className="font-bold text-emerald-400 hover:underline"
+                  className="font-bold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 hover:underline"
                 >
                   {language === 'hu' ? 'Bejelentkezés' : 'Sign in'}
                 </button>

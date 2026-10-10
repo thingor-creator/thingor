@@ -81,20 +81,20 @@ export const PWAInstallPrompt: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-md z-40 bg-slate-900/95 backdrop-blur-md border border-emerald-500/30 rounded-2xl p-4 shadow-2xl shadow-emerald-950/50 animate-slide-up">
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-md z-40 bg-[var(--card-bg,#3A4551)]/95 backdrop-blur-md border border-[var(--border-color,#56616D)] rounded-2xl p-4 shadow-2xl animate-slide-up">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-slate-950 font-bold flex-shrink-0 shadow-md">
-            <Smartphone className="w-5 h-5 text-slate-950" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-blue-500 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md shadow-blue-500/20">
+            <Smartphone className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+            <h4 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-1.5">
               <span>Telepítsd a Thingor-t</span>
-              <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)]">
                 PWA
               </span>
             </h4>
-            <p className="text-xs text-slate-300 mt-0.5 leading-snug">
+            <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-0.5 leading-snug">
               Érd el leltáradat egyetlen kattintással a telefonod kezdőképernyőjéről!
             </p>
           </div>
@@ -102,7 +102,7 @@ export const PWAInstallPrompt: React.FC = () => {
 
         <button
           onClick={handleDismiss}
-          className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+          className="text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] p-1.5 rounded-lg hover:bg-[var(--surface-bg,#465362)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-blue,#2563EB)]"
           title="Bezárás"
         >
           <X className="w-4 h-4" />
@@ -110,26 +110,26 @@ export const PWAInstallPrompt: React.FC = () => {
       </div>
 
       {isInstalledSuccess ? (
-        <div className="mt-3 p-2 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 border border-emerald-500/40">
+        <div className="mt-3 p-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2 border border-emerald-500/30">
           <Check className="w-4 h-4 text-emerald-400" />
           Sikeresen hozzáadva a kezdőképernyőhöz!
         </div>
       ) : isIOS ? (
-        <div className="mt-3 text-[11px] text-slate-300 bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-          Koppints a Safari <span className="font-bold text-emerald-400">Megosztás (Share)</span> gombjára, majd válaszd a <span className="font-bold text-emerald-400">"Hozzáadás a kezdőképernyőhöz"</span> lehetőséget.
+        <div className="mt-3 text-[11px] text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] p-2.5 rounded-xl border border-[var(--border-color,#56616D)] leading-relaxed">
+          Koppints a Safari <span className="font-bold text-[var(--color-primary-blue,#2563EB)]">Megosztás (Share)</span> gombjára, majd válaszd a <span className="font-bold text-[var(--color-primary-blue,#2563EB)]">"Hozzáadás a kezdőképernyőhöz"</span> lehetőséget.
         </div>
       ) : (
         <div className="mt-3 flex items-center gap-2">
           <button
             onClick={handleInstallClick}
-            className="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98]"
+            className="flex-1 py-2 px-3 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-blue,#2563EB)] focus:ring-offset-2 focus:ring-offset-[var(--card-bg,#3A4551)]"
           >
             <Download className="w-4 h-4" />
             <span>Telepítés</span>
           </button>
           <button
             onClick={handleDismiss}
-            className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
+            className="py-2 px-3 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)] font-semibold text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--border-color,#56616D)]"
           >
             Most nem
           </button>

@@ -246,20 +246,20 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-4xl rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-4xl rounded-[14px] bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <div className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)]">
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">
+              <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
                 {isHu ? 'Biztosítási Leltár Export (PDF)' : 'Insurance Inventory Export (PDF)'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                 {isHu
                   ? 'Hivatalos vagyontárgy kimutatás és archiválható PDF dokumentum'
                   : 'Official asset documentation for insurance and offline archiving'}
@@ -268,16 +268,16 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Action Controls Top Bar */}
-        <div className="px-6 py-3 bg-slate-950/40 border-b border-slate-800/80 flex items-center justify-between gap-4 shrink-0 flex-wrap">
-          <div className="text-xs text-slate-400 flex items-center gap-2">
-            <Boxes className="h-4 w-4 text-emerald-400" />
+        <div className="px-6 py-3 bg-[var(--surface-bg,#465362)]/30 border-b border-[var(--border-color,#56616D)] flex items-center justify-between gap-4 shrink-0 flex-wrap">
+          <div className="text-xs text-[var(--text-sub,#B5BDC6)] flex items-center gap-2">
+            <Boxes className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
             <span>
               {isHu
                 ? `${totalItemsCount} tárgy készen áll az exportálásra`
@@ -289,7 +289,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
             <button
               onClick={handlePrintNative}
               disabled={isGenerating || totalItemsCount === 0}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] text-xs font-semibold border border-[var(--border-color,#56616D)] transition-colors disabled:opacity-50"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>{isHu ? 'Nyomtatás' : 'Print'}</span>
@@ -298,7 +298,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
             <button
               onClick={handleDownloadPDF}
               disabled={isGenerating || totalItemsCount === 0}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
             >
               {isGenerating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -318,15 +318,15 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
         )}
 
         {/* Scrollable Preview & Print Template Container */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-950/90">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-[var(--bg-main,#303943)]/60">
           
           {totalItemsCount === 0 ? (
             <div className="p-12 text-center space-y-4">
-              <Boxes className="h-12 w-12 text-slate-600 mx-auto" />
-              <h4 className="text-base font-bold text-white">
+              <Boxes className="h-12 w-12 text-[var(--text-sub,#B5BDC6)]/50 mx-auto" />
+              <h4 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
                 {isHu ? 'Nincs exportálható tárgy' : 'No items to export'}
               </h4>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] max-w-sm mx-auto">
                 {isHu
                   ? 'A leltár jelenleg üres. Vegyél fel új tárgyakat az exportálás előtt.'
                   : 'Your inventory is currently empty. Add items before exporting.'}
@@ -349,10 +349,10 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
               {/* PDF Document Header */}
               <div
                 className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-5"
-                style={{ borderBottom: '2px solid #059669' }}
+                style={{ borderBottom: '2px solid #2563EB' }}
               >
                 <div>
-                  <div className="flex items-center gap-2 font-extrabold text-xs sm:text-sm uppercase tracking-wider" style={{ color: '#047857' }}>
+                  <div className="flex items-center gap-2 font-extrabold text-xs sm:text-sm uppercase tracking-wider" style={{ color: '#2563EB' }}>
                     <ShieldCheck className="h-4 sm:h-5 w-4 sm:w-5" />
                     <span>Thingor Inventory System</span>
                   </div>
@@ -373,7 +373,7 @@ export const InsuranceInventoryModal: React.FC<InsuranceInventoryModalProps> = (
                   </div>
                   <div
                     className="inline-block px-2 py-0.5 rounded text-[10px] font-bold"
-                    style={{ backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0' }}
+                    style={{ backgroundColor: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }}
                   >
                     Hitelesített Leltár
                   </div>

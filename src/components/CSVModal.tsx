@@ -414,40 +414,40 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
   const invalidRowsCount = parsedRows.filter(r => !r.isValid).length;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-4xl rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-4xl rounded-[14px] bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <div className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)]">
               <FileSpreadsheet className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">
+              <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
                 {isHu ? 'CSV Tárgykezelés (Export / Import)' : 'CSV Management (Export / Import)'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                 {isHu ? 'Tárgyak kötegelt kimentése és biztonságos beimportálása' : 'Batch export and secure import of items'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-slate-800 bg-slate-950/40 px-6 gap-2 text-xs font-semibold shrink-0">
+        <div className="flex border-b border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/30 px-6 gap-2 text-xs font-semibold shrink-0">
           <button
             onClick={() => setActiveTab('export')}
             className={`py-3 px-4 border-b-2 flex items-center gap-2 transition-colors ${
               activeTab === 'export'
-                ? 'border-emerald-400 text-emerald-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[var(--color-primary-blue,#2563EB)] text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'border-transparent text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
             }`}
           >
             <Download className="h-4 w-4" />
@@ -457,8 +457,8 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
             onClick={() => setActiveTab('import')}
             className={`py-3 px-4 border-b-2 flex items-center gap-2 transition-colors ${
               activeTab === 'import'
-                ? 'border-emerald-400 text-emerald-400 font-bold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-[var(--color-primary-blue,#2563EB)] text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'border-transparent text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
             }`}
           >
             <Upload className="h-4 w-4" />
@@ -472,13 +472,13 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
           {/* TAB 1: EXPORT */}
           {activeTab === 'export' && (
             <div className="space-y-6">
-              <div className="p-6 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-4 text-center">
-                <FileSpreadsheet className="h-12 w-12 text-emerald-400 mx-auto" />
+              <div className="p-6 rounded-2xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)] space-y-4 text-center">
+                <FileSpreadsheet className="h-12 w-12 text-[var(--color-primary-blue,#2563EB)] mx-auto" />
                 <div className="space-y-1">
-                  <h4 className="text-base font-bold text-white">
+                  <h4 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
                     {isHu ? 'Teljes Leltár Exportálása CSV-be' : 'Export Full Inventory to CSV'}
                   </h4>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] max-w-md mx-auto leading-relaxed">
                     {isHu
                       ? 'Az exportálás UTF-8 BOM kódolással történik, így az ékezetes karakterek és a szövegek közvetlenül, hibátlanul nyílnak meg Microsoft Excelben.'
                       : 'Exports all current items to UTF-8 BOM CSV format compatible with Excel.'}
@@ -489,7 +489,7 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                   <button
                     onClick={handleExportCSV}
                     disabled={items.length === 0}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-950/40 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
                   >
                     <Download className="h-4 w-4" />
                     <span>{isHu ? `CSV Export Letöltése (${items.length} tárgy)` : `Download CSV (${items.length} items)`}</span>
@@ -507,11 +507,11 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
                 {/* Download Sample */}
-                <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between space-y-3">
+                <div className="p-5 rounded-2xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)] flex flex-col justify-between space-y-3">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">1. Lépés</span>
-                    <h5 className="text-sm font-bold text-white">{isHu ? 'Minta CSV Fájl Letöltése' : 'Download Sample CSV'}</h5>
-                    <p className="text-xs text-slate-400">
+                    <span className="text-[10px] font-bold text-[var(--color-primary-blue,#2563EB)] uppercase tracking-wider">1. Lépés</span>
+                    <h5 className="text-sm font-bold text-[var(--text-main,#E0E3E6)]">{isHu ? 'Minta CSV Fájl Letöltése' : 'Download Sample CSV'}</h5>
+                    <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                       {isHu
                         ? 'Használd a hivatalos oszlopfejléceket tartalmazó minta fájlt az adatok feltöltéséhez.'
                         : 'Use the official sample CSV file with correct column headers.'}
@@ -519,7 +519,7 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                   </div>
                   <button
                     onClick={handleDownloadSample}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] text-xs font-bold border border-[var(--border-color,#56616D)] transition-colors"
                   >
                     <Download className="h-3.5 w-3.5" />
                     <span>{isHu ? 'Minta CSV Letöltése' : 'Download Sample'}</span>
@@ -527,11 +527,11 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Select File */}
-                <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between space-y-3">
+                <div className="p-5 rounded-2xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)] flex flex-col justify-between space-y-3">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">2. Lépés</span>
-                    <h5 className="text-sm font-bold text-white">{isHu ? 'CSV Fájl Kiválasztása' : 'Select CSV File'}</h5>
-                    <p className="text-xs text-slate-400 truncate">
+                    <span className="text-[10px] font-bold text-[var(--color-primary-blue,#2563EB)] uppercase tracking-wider">2. Lépés</span>
+                    <h5 className="text-sm font-bold text-[var(--text-main,#E0E3E6)]">{isHu ? 'CSV Fájl Kiválasztása' : 'Select CSV File'}</h5>
+                    <p className="text-xs text-[var(--text-sub,#B5BDC6)] truncate">
                       {csvFile ? csvFile.name : (isHu ? 'Válassz ki egy `.csv` fájlt a számítógépedről' : 'Select a `.csv` file')}
                     </p>
                   </div>
@@ -546,7 +546,7 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
 
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow transition-all"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs shadow transition-all"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     <span>{csvFile ? (isHu ? 'Másik fájl kiválasztása' : 'Choose another file') : (isHu ? 'CSV Tallózása' : 'Browse CSV')}</span>
@@ -558,8 +558,8 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
               {/* Parsing Progress */}
               {isParsing && (
                 <div className="p-8 text-center space-y-3">
-                  <Loader2 className="h-8 w-8 text-emerald-400 animate-spin mx-auto" />
-                  <p className="text-xs text-slate-300 font-medium">
+                  <Loader2 className="h-8 w-8 text-[var(--color-primary-blue,#2563EB)] animate-spin mx-auto" />
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] font-medium">
                     {isHu ? 'CSV fájl elemzése és ellenőrzése...' : 'Parsing and validating CSV...'}
                   </p>
                 </div>
@@ -575,7 +575,7 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-6 w-6 shrink-0" />
                     <div>
-                      <h5 className="text-sm font-bold text-white">
+                      <h5 className="text-sm font-bold text-[var(--text-main,#E0E3E6)]">
                         {isHu ? 'Importálás Befejeződött' : 'Import Finished'}
                       </h5>
                       <p className="text-xs">
@@ -593,9 +593,9 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                 <div className="space-y-4 pt-2">
                   
                   {/* Summary Bar */}
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs flex-wrap gap-3">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)] text-xs flex-wrap gap-3">
                     <div className="flex items-center gap-4">
-                      <span className="font-bold text-white">
+                      <span className="font-bold text-[var(--text-main,#E0E3E6)]">
                         {isHu ? `Összes sor: ${parsedRows.length}` : `Total rows: ${parsedRows.length}`}
                       </span>
                       <span className="font-bold text-emerald-400 flex items-center gap-1">
@@ -613,7 +613,7 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                     <button
                       onClick={handleExecuteImport}
                       disabled={isImporting || validRowsCount === 0}
-                      className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all disabled:opacity-50"
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
                     >
                       {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                       <span>
@@ -625,10 +625,10 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                   </div>
 
                   {/* Rows Table */}
-                  <div className="rounded-xl border border-slate-800 overflow-hidden max-h-80 overflow-y-auto">
+                  <div className="rounded-xl border border-[var(--border-color,#56616D)] overflow-hidden max-h-80 overflow-y-auto">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold text-slate-400">
+                        <tr className="bg-[var(--surface-bg,#465362)]/60 border-b border-[var(--border-color,#56616D)] text-[11px] font-bold text-[var(--text-sub,#B5BDC6)]">
                           <th className="p-2.5 w-12 text-center">Sor</th>
                           <th className="p-2.5">Státusz</th>
                           <th className="p-2.5">Tárgy Neve</th>
@@ -638,10 +638,10 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                           <th className="p-2.5">Hiba / Részletek</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/60 bg-slate-900/60 text-slate-300">
+                      <tbody className="divide-y divide-[var(--border-color,#56616D)]/60 bg-[var(--surface-bg,#465362)]/20 text-[var(--text-main,#E0E3E6)]">
                         {parsedRows.map((row) => (
-                          <tr key={row.rowNum} className={row.isValid ? 'hover:bg-slate-800/40' : 'bg-rose-950/20'}>
-                            <td className="p-2.5 text-center font-mono text-[11px] text-slate-500">
+                          <tr key={row.rowNum} className={row.isValid ? 'hover:bg-[var(--surface-bg,#465362)]/40' : 'bg-rose-950/20'}>
+                            <td className="p-2.5 text-center font-mono text-[11px] text-[var(--text-sub,#B5BDC6)]">
                               #{row.rowNum}
                             </td>
                             <td className="p-2.5">
@@ -655,7 +655,7 @@ export const CSVModal: React.FC<CSVModalProps> = ({ isOpen, onClose }) => {
                                 </span>
                               )}
                             </td>
-                            <td className="p-2.5 font-bold text-white">
+                            <td className="p-2.5 font-bold text-[var(--text-main,#E0E3E6)]">
                               {row.name || <span className="text-rose-400 italic">Hiányzik</span>}
                             </td>
                             <td className="p-2.5">{row.categoryName}</td>
