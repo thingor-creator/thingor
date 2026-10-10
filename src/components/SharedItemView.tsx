@@ -8,7 +8,7 @@ interface SharedItemViewProps {
 }
 
 export const SharedItemView: React.FC<SharedItemViewProps> = ({ token }) => {
-  const { getSharedItemByToken } = useApp();
+  const { getSharedItemByToken, siteSettings } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sharedItem, setSharedItem] = useState<SharedItemViewData | null>(null);
@@ -111,11 +111,13 @@ export const SharedItemView: React.FC<SharedItemViewProps> = ({ token }) => {
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20">
-              T
-            </div>
+            <img
+              src={siteSettings.logo_url || '/logo.png'}
+              alt={siteSettings.site_name || 'Thingor'}
+              className="w-9 h-9 rounded-xl object-contain bg-slate-900 p-1 border border-slate-800 shadow-md"
+            />
             <div>
-              <span className="font-extrabold text-lg text-white tracking-tight">THINGOR</span>
+              <span className="font-extrabold text-lg text-white tracking-tight">{siteSettings.site_name || 'THINGOR'}</span>
               <span className="text-xs text-slate-400 block -mt-1 font-medium">Megosztott Tárgyadatlap</span>
             </div>
           </div>

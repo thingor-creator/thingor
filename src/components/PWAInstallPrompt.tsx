@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Download, X, Smartphone, Check } from 'lucide-react';
+import { Download, X, Check } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -7,6 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const PWAInstallPrompt: React.FC = () => {
+  const { siteSettings } = useApp();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -84,12 +86,14 @@ export const PWAInstallPrompt: React.FC = () => {
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-md z-40 bg-[var(--card-bg,#3A4551)]/95 backdrop-blur-md border border-[var(--border-color,#56616D)] rounded-2xl p-4 shadow-2xl animate-slide-up">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-blue-500 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md shadow-blue-500/20">
-            <Smartphone className="w-5 h-5 text-white" />
-          </div>
+          <img
+            src={siteSettings.logo_url || '/logo.png'}
+            alt={siteSettings.site_name || 'Thingor'}
+            className="w-10 h-10 rounded-xl object-contain bg-[var(--surface-bg,#465362)] p-1 border border-[var(--border-color,#56616D)] flex-shrink-0 shadow-md"
+          />
           <div>
             <h4 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-1.5">
-              <span>Telepítsd a Thingor-t</span>
+              <span>Telepítsd a {siteSettings.site_name || 'Thingor'}-t</span>
               <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)]">
                 PWA
               </span>

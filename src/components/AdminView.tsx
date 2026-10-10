@@ -116,7 +116,12 @@ export const AdminView: React.FC = () => {
             }
           }
           setLogoUrl(url);
-          const updateRes = await updateSiteSettings({ logo_url: url });
+          const updatePayload: { logo_url: string; favicon_url?: string } = { logo_url: url };
+          if (!siteSettings.favicon_url || siteSettings.favicon_url === '/favicon.png') {
+            setFaviconUrl(url);
+            updatePayload.favicon_url = url;
+          }
+          const updateRes = await updateSiteSettings(updatePayload);
           if (updateRes.success) {
             setActionMsg({ type: 'success', text: 'Új logó kép feltöltve, a régi törölve és sikeresen elmentve!' });
           } else {
@@ -1473,14 +1478,14 @@ export const AdminView: React.FC = () => {
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                         {/* Browser tab simulation */}
                         <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center gap-2 min-w-0">
-                          <img src={faviconUrl || '/favicon.png'} alt="Favicon Preview" className="w-4 h-4 object-contain rounded shrink-0" />
-                          <span className="text-[11px] font-semibold text-slate-300 truncate">Thingor – A tárgyaid...</span>
+                          <img src={faviconUrl || logoUrl || '/favicon.png'} alt="Favicon Preview" className="w-4 h-4 object-contain rounded shrink-0" />
+                          <span className="text-[11px] font-semibold text-slate-300 truncate">{siteSettings.site_name || 'Thingor'} – A tárgyaid...</span>
                         </div>
 
                         {/* Mobile App icon simulation */}
                         <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-2 shrink-0">
-                          <img src={faviconUrl || '/favicon.png'} alt="PWA Icon Preview" className="w-8 h-8 object-cover rounded-xl shadow-md" />
-                          <span className="text-[10px] font-extrabold text-white">Thingor App</span>
+                          <img src={logoUrl || faviconUrl || '/logo.png'} alt="PWA Icon Preview" className="w-8 h-8 object-cover rounded-xl shadow-md" />
+                          <span className="text-[10px] font-extrabold text-white">{siteSettings.site_name || 'Thingor'} App</span>
                         </div>
                       </div>
                     </div>

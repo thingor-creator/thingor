@@ -725,15 +725,115 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     fetchSiteSettings();
   }, []);
 
-  // Update browser tab favicon dynamically when favicon_url changes
+  // Update browser tab favicon, apple touch icon, og images, and PWA manifest dynamically
   useEffect(() => {
-    if (siteSettings.favicon_url) {
-      const favicons = document.querySelectorAll("link[rel*='icon']");
-      favicons.forEach(el => {
-        (el as HTMLLinkElement).href = siteSettings.favicon_url!;
-      });
+    const activeLogo = siteSettings.logo_url || '/logo.png';
+    const activeFavicon = siteSettings.favicon_url || siteSettings.logo_url || '/favicon.png';
+    const activeName = siteSettings.site_name || 'Thingor';
+
+    // 1. Update all browser favicons
+    const favicons = document.querySelectorAll("link[rel*='icon']");
+    favicons.forEach(el => {
+      (el as HTMLLinkElement).href = activeFavicon;
+    });
+
+    // 2. Update Apple Touch Icon
+    const appleIcons = document.querySelectorAll("link[rel*='apple-touch-icon']");
+    appleIcons.forEach(el => {
+      (el as HTMLLinkElement).href = activeLogo;
+    });
+
+    // 3. Update OpenGraph & Social meta images
+    const socialTags = [
+      "meta[property='og:image']",
+      "meta[property='og:image:secure_url']",
+      "meta[property='og:logo']",
+      "meta[name='twitter:image']",
+      "meta[name='thumbnail']"
+    ];
+    socialTags.forEach(selector => {
+      const el = document.querySelector(selector);
+      if (el) el.setAttribute('content', activeLogo);
+    });
+
+    // 4. Dynamically generate and inject Web App Manifest blob with configured logo & branding
+    let blobUrl = '';
+    try {
+      const dynamicManifest = {
+        name: `${activeName} – Personal Inventory`,
+        short_name: activeName,
+        description: siteSettings.site_description || 'Thingor - Tartsd nyilván a tulajdonodban lévő tárgyakat, hol vannak, mennyit érnek és mi tartozik hozzájuk.',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        orientation: 'any',
+        background_color: '#303943',
+        theme_color: '#2563EB',
+        categories: ['utilities', 'productivity', 'lifestyle'],
+        icons: [
+          {
+            src: activeLogo,
+            sizes: '192x192 512x512',
+            type: activeLogo.endsWith('.webp') ? 'image/webp' : 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: activeLogo,
+            sizes: '192x192 512x512',
+            type: activeLogo.endsWith('.webp') ? 'image/webp' : 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png'
+          }
+        ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(dynamicManifest, null, 2)], { type: 'application/manifest+json' });
+      blobUrl = URL.createObjectURL(manifestBlob);
+      let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+      if (!manifestLink) {
+        manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        document.head.appendChild(manifestLink);
+      }
+      manifestLink.href = blobUrl;
+    } catch (e) {
+      console.warn('Could not generate dynamic manifest blob:', e);
     }
-  }, [siteSettings.favicon_url]);
+
+    return () => {
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [siteSettings.logo_url, siteSettings.favicon_url, siteSettings.site_name, siteSettings.site_description]);
 
   // Handle Supabase Auth state if configured
   useEffect(() => {
@@ -1047,20 +1147,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (error) return { success: false, error: formatAuthError(error.message) };
 
       if (data.user) {
-        setUser({
-          id: data.user.id,
-          user_id: data.user.id,
-          display_name: data.user.user_metadata?.display_name || (cleanEmail === 'mythingor@gmail.com' ? 'Admin (Thingor)' : cleanEmail.split('@')[0]),
-          email: cleanEmail,
-          is_admin: Boolean(data.user.user_metadata?.is_admin) || cleanEmail === 'mythingor@gmail.com',
-        });
+        const profile = await fetchUserProfile(
+          data.user.id,
+          cleanEmail,
+          data.user.user_metadata?.display_name
+        );
+        if (isSuspended(profile)) {
+          await supabase.auth.signOut();
+          setUser(null);
+          localStorage.removeItem('thingor_user');
+          return {
+            success: false,
+            error: language === 'hu'
+              ? 'Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.'
+              : 'Your account is suspended. Please contact system administrator.'
+          };
+        }
+        setUser(profile);
       }
       setIsAuthModalOpen(false);
       return { success: true };
     }
 
     const savedRegs = localStorage.getItem('thingor_registered_users');
-    const registeredUsers: Array<{ email: string; pass: string; name: string; id: string }> = savedRegs ? JSON.parse(savedRegs) : [];
+    const registeredUsers: Array<{ email: string; pass: string; name: string; id: string; role?: string }> = savedRegs ? JSON.parse(savedRegs) : [];
     const matched = registeredUsers.find(u => u.email.toLowerCase() === cleanEmail && u.pass === pass);
 
     if (!matched) {
@@ -1072,12 +1182,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
     }
 
+    const isMatchedAdmin = matched.role === 'admin' || cleanEmail === 'mythingor@gmail.com';
     setUser({
       id: matched.id,
       user_id: matched.id,
       display_name: matched.name,
       email: matched.email,
-      is_admin: matched.email.toLowerCase() === 'mythingor@gmail.com',
+      role: isMatchedAdmin ? 'admin' : 'user',
+      status: 'active',
+      is_admin: isMatchedAdmin,
     });
     setIsAuthModalOpen(false);
     return { success: true };
@@ -1107,7 +1220,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('thingor_household_members');
     localStorage.removeItem('thingor_household_invites');
 
-    const currentIsAdmin = !!user && (user.email?.toLowerCase() === 'mythingor@gmail.com' || !!user.is_admin);
+    const currentIsAdmin = isAdmin(user);
     if (isRegistrationSuspended && !currentIsAdmin) {
       return {
         success: false,
@@ -1134,12 +1247,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       if (data.user && data.session) {
-        setUser({
-          id: data.user.id,
-          user_id: data.user.id,
-          display_name: name || data.user.user_metadata?.display_name || cleanEmail.split('@')[0],
-          email: cleanEmail
-        });
+        const profile = await fetchUserProfile(
+          data.user.id,
+          cleanEmail,
+          name || data.user.user_metadata?.display_name
+        );
+        setUser(profile);
         setIsAuthModalOpen(false);
       }
       return { success: true, emailConfirmationRequired: false };
@@ -1168,7 +1281,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: newUser.id,
       user_id: newUser.id,
       display_name: newUser.name,
-      email: newUser.email
+      email: newUser.email,
+      role: 'user',
+      status: 'active',
+      is_admin: false,
     });
     setIsAuthModalOpen(false);
     return { success: true, emailConfirmationRequired: false };

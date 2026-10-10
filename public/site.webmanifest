@@ -6,8 +6,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#020617",
-  "theme_color": "#10b981",
+  "background_color": "#303943",
+  "theme_color": "#2563EB",
   "categories": ["utilities", "productivity", "lifestyle"],
   "icons": [
     {
@@ -33,6 +33,18 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/logo.webp",
+      "sizes": "1024x1008",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "1024x1008",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/apple-touch-icon.png",

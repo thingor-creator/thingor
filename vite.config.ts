@@ -29,10 +29,14 @@ export default defineConfig({
         'favicon.ico',
         'favicon.svg',
         'favicon.png',
+        'favicon-16x16.png',
+        'favicon-32x32.png',
+        'favicon-48x48.png',
         'apple-touch-icon.png',
         'android-chrome-192x192.png',
         'android-chrome-512x512.png',
         'logo.png',
+        'logo.webp',
       ],
       manifest: {
         name: 'Thingor – Personal Inventory',
@@ -42,8 +46,8 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'any',
-        background_color: '#020617',
-        theme_color: '#10b981',
+        background_color: '#303943',
+        theme_color: '#2563EB',
         categories: ['utilities', 'productivity', 'lifestyle'],
         icons: [
           {
@@ -71,11 +75,23 @@ export default defineConfig({
             purpose: 'maskable'
           },
           {
+            src: '/logo.webp',
+            sizes: '1024x1008',
+            type: 'image/webp',
+            purpose: 'any'
+          },
+          {
+            src: '/logo.png',
+            sizes: '1024x1008',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
             src: '/apple-touch-icon.png',
             sizes: '180x180',
             type: 'image/png'
           }
-        ]
+        ],
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
