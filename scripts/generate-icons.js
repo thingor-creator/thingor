@@ -15,26 +15,56 @@ async function generateIcons() {
     .toFile(path.resolve('public/logo.png'));
   console.log('Generated public/logo.png');
 
-  // 2. android-chrome-192x192.png
-  await sharp(inputWebp)
-    .resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  // 2. android-chrome-192x192.png (with safe-zone padding so mobile never crops the logo)
+  const inner192 = await sharp(inputWebp)
+    .resize(150, 150, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .toBuffer();
+  await sharp({
+    create: {
+      width: 192,
+      height: 192,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    }
+  })
+    .composite([{ input: inner192, gravity: 'center' }])
     .png()
     .toFile(path.resolve('public/android-chrome-192x192.png'));
-  console.log('Generated public/android-chrome-192x192.png');
+  console.log('Generated public/android-chrome-192x192.png (with safe padding)');
 
-  // 3. android-chrome-512x512.png
-  await sharp(inputWebp)
-    .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  // 3. android-chrome-512x512.png (with safe-zone padding so mobile never crops the logo)
+  const inner512 = await sharp(inputWebp)
+    .resize(400, 400, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .toBuffer();
+  await sharp({
+    create: {
+      width: 512,
+      height: 512,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    }
+  })
+    .composite([{ input: inner512, gravity: 'center' }])
     .png()
     .toFile(path.resolve('public/android-chrome-512x512.png'));
-  console.log('Generated public/android-chrome-512x512.png');
+  console.log('Generated public/android-chrome-512x512.png (with safe padding)');
 
-  // 4. apple-touch-icon.png (180x180)
-  await sharp(inputWebp)
-    .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  // 4. apple-touch-icon.png (180x180 with safe-zone padding on theme background #303943)
+  const inner180 = await sharp(inputWebp)
+    .resize(140, 140, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .toBuffer();
+  await sharp({
+    create: {
+      width: 180,
+      height: 180,
+      channels: 4,
+      background: { r: 48, g: 57, b: 67, alpha: 1 } // #303943
+    }
+  })
+    .composite([{ input: inner180, gravity: 'center' }])
     .png()
     .toFile(path.resolve('public/apple-touch-icon.png'));
-  console.log('Generated public/apple-touch-icon.png');
+  console.log('Generated public/apple-touch-icon.png (with safe padding)');
 
   // 5. favicon.png (64x64)
   await sharp(inputWebp)

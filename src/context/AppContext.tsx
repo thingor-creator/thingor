@@ -772,28 +772,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         categories: ['utilities', 'productivity', 'lifestyle'],
         icons: [
           {
-            src: activeLogo,
-            sizes: '192x192 512x512',
-            type: activeLogo.endsWith('.webp') ? 'image/webp' : 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: activeLogo,
-            sizes: '192x192 512x512',
-            type: activeLogo.endsWith('.webp') ? 'image/webp' : 'image/png',
-            purpose: 'maskable'
-          },
-          {
             src: '/android-chrome-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
-          },
-          {
-            src: '/android-chrome-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable'
           },
           {
             src: '/android-chrome-512x512.png',
@@ -802,15 +784,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             purpose: 'any'
           },
           {
-            src: '/android-chrome-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
+            src: activeLogo,
+            sizes: '1024x1008',
+            type: activeLogo.endsWith('.webp') ? 'image/webp' : 'image/png',
+            purpose: 'any'
           },
           {
             src: '/apple-touch-icon.png',
             sizes: '180x180',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           }
         ]
       };
