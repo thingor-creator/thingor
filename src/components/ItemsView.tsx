@@ -15,6 +15,15 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 
+// Helper function for local accent- and case-insensitive search normalization
+const normalizeSearchText = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return String(text)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
 export const ItemsView: React.FC = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
@@ -33,17 +42,29 @@ export const ItemsView: React.FC = () => {
     language,
   } = useApp();
 
-  // Search & Filter Logic across name, description, category, location
+  // Search & Filter Logic across name, description, notes, category, location
+  const searchTokens = filters.search.trim()
+    ? filters.search.trim().split(/\s+/).map(normalizeSearchText).filter(Boolean)
+    : [];
+
   const filteredItems = items.filter(item => {
-    // 1. Search term match
-    if (filters.search.trim()) {
-      const q = filters.search.toLowerCase();
-      const nameMatch = item.name.toLowerCase().includes(q);
-      const descMatch = item.description?.toLowerCase().includes(q) || false;
-      const catMatch = getCategoryName(item.category_id).toLowerCase().includes(q);
-      const locMatch = getLocationPath(item.location_id).toLowerCase().includes(q);
-      
-      if (!nameMatch && !descMatch && !catMatch && !locMatch) {
+    // 1. Search term match (all tokens must match in at least one searchable field)
+    if (searchTokens.length > 0) {
+      const normName = normalizeSearchText(item.name);
+      const normDesc = normalizeSearchText(item.description);
+      const normNotes = normalizeSearchText(item.notes);
+      const normCategory = normalizeSearchText(item.category_id ? getCategoryName(item.category_id) : '');
+      const normLocation = normalizeSearchText(item.location_id ? getLocationPath(item.location_id) : '');
+
+      const isMatch = searchTokens.every(token =>
+        normName.includes(token) ||
+        normDesc.includes(token) ||
+        normNotes.includes(token) ||
+        normCategory.includes(token) ||
+        normLocation.includes(token)
+      );
+
+      if (!isMatch) {
         return false;
       }
     }
@@ -103,7 +124,7 @@ export const ItemsView: React.FC = () => {
   };
 
   const hasActiveFilters =
-    filters.search ||
+    Boolean(filters.search.trim()) ||
     filters.categoryId !== 'all' ||
     filters.locationId !== 'all' ||
     filters.condition !== 'all';
