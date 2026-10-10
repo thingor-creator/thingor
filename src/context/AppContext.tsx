@@ -892,33 +892,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const memberData = memberList?.[0];
         if (memberData && isMounted) {
           const { data: hhData } = await supabase.from('households').select('*').eq('id', memberData.household_id).maybeSingle();
-          if (hhData && isMounted) setHousehold(hhData as Household);
+          if (hhData && isMounted) {
+            setHousehold(hhData as Household);
 
-          const { data: allMembers } = await supabase.from('household_members').select('*').eq('household_id', memberData.household_id);
-          if (allMembers && isMounted) setHouseholdMembers(allMembers as HouseholdMember[]);
+            // AUTO-HEAL: Ensure all items owned by user with ownership_scope = 'household' have this valid household_id in Supabase
+            if (hhData.id && isUUID(hhData.id)) {
+              await supabase
+                .from('items')
+                .update({ household_id: hhData.id })
+                .eq('user_id', user.id)
+                .eq('ownership_scope', 'household');
+            }
 
-          const { data: allInvites } = await supabase.from('household_invites').select('*').eq('household_id', memberData.household_id);
-          if (allInvites && isMounted) setHouseholdInvites(allInvites as HouseholdInvite[]);
+            const { data: allMembers } = await supabase.from('household_members').select('*').eq('household_id', memberData.household_id);
+            if (allMembers && isMounted) setHouseholdMembers(allMembers as HouseholdMember[]);
 
-          // Re-sync locations and items once household context is established
-          const { data: freshLocations } = await supabase.from('locations').select('*');
-          if (freshLocations && isMounted) setLocations(freshLocations as LocationItem[]);
+            const { data: allInvites } = await supabase.from('household_invites').select('*').eq('household_id', memberData.household_id);
+            if (allInvites && isMounted) setHouseholdInvites(allInvites as HouseholdInvite[]);
 
-          const { data: freshItems } = await supabase.from('items').select('*').order('created_at', { ascending: false });
-          if (freshItems && isMounted) {
-            setItems(prev => {
-              const itemMap = new Map<string, Item>();
-              for (const item of prev) {
-                if (item && item.name) itemMap.set(item.id, item);
-              }
-              for (const item of (freshItems as Item[])) {
-                if (item && item.name) itemMap.set(item.id, item);
-              }
-              return Array.from(itemMap.values()).sort((a, b) => 
-                (b.created_at || '').localeCompare(a.created_at || '')
-              );
-            });
+            // Re-sync locations and items once household context is established
+            const { data: freshLocations } = await supabase.from('locations').select('*');
+            if (freshLocations && isMounted) setLocations(freshLocations as LocationItem[]);
+
+            const { data: freshItems } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+            if (freshItems && isMounted) {
+              setItems(prev => {
+                const itemMap = new Map<string, Item>();
+                for (const item of prev) {
+                  if (item && item.name) itemMap.set(item.id, item);
+                }
+                for (const item of (freshItems as Item[])) {
+                  if (item && item.name) itemMap.set(item.id, item);
+                }
+                return Array.from(itemMap.values()).sort((a, b) => 
+                  (b.created_at || '').localeCompare(a.created_at || '')
+                );
+              });
+            }
           }
+        } else if (isMounted && household && !isUUID(household.id)) {
+          ensureValidHousehold(household);
         }
       });
 
@@ -1289,6 +1302,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const safeCategoryId = isUUID(itemData.category_id) ? itemData.category_id : null;
     const safeLocationId = isUUID(itemData.location_id) ? itemData.location_id : null;
 
+    let targetHouseholdId: string | null = null;
+    if (itemData.ownership_scope === 'household') {
+      if (household && isUUID(household.id)) {
+        targetHouseholdId = household.id;
+      } else {
+        const validHh = await ensureValidHousehold(household);
+        if (validHh && isUUID(validHh.id)) {
+          targetHouseholdId = validHh.id;
+        }
+      }
+    }
+
     if (isSupabaseConfigured && supabase && user?.id) {
       const cleanPayload: Record<string, any> = {
         name: itemData.name.trim(),
@@ -1308,7 +1333,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         warranty_end: itemData.warranty_end || null,
         notes: itemData.notes?.trim() || null,
         user_id: user.id,
-        household_id: itemData.ownership_scope === 'household' ? (household?.id || null) : null,
+        household_id: targetHouseholdId,
       };
 
       const { data, error } = await supabase
@@ -1347,6 +1372,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ...itemData,
       id: 'item-' + Date.now(),
       user_id: user?.id,
+      household_id: targetHouseholdId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -1356,6 +1382,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateItem = async (id: string, updates: Partial<Item>): Promise<void> => {
+    let targetHouseholdId: string | null | undefined = undefined;
+    if (updates.ownership_scope === 'household') {
+      if (household && isUUID(household.id)) {
+        targetHouseholdId = household.id;
+      } else {
+        const validHh = await ensureValidHousehold(household);
+        if (validHh && isUUID(validHh.id)) {
+          targetHouseholdId = validHh.id;
+        }
+      }
+    } else if (updates.ownership_scope === 'private') {
+      targetHouseholdId = null;
+    }
+
     if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
       const cleanUpdates: Record<string, any> = { ...updates, updated_at: new Date().toISOString() };
       if ('category_id' in cleanUpdates && !isUUID(cleanUpdates.category_id)) {
@@ -1364,10 +1404,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if ('location_id' in cleanUpdates && !isUUID(cleanUpdates.location_id)) {
         cleanUpdates.location_id = null;
       }
-      if (cleanUpdates.ownership_scope === 'household' && household?.id) {
-        cleanUpdates.household_id = household.id;
-      } else if (cleanUpdates.ownership_scope === 'private') {
-        cleanUpdates.household_id = null;
+      if (targetHouseholdId !== undefined) {
+        cleanUpdates.household_id = targetHouseholdId;
       }
 
       // Convert empty strings to null for optional dates/fields
@@ -1393,6 +1431,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setItems(prev => prev.map(item => item.id === id ? {
       ...item,
       ...updates,
+      ...(targetHouseholdId !== undefined ? { household_id: targetHouseholdId } : {}),
       updated_at: new Date().toISOString()
     } : item));
   };
@@ -1909,6 +1948,72 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Helper to guarantee a valid UUID household record in Supabase
+  const ensureValidHousehold = async (currentHh?: Household | null): Promise<Household | null> => {
+    const targetHh = currentHh || household;
+    if (!isSupabaseConfigured || !supabase || !user?.id) return targetHh;
+
+    if (targetHh && isUUID(targetHh.id)) {
+      return targetHh;
+    }
+
+    // 1. Check if user is already in a household in Supabase
+    const { data: memberList } = await supabase
+      .from('household_members')
+      .select('*')
+      .or(`user_id.eq.${user.id},user_email.ilike.${user.email}`);
+
+    let realHh: Household | null = null;
+
+    if (memberList && memberList.length > 0) {
+      const { data: hhData } = await supabase
+        .from('households')
+        .select('*')
+        .eq('id', memberList[0].household_id)
+        .maybeSingle();
+
+      if (hhData) {
+        realHh = hhData as Household;
+      }
+    }
+
+    // 2. If no household row exists in Supabase, create one
+    if (!realHh) {
+      const hhName = targetHh?.name || `${user.display_name || 'Családi'} Háztartása`;
+      const { data: createdHh, error: hhErr } = await supabase
+        .from('households')
+        .insert([{ name: hhName, owner_id: user.id }])
+        .select()
+        .single();
+
+      if (!hhErr && createdHh) {
+        realHh = createdHh as Household;
+        await supabase.from('household_members').insert([{
+          household_id: realHh.id,
+          user_id: user.id,
+          user_email: user.email,
+          user_name: user.display_name || user.email,
+          role: 'owner'
+        }]);
+      }
+    }
+
+    if (realHh && isUUID(realHh.id)) {
+      setHousehold(realHh);
+
+      // Backfill user items in Supabase to link with real household ID
+      await supabase
+        .from('items')
+        .update({ household_id: realHh.id })
+        .eq('user_id', user.id)
+        .eq('ownership_scope', 'household');
+
+      return realHh;
+    }
+
+    return targetHh;
+  };
+
   // CRUD Household & Family Sharing
   const createHousehold = async (name: string): Promise<Household> => {
     const newHh: Household = {
@@ -1929,6 +2034,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     if (isSupabaseConfigured && supabase && user?.id) {
+      // First check if user is already a member of an existing household in Supabase
+      const { data: existingMembers } = await supabase
+        .from('household_members')
+        .select('*')
+        .or(`user_id.eq.${user.id},user_email.ilike.${user.email}`);
+
+      if (existingMembers && existingMembers.length > 0) {
+        const { data: existingHh } = await supabase
+          .from('households')
+          .select('*')
+          .eq('id', existingMembers[0].household_id)
+          .maybeSingle();
+
+        if (existingHh) {
+          setHousehold(existingHh as Household);
+          const { data: allMembers } = await supabase.from('household_members').select('*').eq('household_id', existingHh.id);
+          if (allMembers) setHouseholdMembers(allMembers as HouseholdMember[]);
+          return existingHh as Household;
+        }
+      }
+
       const { data: hhData, error: hhErr } = await supabase.from('households').insert([{ name, owner_id: user.id }]).select().single();
       if (!hhErr && hhData) {
         const { data: mData } = await supabase.from('household_members').insert([{
@@ -2245,10 +2371,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateHouseholdSharedLocations = async (locationIds: string[]): Promise<void> => {
-    if (!household) return;
-    setHousehold(prev => prev ? { ...prev, shared_location_ids: locationIds } : null);
-    if (isSupabaseConfigured && supabase && isUUID(household.id)) {
-      await supabase.from('households').update({ shared_location_ids: locationIds }).eq('id', household.id);
+    let activeHh = household;
+    if (activeHh && !isUUID(activeHh.id)) {
+      const validHh = await ensureValidHousehold(activeHh);
+      if (validHh) activeHh = validHh;
+    }
+    if (!activeHh) return;
+
+    setHousehold(prev => prev ? { ...prev, id: activeHh.id, shared_location_ids: locationIds } : null);
+    if (isSupabaseConfigured && supabase && isUUID(activeHh.id)) {
+      await supabase.from('households').update({ shared_location_ids: locationIds }).eq('id', activeHh.id);
       const { data: locData } = await supabase.from('locations').select('*');
       if (locData) setLocations(locData as LocationItem[]);
     }
