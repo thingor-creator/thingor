@@ -25,8 +25,7 @@ export const LandingPage: React.FC = () => {
     isAuthenticated,
     t,
     language,
-    setActiveLegalSlug,
-    siteSettings
+    setActiveLegalSlug
   } = useApp();
 
   const isHu = language === 'hu';
@@ -72,10 +71,17 @@ export const LandingPage: React.FC = () => {
           <div className="lg:col-span-6 text-center lg:text-left">
             
 
-            {/* Large Brand Wordmark */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[#F1F5F9] leading-none mb-3 sm:mb-4">
-              Thingor
-            </h1>
+            {/* Large Brand Wordmark with App Icon */}
+            <div className="flex items-center justify-center lg:justify-start gap-3.5 sm:gap-4 mb-3 sm:mb-4">
+              <img
+                src="/app-icon.png"
+                alt="Thingor"
+                className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 rounded-2xl shadow-xl shadow-blue-950/40 object-cover shrink-0"
+              />
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[#F1F5F9] leading-none">
+                Thingor
+              </h1>
+            </div>
 
             {/* Tagline in smaller font below Thingor */}
             <p className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#E2E8F0] leading-snug">
@@ -746,13 +752,15 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-[#3E4A59]/80">
-            {/* Brand Logo & Tagline */}
-            <div className="flex items-center gap-3.5">
+            {/* Brand Title & Tagline */}
+            <div className="flex items-center gap-3">
               <img
-                src={siteSettings.logo_url || '/logo.png'}
-                alt={siteSettings.site_name || 'Thingor Logo'}
-                className="h-8 sm:h-9 w-auto object-contain opacity-90"
+                src="/app-icon.png"
+                alt="Thingor"
+                className="h-7 w-7 rounded-lg object-cover opacity-90"
               />
+              <span className="text-sm font-bold text-[#F1F5F9]">Thingor</span>
+              <span className="text-[#3E4A59] hidden sm:inline">•</span>
               <span className="text-xs text-[#94A3B8] font-medium hidden sm:inline">
                 {t('tagline')}
               </span>

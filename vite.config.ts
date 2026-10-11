@@ -26,6 +26,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
+        'app-icon.png',
         'favicon.ico',
         'favicon.svg',
         'favicon.png',
@@ -54,6 +55,12 @@ export default defineConfig({
         lang: 'hu',
         categories: ['utilities', 'productivity', 'lifestyle'],
         icons: [
+          {
+            src: '/app-icon.png',
+            sizes: '1024x1008',
+            type: 'image/png',
+            purpose: 'any'
+          },
           {
             src: '/android-chrome-192x192.png',
             sizes: '192x192',
