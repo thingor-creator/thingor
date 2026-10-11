@@ -10,7 +10,6 @@ import {
   Bike,
   BookOpen,
   Car,
-  Sparkles,
   CheckCircle2,
   Layers,
   FolderTree,
@@ -72,11 +71,6 @@ export const LandingPage: React.FC = () => {
           {/* LEFT COLUMN: Headline, Story & Call-to-actions (6 cols on lg) */}
           <div className="lg:col-span-6 text-center lg:text-left">
             
-            {/* Category / Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#445262] bg-[#2D3743] text-blue-400 text-xs font-semibold tracking-wide shadow-sm mb-4">
-              <Sparkles className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-              <span>{isHu ? 'SZEMÉLYES LELTÁR- ÉS VAGYONKEZELŐ PLATFORM' : 'PERSONAL INVENTORY & ASSET PLATFORM'}</span>
-            </div>
 
             {/* Large Brand Wordmark */}
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[#F1F5F9] leading-none mb-3 sm:mb-4">
