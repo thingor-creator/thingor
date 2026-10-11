@@ -756,73 +756,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (el) el.setAttribute('content', activeLogo);
     });
 
-    // 4. Dynamically generate and inject Web App Manifest blob with configured logo & branding
-    let blobUrl = '';
-    try {
-      const dynamicManifest = {
-        name: `${activeName} – Personal Inventory`,
-        short_name: activeName,
-        description: siteSettings.site_description || 'Thingor - Tartsd nyilván a tulajdonodban lévő tárgyakat, hol vannak, mennyit érnek és mi tartozik hozzájuk.',
-        start_url: '/',
-        scope: '/',
-        display: 'standalone',
-        orientation: 'any',
-        background_color: '#303943',
-        theme_color: '#2563EB',
-        categories: ['utilities', 'productivity', 'lifestyle'],
-        icons: [
-          {
-            src: '/android-chrome-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: '/android-chrome-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: activeLogo,
-            sizes: '1024x1008',
-            type: activeLogo.endsWith('.webp') ? 'image/webp' : 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: '/apple-touch-icon.png',
-            sizes: '180x180',
-            type: 'image/png',
-            purpose: 'any'
-          }
-        ]
-      };
-
-      const manifestBlob = new Blob([JSON.stringify(dynamicManifest, null, 2)], { type: 'application/manifest+json' });
-      blobUrl = URL.createObjectURL(manifestBlob);
-      let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
-      if (!manifestLink) {
-        manifestLink = document.createElement('link');
-        manifestLink.rel = 'manifest';
-        document.head.appendChild(manifestLink);
-      }
-      manifestLink.href = blobUrl;
-    } catch (e) {
-      console.warn('Could not generate dynamic manifest blob:', e);
+    // Ensure link[rel="manifest"] points to the valid static webmanifest
+    const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    if (manifestLink && manifestLink.href.startsWith('blob:')) {
+      manifestLink.href = '/manifest.webmanifest';
     }
-
-    return () => {
-      if (blobUrl && blobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
-  }, [siteSettings.logo_url, siteSettings.favicon_url, siteSettings.site_name, siteSettings.site_description]);
+  }, [siteSettings.logo_url, siteSettings.favicon_url]);
 
   // Handle Supabase Auth state if configured
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error || !session) {
+        if (error) {
+          console.warn('Supabase auth session invalid or expired:', error.message);
+        }
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        setUser(null);
+        localStorage.removeItem('thingor_user');
+        return;
+      }
+
       if (session?.user) {
         const profile = await fetchUserProfile(
           session.user.id,
@@ -837,10 +792,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return;
         }
         setUser(profile);
-      } else {
-        setUser(null);
-        localStorage.removeItem('thingor_user');
       }
+    }).catch(async (err) => {
+      console.warn('Supabase getSession exception:', err);
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      setUser(null);
+      localStorage.removeItem('thingor_user');
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -866,6 +823,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         setUser(profile);
       } else if (event === 'SIGNED_OUT' || !session) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
         setUser(null);
         setItems([]);
         setDocuments([]);
