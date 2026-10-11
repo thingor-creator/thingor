@@ -71,16 +71,16 @@ export const LandingPage: React.FC = () => {
           <div className="lg:col-span-6 text-center lg:text-left">
             
 
-            {/* Large Brand Wordmark with App Icon */}
-            <div className="flex items-center justify-center lg:justify-start gap-3.5 sm:gap-4 mb-3 sm:mb-4">
-              <img
-                src="/app-icon.png"
-                alt="Thingor"
-                className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 rounded-2xl shadow-xl shadow-blue-950/40 object-cover shrink-0"
-              />
+            {/* Large Brand Wordmark with App Icon on the Right */}
+            <div className="flex items-center justify-center lg:justify-start gap-4 sm:gap-6 mb-3 sm:mb-4">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[#F1F5F9] leading-none">
                 Thingor
               </h1>
+              <img
+                src="/app-icon.png"
+                alt="Thingor"
+                className="h-20 w-20 sm:h-24 sm:w-24 lg:h-28 lg:w-28 rounded-3xl shadow-2xl shadow-black/50 object-cover shrink-0 hover:scale-105 transition-transform"
+              />
             </div>
 
             {/* Tagline in smaller font below Thingor */}
