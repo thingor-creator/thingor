@@ -83,8 +83,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-REVOKE ALL ON FUNCTION public.can_access_shared_item(uuid, uuid, uuid, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.can_access_shared_item(uuid, uuid, uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.can_access_shared_item(uuid, uuid, uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.can_access_shared_item(uuid, uuid, uuid, uuid) TO anon, authenticated;
 
 -- 2.2. can_access_shared_location
 CREATE OR REPLACE FUNCTION public.can_access_shared_location(
@@ -140,8 +140,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-REVOKE ALL ON FUNCTION public.can_access_shared_location(uuid, uuid, uuid, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.can_access_shared_location(uuid, uuid, uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.can_access_shared_location(uuid, uuid, uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.can_access_shared_location(uuid, uuid, uuid, uuid) TO anon, authenticated;
 
 -- 2.3. can_access_shared_category
 CREATE OR REPLACE FUNCTION public.can_access_shared_category(
@@ -188,8 +188,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-REVOKE ALL ON FUNCTION public.can_access_shared_category(uuid, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.can_access_shared_category(uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.can_access_shared_category(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.can_access_shared_category(uuid, uuid) TO anon, authenticated;
 
 -- 3. RLS POLICIES UPDATE
 
