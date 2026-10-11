@@ -2429,7 +2429,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isSupabaseConfigured && supabase && isUUID(memberId)) {
       await supabase.from('household_members').update({ allowed_category_ids: allowedCategoryIds }).eq('id', memberId);
       const { data: catData } = await supabase.from('categories').select('*');
-      if (catData) setCategories(catData as CategoryItem[]);
+      if (catData) setCategories(catData as Category[]);
       const { data: itemData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
       if (itemData) setItems(itemData as Item[]);
     }
@@ -2481,7 +2481,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isSupabaseConfigured && supabase && isUUID(activeHh.id)) {
       await supabase.from('households').update({ shared_category_ids: categoryIds }).eq('id', activeHh.id);
       const { data: catData } = await supabase.from('categories').select('*');
-      if (catData) setCategories(catData as CategoryItem[]);
+      if (catData) setCategories(catData as Category[]);
       const { data: itemData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
       if (itemData) setItems(itemData as Item[]);
     }
