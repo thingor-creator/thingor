@@ -35,6 +35,8 @@ export default defineConfig({
         'apple-touch-icon.png',
         'android-chrome-192x192.png',
         'android-chrome-512x512.png',
+        'maskable-icon-192x192.png',
+        'maskable-icon-512x512.png',
         'logo.png',
         'logo.webp',
       ],
@@ -42,12 +44,14 @@ export default defineConfig({
         name: 'Thingor – Personal Inventory',
         short_name: 'Thingor',
         description: 'Thingor - Tartsd nyilván a tulajdonodban lévő tárgyakat, hol vannak, mennyit érnek és mi tartozik hozzájuk.',
+        id: '/',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'any',
         background_color: '#303943',
         theme_color: '#2563EB',
+        lang: 'hu',
         categories: ['utilities', 'productivity', 'lifestyle'],
         icons: [
           {
@@ -57,10 +61,22 @@ export default defineConfig({
             purpose: 'any'
           },
           {
+            src: '/maskable-icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
             src: '/android-chrome-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
+          },
+          {
+            src: '/maskable-icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           },
           {
             src: '/logo.webp',

@@ -9,11 +9,14 @@ interface BeforeInstallPromptEvent extends Event {
 
 export const PWAInstallPrompt: React.FC = () => {
   const { siteSettings } = useApp();
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
+    (window as any).deferredPWAInstallPrompt || null
+  );
   const [isStandalone, setIsStandalone] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isInstalledSuccess, setIsInstalledSuccess] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     // Check if running in standalone mode (already installed as PWA)
@@ -27,10 +30,14 @@ export const PWAInstallPrompt: React.FC = () => {
 
     checkStandalone();
 
-    // Detect iOS
+    // Detect Device Type
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIphoneOrIpad = /iphone|ipad|ipod/.test(userAgent);
+    const isAndroidDevice = /android/.test(userAgent);
+    const isMobileDevice = isIphoneOrIpad || isAndroidDevice || /mobile|tablet/.test(userAgent);
+
     setIsIOS(isIphoneOrIpad);
+    setIsMobile(isMobileDevice);
 
     // Check if user previously dismissed prompt in this session
     const dismissed = sessionStorage.getItem('thingor_pwa_prompt_dismissed');
@@ -38,15 +45,29 @@ export const PWAInstallPrompt: React.FC = () => {
       setIsDismissed(true);
     }
 
+    // Check early captured prompt from window
+    if ((window as any).deferredPWAInstallPrompt) {
+      setDeferredPrompt((window as any).deferredPWAInstallPrompt);
+    }
+
+    const handleCustomInstallable = () => {
+      if ((window as any).deferredPWAInstallPrompt) {
+        setDeferredPrompt((window as any).deferredPWAInstallPrompt);
+      }
+    };
+    window.addEventListener('thingor-pwa-installable', handleCustomInstallable);
+
     // Listen for beforeinstallprompt event (Chromium browsers)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      (window as any).deferredPWAInstallPrompt = e;
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
+      window.removeEventListener('thingor-pwa-installable', handleCustomInstallable);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
@@ -55,8 +76,9 @@ export const PWAInstallPrompt: React.FC = () => {
     return null;
   }
 
-  // Only render if browser captured beforeinstallprompt or on iOS Safari
-  if (!deferredPrompt && !isIOS) {
+  // On desktop browsers, only render if the browser explicitly captured beforeinstallprompt.
+  // On mobile devices, always offer the install guide/prompt.
+  if (!deferredPrompt && !isMobile) {
     return null;
   }
 
@@ -122,7 +144,7 @@ export const PWAInstallPrompt: React.FC = () => {
         <div className="mt-3 text-[11px] text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] p-2.5 rounded-xl border border-[var(--border-color,#56616D)] leading-relaxed">
           Koppints a Safari <span className="font-bold text-[var(--color-primary-blue,#2563EB)]">Megosztás (Share)</span> gombjára, majd válaszd a <span className="font-bold text-[var(--color-primary-blue,#2563EB)]">"Hozzáadás a kezdőképernyőhöz"</span> lehetőséget.
         </div>
-      ) : (
+      ) : deferredPrompt ? (
         <div className="mt-3 flex items-center gap-2">
           <button
             onClick={handleInstallClick}
@@ -136,6 +158,18 @@ export const PWAInstallPrompt: React.FC = () => {
             className="py-2 px-3 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)] font-semibold text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--border-color,#56616D)]"
           >
             Most nem
+          </button>
+        </div>
+      ) : (
+        <div className="mt-3 text-[11px] text-[var(--text-main,#E0E3E6)] bg-[var(--surface-bg,#465362)] p-2.5 rounded-xl border border-[var(--border-color,#56616D)] leading-relaxed flex items-center justify-between gap-2">
+          <span>
+            Koppints a böngésző menüjére <span className="font-bold text-[var(--color-primary-blue,#2563EB)]">(⋮)</span>, majd a <span className="font-bold text-[var(--color-primary-blue,#2563EB)]">"Telepítés"</span> vagy <span className="font-bold text-[var(--color-primary-blue,#2563EB)]">"Hozzáadás a kezdőképernyőhöz"</span> gombra.
+          </span>
+          <button
+            onClick={handleDismiss}
+            className="px-2 py-1 rounded bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-sub,#B5BDC6)] hover:text-white text-[10px] shrink-0 border border-[var(--border-color,#56616D)]"
+          >
+            Értem
           </button>
         </div>
       )}

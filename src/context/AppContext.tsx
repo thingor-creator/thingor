@@ -729,7 +729,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     const activeLogo = siteSettings.logo_url || '/logo.png';
     const activeFavicon = siteSettings.favicon_url || siteSettings.logo_url || '/favicon.png';
-    const activeName = siteSettings.site_name || 'Thingor';
 
     // 1. Update all browser favicons
     const favicons = document.querySelectorAll("link[rel*='icon']");
@@ -768,13 +767,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isSupabaseConfigured || !supabase) return;
 
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (error || !session) {
-        if (error) {
-          console.warn('Supabase auth session invalid or expired:', error.message);
-        }
+      if (error) {
+        console.warn('Supabase auth session invalid or expired:', error.message);
+        // Only purge local auth storage if an actual invalid token error was received
         await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
         setUser(null);
         localStorage.removeItem('thingor_user');
+        return;
+      }
+
+      if (!session) {
+        // Normal anonymous visitor state (no session) - do NOT invoke signOut
+        setUser(null);
         return;
       }
 
@@ -822,8 +826,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return;
         }
         setUser(profile);
-      } else if (event === 'SIGNED_OUT' || !session) {
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      } else if (event === 'SIGNED_OUT') {
+        // Explicit sign out: clear local state without recursively calling signOut()
         setUser(null);
         setItems([]);
         setDocuments([]);
