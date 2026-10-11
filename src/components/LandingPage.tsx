@@ -78,29 +78,25 @@ export const LandingPage: React.FC = () => {
               <span>{isHu ? 'SZEMÉLYES LELTÁR- ÉS VAGYONKEZELŐ PLATFORM' : 'PERSONAL INVENTORY & ASSET PLATFORM'}</span>
             </div>
 
-            {/* Logo: Refined, balanced proportion (doesn't compete with h1) */}
-            <div className="mb-4 flex justify-center lg:justify-start">
-              <img
-                src={siteSettings.logo_url || '/logo.png'}
-                alt={siteSettings.site_name || 'Thingor Logo'}
-                className="h-9 sm:h-11 md:h-12 w-auto object-contain opacity-95"
-              />
-            </div>
+            {/* Large Brand Wordmark */}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[#F1F5F9] leading-none mb-3 sm:mb-4">
+              Thingor
+            </h1>
 
-            {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#F1F5F9] leading-[1.12]">
+            {/* Tagline in smaller font below Thingor */}
+            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#E2E8F0] leading-snug">
               {isHu ? (
                 <>
-                  A tárgyaid.<br className="hidden sm:inline" />{' '}
+                  A tárgyaid.{' '}
                   <span className="text-blue-400">Egy helyen.</span>
                 </>
               ) : (
                 <>
-                  All your things.<br className="hidden sm:inline" />{' '}
+                  All your things.{' '}
                   <span className="text-blue-400">In one place.</span>
                 </>
               )}
-            </h1>
+            </p>
 
             {/* Concise Value Description */}
             <p className="mt-4 sm:mt-5 text-base sm:text-lg text-[#94A3B8] max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
