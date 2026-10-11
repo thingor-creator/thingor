@@ -90,9 +90,8 @@ export const Navbar: React.FC = () => {
       <header className="sticky top-0 z-40 w-full border-b border-[var(--border-color,#56616D)] bg-[var(--bg-main,#303943)]/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8">
           
-          {/* Logo & Brand (Hidden on Landing Page to avoid duplicate logo) */}
-          <div className="flex items-center gap-2 sm:gap-4 xl:gap-6 shrink-0">
-            {currentView !== 'landing' && (
+            {/* Logo & Brand */}
+            <div className="flex items-center gap-2 sm:gap-4 xl:gap-6 shrink-0">
               <button
                 onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
                 className="flex items-center gap-2 text-left focus:outline-none group py-1 shrink-0"
@@ -100,10 +99,9 @@ export const Navbar: React.FC = () => {
                 <img
                   src={siteSettings.logo_url || '/logo.png'}
                   alt={siteSettings.site_name || 'Thingor Logo'}
-                  className="h-8 sm:h-12 md:h-14 max-w-[120px] xs:max-w-[150px] sm:max-w-[240px] w-auto object-contain group-hover:scale-105 transition-all shrink-0"
+                  className="h-8 sm:h-9 md:h-10 max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] w-auto object-contain group-hover:opacity-90 transition-opacity shrink-0"
                 />
               </button>
-            )}
 
             {/* Desktop Hierarchical Navigation (Authenticated) */}
             {isAuthenticated && (
@@ -306,7 +304,7 @@ export const Navbar: React.FC = () => {
             <div className="relative shrink-0">
               <button
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-xs font-semibold text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
+                className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-xs font-semibold text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
               >
                 <Globe className="h-3.5 w-3.5 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                 <span className="font-bold uppercase">{language}</span>
@@ -423,13 +421,13 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
                 <button
                   onClick={() => {
                     setAuthModalMode('login');
                     setIsAuthModalOpen(true);
                   }}
-                  className="px-3 py-1.5 text-xs sm:text-sm font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white transition-colors shrink-0 whitespace-nowrap"
+                  className="h-9 px-3 text-xs sm:text-sm font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white transition-colors shrink-0 whitespace-nowrap flex items-center"
                 >
                   {t('sign_in')}
                 </button>
@@ -438,7 +436,7 @@ export const Navbar: React.FC = () => {
                     setAuthModalMode('signup');
                     setIsAuthModalOpen(true);
                   }}
-                  className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs sm:text-sm transition-all shadow-md shrink-0 whitespace-nowrap"
+                  className="h-9 px-3.5 sm:px-4 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs sm:text-sm transition-all shadow-md shrink-0 whitespace-nowrap flex items-center justify-center"
                 >
                   {t('start_organizing')}
                 </button>
