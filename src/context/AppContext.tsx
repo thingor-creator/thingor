@@ -154,10 +154,12 @@ interface AppContextType {
   cancelHouseholdInvite: (inviteId: string) => Promise<void>;
   removeHouseholdMember: (memberId: string) => Promise<void>;
   updateHouseholdMember: (memberId: string, updates: Partial<HouseholdMember>) => Promise<void>;
-  updateMemberAllowedLocations: (memberId: string, allowedLocationIds: string[]) => Promise<void>;
+  updateMemberAllowedLocations: (memberId: string, allowedLocationIds: string[] | null) => Promise<void>;
+  updateMemberAllowedCategories: (memberId: string, allowedCategoryIds: string[] | null) => Promise<void>;
   updateMemberRole: (memberId: string, role: HouseholdRole) => Promise<void>;
   leaveHousehold: () => Promise<void>;
   updateHouseholdSharedLocations: (locationIds: string[]) => Promise<void>;
+  updateHouseholdSharedCategories: (categoryIds: string[]) => Promise<void>;
 
   // Item Relationships
   itemRelations: ItemRelation[];
@@ -2411,10 +2413,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const updateMemberAllowedLocations = async (memberId: string, allowedLocationIds: string[]): Promise<void> => {
+  const updateMemberAllowedLocations = async (memberId: string, allowedLocationIds: string[] | null): Promise<void> => {
     setHouseholdMembers(prev => prev.map(m => m.id === memberId ? { ...m, allowed_location_ids: allowedLocationIds } : m));
     if (isSupabaseConfigured && supabase && isUUID(memberId)) {
       await supabase.from('household_members').update({ allowed_location_ids: allowedLocationIds }).eq('id', memberId);
+      const { data: locData } = await supabase.from('locations').select('*');
+      if (locData) setLocations(locData as LocationItem[]);
+      const { data: itemData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+      if (itemData) setItems(itemData as Item[]);
+    }
+  };
+
+  const updateMemberAllowedCategories = async (memberId: string, allowedCategoryIds: string[] | null): Promise<void> => {
+    setHouseholdMembers(prev => prev.map(m => m.id === memberId ? { ...m, allowed_category_ids: allowedCategoryIds } : m));
+    if (isSupabaseConfigured && supabase && isUUID(memberId)) {
+      await supabase.from('household_members').update({ allowed_category_ids: allowedCategoryIds }).eq('id', memberId);
+      const { data: catData } = await supabase.from('categories').select('*');
+      if (catData) setCategories(catData as CategoryItem[]);
+      const { data: itemData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+      if (itemData) setItems(itemData as Item[]);
     }
   };
 
@@ -2447,6 +2464,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await supabase.from('households').update({ shared_location_ids: locationIds }).eq('id', activeHh.id);
       const { data: locData } = await supabase.from('locations').select('*');
       if (locData) setLocations(locData as LocationItem[]);
+      const { data: itemData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+      if (itemData) setItems(itemData as Item[]);
+    }
+  };
+
+  const updateHouseholdSharedCategories = async (categoryIds: string[]): Promise<void> => {
+    let activeHh = household;
+    if (activeHh && !isUUID(activeHh.id)) {
+      const validHh = await ensureValidHousehold(activeHh);
+      if (validHh) activeHh = validHh;
+    }
+    if (!activeHh) return;
+
+    setHousehold(prev => prev ? { ...prev, id: activeHh.id, shared_category_ids: categoryIds } : null);
+    if (isSupabaseConfigured && supabase && isUUID(activeHh.id)) {
+      await supabase.from('households').update({ shared_category_ids: categoryIds }).eq('id', activeHh.id);
+      const { data: catData } = await supabase.from('categories').select('*');
+      if (catData) setCategories(catData as CategoryItem[]);
+      const { data: itemData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+      if (itemData) setItems(itemData as Item[]);
     }
   };
 
@@ -3257,9 +3294,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         removeHouseholdMember,
         updateHouseholdMember,
         updateMemberAllowedLocations,
+        updateMemberAllowedCategories,
         updateMemberRole,
         leaveHousehold,
         updateHouseholdSharedLocations,
+        updateHouseholdSharedCategories,
 
         itemRelations,
         addItemRelation,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Lock } from 'lucide-react';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Lock, Tag } from 'lucide-react';
 import type { HouseholdRole, HouseholdMember } from '../types';
 
 export const HouseholdView: React.FC = () => {
@@ -17,9 +17,12 @@ export const HouseholdView: React.FC = () => {
     removeHouseholdMember,
     updateHouseholdMember,
     updateMemberAllowedLocations,
+    updateMemberAllowedCategories,
     leaveHousehold,
     updateHouseholdSharedLocations,
+    updateHouseholdSharedCategories,
     locations,
+    categories,
     items,
     user,
     setSelectedItemId,
@@ -42,7 +45,11 @@ export const HouseholdView: React.FC = () => {
 
   // Per-member sharing modal state
   const [sharingMember, setSharingMember] = useState<HouseholdMember | null>(null);
+  const [sharingTab, setSharingTab] = useState<'locations' | 'categories'>('locations');
+  const [inheritLocations, setInheritLocations] = useState(true);
   const [memberAllowedLocs, setMemberAllowedLocs] = useState<string[]>([]);
+  const [inheritCategories, setInheritCategories] = useState(true);
+  const [memberAllowedCats, setMemberAllowedCats] = useState<string[]>([]);
 
   const handleOpenEditMember = (m: HouseholdMember) => {
     setEditingMember(m);
@@ -62,12 +69,30 @@ export const HouseholdView: React.FC = () => {
 
   const handleOpenSharingMember = (m: HouseholdMember) => {
     setSharingMember(m);
-    setMemberAllowedLocs(m.allowed_location_ids || household?.shared_location_ids || []);
+    setSharingTab('locations');
+    if (m.allowed_location_ids === null || m.allowed_location_ids === undefined) {
+      setInheritLocations(true);
+      setMemberAllowedLocs(household?.shared_location_ids || []);
+    } else {
+      setInheritLocations(false);
+      setMemberAllowedLocs(m.allowed_location_ids);
+    }
+
+    if (m.allowed_category_ids === null || m.allowed_category_ids === undefined) {
+      setInheritCategories(true);
+      setMemberAllowedCats(household?.shared_category_ids || []);
+    } else {
+      setInheritCategories(false);
+      setMemberAllowedCats(m.allowed_category_ids);
+    }
   };
 
-  const handleSaveMemberLocations = async () => {
+  const handleSaveMemberSharing = async () => {
     if (!sharingMember) return;
-    await updateMemberAllowedLocations(sharingMember.id, memberAllowedLocs);
+    const locPayload = inheritLocations ? null : memberAllowedLocs;
+    const catPayload = inheritCategories ? null : memberAllowedCats;
+    await updateMemberAllowedLocations(sharingMember.id, locPayload);
+    await updateMemberAllowedCategories(sharingMember.id, catPayload);
     setSharingMember(null);
   };
 
@@ -415,10 +440,39 @@ export const HouseholdView: React.FC = () => {
                         {member.title}
                       </span>
                     )}
-                    {member.allowed_location_ids && member.allowed_location_ids.length > 0 && (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-950/50 text-blue-300 border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1">
-                        <SlidersHorizontal className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
-                        {language === 'hu' ? 'Egyedi helyszínek' : 'Custom locations'} ({member.allowed_location_ids.length})
+                    {/* Location status badge */}
+                    {member.allowed_location_ids === null || member.allowed_location_ids === undefined ? (
+                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] flex items-center gap-1">
+                        <FolderCheck className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]" />
+                        {language === 'hu' ? 'Mappák: Örökölt' : 'Folders: Inherited'}
+                      </span>
+                    ) : member.allowed_location_ids.length === 0 ? (
+                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-rose-950/40 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                        <FolderCheck className="w-3 h-3 text-rose-400" />
+                        {language === 'hu' ? 'Mappák: Letiltva (0)' : 'Folders: Blocked (0)'}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-blue-950/50 text-blue-300 border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1">
+                        <FolderCheck className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
+                        {language === 'hu' ? 'Egyedi mappák' : 'Custom folders'} ({member.allowed_location_ids.length})
+                      </span>
+                    )}
+
+                    {/* Category status badge */}
+                    {member.allowed_category_ids === null || member.allowed_category_ids === undefined ? (
+                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] flex items-center gap-1">
+                        <Tag className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]" />
+                        {language === 'hu' ? 'Kategóriák: Örökölt' : 'Categories: Inherited'}
+                      </span>
+                    ) : member.allowed_category_ids.length === 0 ? (
+                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-rose-950/40 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                        <Tag className="w-3 h-3 text-rose-400" />
+                        {language === 'hu' ? 'Kategóriák: Letiltva (0)' : 'Categories: Blocked (0)'}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-purple-950/50 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                        <Tag className="w-3 h-3 text-purple-400" />
+                        {language === 'hu' ? 'Egyedi kategóriák' : 'Custom categories'} ({member.allowed_category_ids.length})
                       </span>
                     )}
                   </div>
@@ -624,6 +678,59 @@ export const HouseholdView: React.FC = () => {
         )}
       </div>
 
+      {/* Shared Categories Management */}
+      <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+            <Tag className="w-5 h-5 text-purple-400" />
+            {language === 'hu' ? 'Megosztott Kategóriák' : 'Shared Categories'}
+          </h2>
+        </div>
+        <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
+          {language === 'hu'
+            ? 'Válaszd ki, mely tárgykategóriákat osztod meg a háztartással. A kijelölt kategóriák tárgyai alapértelmezetten láthatók a családtagok számára.'
+            : 'Select which item categories are shared with household members by default.'}
+        </p>
+
+        {categories.length === 0 ? (
+          <p className="text-sm text-[var(--text-sub,#B5BDC6)] italic">{language === 'hu' ? 'Még nincs elérhető kategória.' : 'No categories available.'}</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {categories.map(cat => {
+              const sharedCats = household?.shared_category_ids || [];
+              const isCatShared = sharedCats.includes(cat.id);
+
+              const toggleCat = () => {
+                let updated = isCatShared
+                  ? sharedCats.filter(id => id !== cat.id)
+                  : [...sharedCats, cat.id];
+                updateHouseholdSharedCategories(updated);
+              };
+
+              return (
+                <label
+                  key={cat.id}
+                  className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                    isCatShared ? 'bg-purple-950/40 border-purple-500 text-white font-semibold' : 'bg-[var(--surface-bg,#465362)] border-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Tag className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span className="text-sm truncate">{cat.name}</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isCatShared}
+                    onChange={toggleCat}
+                    className="w-4 h-4 accent-purple-500 rounded"
+                  />
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Shared Household Items Overview */}
       <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
@@ -750,7 +857,7 @@ export const HouseholdView: React.FC = () => {
         </div>
       )}
 
-      {/* 2. MEMBER LOCATION SHARING MODAL */}
+      {/* 2. MEMBER SHARING MODAL (LOCATIONS & CATEGORIES) */}
       {sharingMember && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="max-w-lg w-full bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-2xl space-y-5">
@@ -761,7 +868,7 @@ export const HouseholdView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
-                    {language === 'hu' ? 'Családtagonkénti Megosztás' : 'Member Location Sharing'}
+                    {language === 'hu' ? 'Családtagonkénti Megosztás' : 'Member Sharing Settings'}
                   </h3>
                   <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                     {sharingMember.user_name || sharingMember.user_email}
@@ -776,64 +883,221 @@ export const HouseholdView: React.FC = () => {
               </button>
             </div>
 
-            <p className="text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
-              {language === 'hu'
-                ? 'Jelöld ki azokat a helyszíneket és mappákat, amelyeket ez a családtag megtekinthet a háztartási leltárban.'
-                : 'Select specific locations and folders this family member is allowed to view.'}
-            </p>
-
-            <div className="flex items-center justify-between py-1">
+            {/* Sharing Mode Tabs */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--surface-bg,#465362)] rounded-xl border border-[var(--border-color,#56616D)]">
               <button
                 type="button"
-                onClick={() => setMemberAllowedLocs(locations.map(l => l.id))}
-                className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400"
+                onClick={() => setSharingTab('locations')}
+                className={`py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 ${
+                  sharingTab === 'locations'
+                    ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                    : 'text-[var(--text-sub,#B5BDC6)] hover:text-white'
+                }`}
               >
-                {language === 'hu' ? 'Összes kijelölése' : 'Select All'}
+                <FolderCheck className="w-4 h-4" />
+                <span>{language === 'hu' ? 'Mappák & Helyszínek' : 'Folders & Locations'}</span>
               </button>
               <button
                 type="button"
-                onClick={() => setMemberAllowedLocs([])}
-                className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white"
+                onClick={() => setSharingTab('categories')}
+                className={`py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 ${
+                  sharingTab === 'categories'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-[var(--text-sub,#B5BDC6)] hover:text-white'
+                }`}
               >
-                {language === 'hu' ? 'Kijelölés törlése' : 'Clear All'}
+                <Tag className="w-4 h-4" />
+                <span>{language === 'hu' ? 'Kategóriák' : 'Categories'}</span>
               </button>
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-              {locations.length === 0 ? (
-                <p className="text-xs text-[var(--text-sub,#B5BDC6)] italic py-2">{language === 'hu' ? 'Nincsenek létrehozott helyszínek.' : 'No locations created.'}</p>
-              ) : (
-                locations.map((loc) => {
-                  const isChecked = memberAllowedLocs.includes(loc.id);
-                  const toggle = () => {
-                    setMemberAllowedLocs(prev =>
-                      isChecked ? prev.filter(id => id !== loc.id) : [...prev, loc.id]
-                    );
-                  };
-                  return (
-                    <label
-                      key={loc.id}
-                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition text-sm ${
-                        isChecked
-                          ? 'bg-blue-950/40 border-[var(--color-primary-blue,#2563EB)] text-white font-semibold'
-                          : 'bg-[var(--surface-bg,#465362)] border-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <MapPin className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-                        <span className="truncate">{loc.name}</span>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={toggle}
-                        className="w-4 h-4 accent-[var(--color-primary-blue,#2563EB)] rounded"
-                      />
-                    </label>
-                  );
-                })
-              )}
-            </div>
+            {/* LOCATIONS TAB */}
+            {sharingTab === 'locations' && (
+              <div className="space-y-4">
+                {/* Inheritance Toggle */}
+                <div className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] space-y-2">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
+                    <input
+                      type="radio"
+                      name="loc_mode"
+                      checked={inheritLocations}
+                      onChange={() => setInheritLocations(true)}
+                      className="accent-[var(--color-primary-blue,#2563EB)]"
+                    />
+                    <span>{language === 'hu' ? 'Háztartási alapértelmezések követése (Öröklés)' : 'Follow household defaults (Inherit)'}</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
+                    <input
+                      type="radio"
+                      name="loc_mode"
+                      checked={!inheritLocations}
+                      onChange={() => setInheritLocations(false)}
+                      className="accent-[var(--color-primary-blue,#2563EB)]"
+                    />
+                    <span>{language === 'hu' ? 'Egyedi hozzáférés beállítása erre a családtagra' : 'Custom access for this member'}</span>
+                  </label>
+                </div>
+
+                {inheritLocations ? (
+                  <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/30 text-xs text-blue-200">
+                    <p className="font-medium">
+                      {language === 'hu'
+                        ? `Ez a családtag automatikusan a háztartásban megosztott helyszíneket látja (${household?.shared_location_ids?.length || 0} db).`
+                        : `This member automatically inherits household shared locations (${household?.shared_location_ids?.length || 0} items).`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-1">
+                      <button
+                        type="button"
+                        onClick={() => setMemberAllowedLocs(locations.map(l => l.id))}
+                        className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400"
+                      >
+                        {language === 'hu' ? 'Összes kijelölése' : 'Select All'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMemberAllowedLocs([])}
+                        className="text-xs font-semibold text-rose-400 hover:text-rose-300"
+                      >
+                        {language === 'hu' ? 'Kijelölés törlése (Teljes tiltás)' : 'Clear All (Block)'}
+                      </button>
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
+                      {locations.length === 0 ? (
+                        <p className="text-xs text-[var(--text-sub,#B5BDC6)] italic py-2">{language === 'hu' ? 'Nincsenek létrehozott helyszínek.' : 'No locations created.'}</p>
+                      ) : (
+                        locations.map((loc) => {
+                          const isChecked = memberAllowedLocs.includes(loc.id);
+                          const toggle = () => {
+                            setMemberAllowedLocs(prev =>
+                              isChecked ? prev.filter(id => id !== loc.id) : [...prev, loc.id]
+                            );
+                          };
+                          return (
+                            <label
+                              key={loc.id}
+                              className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition text-sm ${
+                                isChecked
+                                  ? 'bg-blue-950/40 border-[var(--color-primary-blue,#2563EB)] text-white font-semibold'
+                                  : 'bg-[var(--surface-bg,#465362)] border-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <MapPin className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                                <span className="truncate">{loc.name}</span>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={toggle}
+                                className="w-4 h-4 accent-[var(--color-primary-blue,#2563EB)] rounded"
+                              />
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CATEGORIES TAB */}
+            {sharingTab === 'categories' && (
+              <div className="space-y-4">
+                {/* Inheritance Toggle */}
+                <div className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] space-y-2">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
+                    <input
+                      type="radio"
+                      name="cat_mode"
+                      checked={inheritCategories}
+                      onChange={() => setInheritCategories(true)}
+                      className="accent-purple-500"
+                    />
+                    <span>{language === 'hu' ? 'Háztartási alapértelmezések követése (Öröklés)' : 'Follow household defaults (Inherit)'}</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
+                    <input
+                      type="radio"
+                      name="cat_mode"
+                      checked={!inheritCategories}
+                      onChange={() => setInheritCategories(false)}
+                      className="accent-purple-500"
+                    />
+                    <span>{language === 'hu' ? 'Egyedi hozzáférés beállítása erre a családtagra' : 'Custom access for this member'}</span>
+                  </label>
+                </div>
+
+                {inheritCategories ? (
+                  <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/30 text-xs text-purple-200">
+                    <p className="font-medium">
+                      {language === 'hu'
+                        ? `Ez a családtag automatikusan a háztartásban megosztott kategóriákat látja (${household?.shared_category_ids?.length || 0} db).`
+                        : `This member automatically inherits household shared categories (${household?.shared_category_ids?.length || 0} items).`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-1">
+                      <button
+                        type="button"
+                        onClick={() => setMemberAllowedCats(categories.map(c => c.id))}
+                        className="text-xs font-semibold text-purple-400 hover:text-purple-300"
+                      >
+                        {language === 'hu' ? 'Összes kijelölése' : 'Select All'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMemberAllowedCats([])}
+                        className="text-xs font-semibold text-rose-400 hover:text-rose-300"
+                      >
+                        {language === 'hu' ? 'Kijelölés törlése (Teljes tiltás)' : 'Clear All (Block)'}
+                      </button>
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
+                      {categories.length === 0 ? (
+                        <p className="text-xs text-[var(--text-sub,#B5BDC6)] italic py-2">{language === 'hu' ? 'Nincsenek kategóriák.' : 'No categories available.'}</p>
+                      ) : (
+                        categories.map((cat) => {
+                          const isChecked = memberAllowedCats.includes(cat.id);
+                          const toggle = () => {
+                            setMemberAllowedCats(prev =>
+                              isChecked ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
+                            );
+                          };
+                          return (
+                            <label
+                              key={cat.id}
+                              className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition text-sm ${
+                                isChecked
+                                  ? 'bg-purple-950/40 border-purple-500 text-white font-semibold'
+                                  : 'bg-[var(--surface-bg,#465362)] border-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <Tag className="w-4 h-4 text-purple-400 shrink-0" />
+                                <span className="truncate">{cat.name}</span>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={toggle}
+                                className="w-4 h-4 accent-purple-500 rounded"
+                              />
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--border-color,#56616D)]">
               <button
@@ -845,7 +1109,7 @@ export const HouseholdView: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={handleSaveMemberLocations}
+                onClick={handleSaveMemberSharing}
                 className="px-5 py-2 bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-sm rounded-xl transition shadow-md flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />

@@ -93,6 +93,7 @@ export interface Household {
   owner_id?: string;
   created_by?: string;
   shared_location_ids?: string[];
+  shared_category_ids?: string[];
   created_at: string;
 }
 
@@ -107,7 +108,8 @@ export interface HouseholdMember {
   title?: string;
   role: HouseholdRole;
   joined_at: string;
-  allowed_location_ids?: string[];
+  allowed_location_ids?: string[] | null;
+  allowed_category_ids?: string[] | null;
 }
 
 export interface HouseholdInvite {
