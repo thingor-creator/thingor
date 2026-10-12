@@ -61,6 +61,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
           <img
             src={item.photo_url}
             alt={item.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-contain object-center block group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';

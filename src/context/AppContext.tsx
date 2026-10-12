@@ -114,6 +114,8 @@ interface AppContextType {
 
   // Data collections
   items: Item[];
+  itemsVersion: number;
+  refreshItems: () => void;
   categories: Category[];
   locations: LocationItem[];
   documents: ItemDocument[];
@@ -292,6 +294,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return [];
   });
+
+  const [itemsVersion, setItemsVersion] = useState(0);
+  const refreshItems = useCallback(() => setItemsVersion(v => v + 1), []);
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('thingor_categories');
@@ -578,8 +583,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     if (items.length > 0) {
-      localStorage.setItem('thingor_items', JSON.stringify(items));
-      localStorage.setItem('thingor_items_backup', JSON.stringify(items));
+      try {
+        const cacheItems = items.slice(0, 50);
+        localStorage.setItem('thingor_items', JSON.stringify(cacheItems));
+        localStorage.setItem('thingor_items_backup', JSON.stringify(cacheItems));
+      } catch {
+        console.warn('LocalStorage quota limit reached, skipping full item serialization');
+      }
     }
   }, [items]);
 
@@ -1444,6 +1454,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     setItems(prev => [newItem, ...prev]);
+    refreshItems();
     return newItem;
   };
 
@@ -1500,6 +1511,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ...(targetHouseholdId !== undefined ? { household_id: targetHouseholdId } : {}),
       updated_at: new Date().toISOString()
     } : item));
+    refreshItems();
   };
 
   const deleteItem = async (id: string): Promise<void> => {
@@ -1510,6 +1522,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setItems(prev => prev.filter(item => item.id !== id));
     setDocuments(prev => prev.filter(doc => doc.item_id !== id));
     if (selectedItemId === id) setSelectedItemId(null);
+    refreshItems();
   };
 
   // CRUD Categories (M6 Cloud Integration)
@@ -3259,6 +3272,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         resetFilters,
 
         items,
+        itemsVersion,
+        refreshItems,
         categories,
         locations,
         documents,

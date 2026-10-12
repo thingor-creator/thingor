@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { ItemCard } from './ItemCard';
 import { InsuranceInventoryModal } from './InsuranceInventoryModal';
 import { CSVModal } from './CSVModal';
-import type { SortField } from '../types';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import type { Item, SortField } from '../types';
 import {
   Search,
   Plus,
@@ -12,10 +13,13 @@ import {
   X,
   RotateCcw,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 
-// Helper function for local accent- and case-insensitive search normalization
+// Local search normalization helper for offline/guest fallback
 const normalizeSearchText = (text: string | null | undefined): string => {
   if (!text) return '';
   return String(text)
@@ -24,11 +28,15 @@ const normalizeSearchText = (text: string | null | undefined): string => {
     .replace(/[\u0300-\u036f]/g, '');
 };
 
+const PAGE_SIZE_OPTIONS = [24, 48, 96];
+
 export const ItemsView: React.FC = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
+
   const {
-    items,
+    items: localItems,
+    itemsVersion,
     categories,
     locations,
     filters,
@@ -40,83 +48,230 @@ export const ItemsView: React.FC = () => {
     getCategoryName,
     t,
     language,
+    user,
   } = useApp();
 
-  // Search & Filter Logic across name, description, notes, category, location
-  const searchTokens = filters.search.trim()
-    ? filters.search.trim().split(/\s+/).map(normalizeSearchText).filter(Boolean)
-    : [];
+  // Server-side pagination and data state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
+  const [paginatedItems, setPaginatedItems] = useState<Item[]>([]);
+  const [totalMatchingCount, setTotalMatchingCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const filteredItems = items.filter(item => {
-    // 1. Search term match (all tokens must match in at least one searchable field)
-    if (searchTokens.length > 0) {
-      const normName = normalizeSearchText(item.name);
-      const normDesc = normalizeSearchText(item.description);
-      const normNotes = normalizeSearchText(item.notes);
-      const normCategory = normalizeSearchText(item.category_id ? getCategoryName(item.category_id) : '');
-      const normLocation = normalizeSearchText(item.location_id ? getLocationPath(item.location_id) : '');
+  // Local debounced search input state for smooth 60fps typing
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-      const isMatch = searchTokens.every(token =>
-        normName.includes(token) ||
-        normDesc.includes(token) ||
-        normNotes.includes(token) ||
-        normCategory.includes(token) ||
-        normLocation.includes(token)
-      );
+  // Synchronize local search input when filters.search is reset or modified externally
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
 
-      if (!isMatch) {
-        return false;
+  // Handle debounced search typing
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: value }));
+      setCurrentPage(1);
+    }, 300);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    setFilters(prev => ({ ...prev, search: '' }));
+    setCurrentPage(1);
+  };
+
+  // Reset page to 1 whenever dropdown filters or sorting change
+  const handleFilterChange = useCallback((updater: (prev: typeof filters) => typeof filters) => {
+    setFilters(prev => {
+      const next = updater(prev);
+      return next;
+    });
+    setCurrentPage(1);
+  }, [setFilters]);
+
+  // Main Data Query: Server-side pagination via Supabase (or in-memory client fallback)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchPageData = async () => {
+      // 1. Authenticated Server-Side Pagination using Supabase
+      if (isSupabaseConfigured && supabase && user?.id) {
+        setIsLoading(true);
+        setFetchError(null);
+
+        try {
+          let query = supabase
+            .from('items')
+            .select('*', { count: 'exact' });
+
+          // 1.1 Text search across name, description, notes
+          const searchTokens = filters.search.trim()
+            ? filters.search.trim().split(/\s+/).filter(Boolean)
+            : [];
+
+          for (const token of searchTokens) {
+            const sanitized = token.replace(/[%_,()]/g, '').trim();
+            if (sanitized) {
+              query = query.or(`name.ilike.%${sanitized}%,description.ilike.%${sanitized}%,notes.ilike.%${sanitized}%`);
+            }
+          }
+
+          // 1.2 Category Filter
+          if (filters.categoryId && filters.categoryId !== 'all') {
+            query = query.eq('category_id', filters.categoryId);
+          }
+
+          // 1.3 Location Filter
+          if (filters.locationId && filters.locationId !== 'all') {
+            query = query.eq('location_id', filters.locationId);
+          }
+
+          // 1.4 Condition Filter
+          if (filters.condition && filters.condition !== 'all') {
+            query = query.eq('condition', filters.condition);
+          }
+
+          // 1.5 Sorting
+          let sortCol = 'created_at';
+          if (filters.sortBy === 'name') sortCol = 'name';
+          else if (filters.sortBy === 'purchase_date') sortCol = 'purchase_date';
+          else if (filters.sortBy === 'current_value') sortCol = 'current_value';
+          else if (filters.sortBy === 'category') sortCol = 'category_id';
+          else if (filters.sortBy === 'location') sortCol = 'location_id';
+
+          query = query.order(sortCol, {
+            ascending: filters.sortOrder === 'asc',
+            nullsFirst: false,
+          });
+
+          // 1.6 Pagination range: [from, to] (0-indexed inclusive)
+          const from = (currentPage - 1) * pageSize;
+          const to = from + pageSize - 1;
+          query = query.range(from, to);
+
+          const { data, count, error } = await query;
+
+          if (isCancelled) return;
+
+          if (error) {
+            console.error('Supabase paginated items query error:', error.message);
+            setFetchError(error.message);
+            // Fallback to client data if network/table error
+            runClientSidePagination();
+          } else {
+            setPaginatedItems(data as Item[]);
+            setTotalMatchingCount(count ?? 0);
+          }
+        } catch (err: any) {
+          if (!isCancelled) {
+            setFetchError(err.message || 'Error loading items');
+            runClientSidePagination();
+          }
+        } finally {
+          if (!isCancelled) {
+            setIsLoading(false);
+          }
+        }
+        return;
       }
-    }
 
-    // 2. Category filter
-    if (filters.categoryId !== 'all' && item.category_id !== filters.categoryId) {
-      return false;
-    }
+      // 2. Offline / Guest Client-Side Fallback
+      runClientSidePagination();
+    };
 
-    // 3. Location filter
-    if (filters.locationId !== 'all' && item.location_id !== filters.locationId) {
-      return false;
-    }
+    const runClientSidePagination = () => {
+      const searchTokens = filters.search.trim()
+        ? filters.search.trim().split(/\s+/).map(normalizeSearchText).filter(Boolean)
+        : [];
 
-    // 4. Condition filter
-    if (filters.condition !== 'all' && item.condition !== filters.condition) {
-      return false;
-    }
+      const filtered = localItems.filter(item => {
+        if (searchTokens.length > 0) {
+          const normName = normalizeSearchText(item.name);
+          const normDesc = normalizeSearchText(item.description);
+          const normNotes = normalizeSearchText(item.notes);
+          const normCat = normalizeSearchText(item.category_id ? getCategoryName(item.category_id) : '');
+          const normLoc = normalizeSearchText(item.location_id ? getLocationPath(item.location_id) : '');
 
-    return true;
-  });
+          const isMatch = searchTokens.every(token =>
+            normName.includes(token) ||
+            normDesc.includes(token) ||
+            normNotes.includes(token) ||
+            normCat.includes(token) ||
+            normLoc.includes(token)
+          );
+          if (!isMatch) return false;
+        }
 
-  // Sorting logic
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    let comparison = 0;
+        if (filters.categoryId !== 'all' && item.category_id !== filters.categoryId) return false;
+        if (filters.locationId !== 'all' && item.location_id !== filters.locationId) return false;
+        if (filters.condition !== 'all' && item.condition !== filters.condition) return false;
 
-    switch (filters.sortBy) {
-      case 'name':
-        comparison = a.name.localeCompare(b.name);
-        break;
-      case 'purchase_date':
-        comparison = (a.purchase_date || '').localeCompare(b.purchase_date || '');
-        break;
-      case 'current_value':
-        const valA = a.current_value ?? a.purchase_price ?? 0;
-        const valB = b.current_value ?? b.purchase_price ?? 0;
-        comparison = valA - valB;
-        break;
-      case 'category':
-        comparison = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id));
-        break;
-      case 'location':
-        comparison = getLocationPath(a.location_id).localeCompare(getLocationPath(b.location_id));
-        break;
-      case 'created_at':
-      default:
-        comparison = a.created_at.localeCompare(b.created_at);
-        break;
-    }
+        return true;
+      });
 
-    return filters.sortOrder === 'asc' ? comparison : -comparison;
-  });
+      const sorted = [...filtered].sort((a, b) => {
+        let comp = 0;
+        switch (filters.sortBy) {
+          case 'name':
+            comp = a.name.localeCompare(b.name);
+            break;
+          case 'purchase_date':
+            comp = (a.purchase_date || '').localeCompare(b.purchase_date || '');
+            break;
+          case 'current_value':
+            comp = (a.current_value ?? a.purchase_price ?? 0) - (b.current_value ?? b.purchase_price ?? 0);
+            break;
+          case 'category':
+            comp = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id));
+            break;
+          case 'location':
+            comp = getLocationPath(a.location_id).localeCompare(getLocationPath(b.location_id));
+            break;
+          case 'created_at':
+          default:
+            comp = a.created_at.localeCompare(b.created_at);
+            break;
+        }
+        return filters.sortOrder === 'asc' ? comp : -comp;
+      });
+
+      const from = (currentPage - 1) * pageSize;
+      const slice = sorted.slice(from, from + pageSize);
+
+      setTotalMatchingCount(sorted.length);
+      setPaginatedItems(slice);
+      setIsLoading(false);
+    };
+
+    fetchPageData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    user?.id,
+    filters.search,
+    filters.categoryId,
+    filters.locationId,
+    filters.condition,
+    filters.sortBy,
+    filters.sortOrder,
+    currentPage,
+    pageSize,
+    itemsVersion,
+    localItems,
+    getCategoryName,
+    getLocationPath,
+  ]);
 
   const handleOpenAdd = () => {
     setEditingItem(null);
@@ -129,6 +284,10 @@ export const ItemsView: React.FC = () => {
     filters.locationId !== 'all' ||
     filters.condition !== 'all';
 
+  const totalPages = Math.max(1, Math.ceil(totalMatchingCount / pageSize));
+  const fromRecord = totalMatchingCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const toRecord = Math.min(currentPage * pageSize, totalMatchingCount);
+
   return (
     <div className="space-y-6 pb-20">
       
@@ -140,13 +299,16 @@ export const ItemsView: React.FC = () => {
               {t('my_things')}
             </h1>
             <span className="px-3 py-1 rounded-full bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)] font-bold text-xs">
-              {items.length} {language === 'hu' ? 'tárgy' : 'items'}
+              {totalMatchingCount} {language === 'hu' ? 'tárgy' : 'items'}
             </span>
+            {isLoading && (
+              <Loader2 className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] animate-spin" />
+            )}
           </div>
           <p className="text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
             {language === 'hu'
-              ? 'Keresd, szűrd és kezeld a teljes fizikai tárgynyilvántartásodat.'
-              : 'Search, filter, and manage your complete physical object inventory.'}
+              ? 'Keresd, szűrd és kezeld a fizikai tárgynyilvántartásodat optimális teljesítménnyel.'
+              : 'Search, filter, and manage your inventory with high performance.'}
           </p>
         </div>
 
@@ -182,19 +344,19 @@ export const ItemsView: React.FC = () => {
       {/* SEARCH AND FILTERS BAR */}
       <div className="p-4 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] space-y-4 shadow-sm">
         
-        {/* Search Input */}
+        {/* Search Input with Debounce */}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-sub,#B5BDC6)]" />
           <input
             type="text"
             placeholder={t('search_placeholder')}
-            value={filters.search}
-            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
           />
-          {filters.search && (
+          {searchInput && (
             <button
-              onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+              onClick={handleClearSearch}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-sub,#B5BDC6)] hover:text-white"
             >
               <X className="h-4 w-4" />
@@ -210,7 +372,7 @@ export const ItemsView: React.FC = () => {
             <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('category')}</label>
             <select
               value={filters.categoryId}
-              onChange={(e) => setFilters(prev => ({ ...prev, categoryId: e.target.value }))}
+              onChange={(e) => handleFilterChange(prev => ({ ...prev, categoryId: e.target.value }))}
               className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
             >
               <option value="all">{t('all_categories')}</option>
@@ -225,7 +387,7 @@ export const ItemsView: React.FC = () => {
             <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('location')}</label>
             <select
               value={filters.locationId}
-              onChange={(e) => setFilters(prev => ({ ...prev, locationId: e.target.value }))}
+              onChange={(e) => handleFilterChange(prev => ({ ...prev, locationId: e.target.value }))}
               className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
             >
               <option value="all">{t('all_locations')}</option>
@@ -242,7 +404,7 @@ export const ItemsView: React.FC = () => {
             <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('condition')}</label>
             <select
               value={filters.condition}
-              onChange={(e) => setFilters(prev => ({ ...prev, condition: e.target.value }))}
+              onChange={(e) => handleFilterChange(prev => ({ ...prev, condition: e.target.value }))}
               className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
             >
               <option value="all">{t('all_conditions')}</option>
@@ -255,13 +417,13 @@ export const ItemsView: React.FC = () => {
             </select>
           </div>
 
-          {/* Sort By */}
+          {/* Sort By & Direction */}
           <div>
             <label className="block text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] mb-1">{t('sort_by')}</label>
             <div className="flex gap-1">
               <select
                 value={filters.sortBy}
-                onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as SortField }))}
+                onChange={(e) => handleFilterChange(prev => ({ ...prev, sortBy: e.target.value as SortField }))}
                 className="w-full p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
               >
                 <option value="created_at">{language === 'hu' ? 'Hozzáadás dátuma' : 'Date Added'}</option>
@@ -273,7 +435,7 @@ export const ItemsView: React.FC = () => {
               </select>
 
               <button
-                onClick={() => setFilters(prev => ({ ...prev, sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc' }))}
+                onClick={() => handleFilterChange(prev => ({ ...prev, sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc' }))}
                 className="p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:border-[var(--color-primary-blue,#2563EB)] transition-colors"
                 title="Rendezési irány"
               >
@@ -284,14 +446,19 @@ export const ItemsView: React.FC = () => {
 
         </div>
 
-        {/* Clear Filters Button */}
+        {/* Clear Filters & Active Filter Count Indicator */}
         {hasActiveFilters && (
           <div className="pt-2 flex items-center justify-between border-t border-[var(--border-color,#56616D)]/60 text-xs">
             <span className="text-[var(--text-sub,#B5BDC6)]">
-              {language === 'hu' ? `Megjelenítve: ${sortedItems.length} / ${items.length} tárgy` : `Showing ${sortedItems.length} of ${items.length} items`}
+              {language === 'hu'
+                ? `Találatok: ${totalMatchingCount} tárgy`
+                : `Results: ${totalMatchingCount} items`}
             </span>
             <button
-              onClick={resetFilters}
+              onClick={() => {
+                resetFilters();
+                setCurrentPage(1);
+              }}
               className="text-[var(--color-primary-blue,#2563EB)] hover:underline flex items-center gap-1 font-semibold"
             >
               <RotateCcw className="h-3.5 w-3.5" /> {t('clear_filters')}
@@ -300,8 +467,14 @@ export const ItemsView: React.FC = () => {
         )}
       </div>
 
+      {fetchError && (
+        <div className="p-3 rounded-xl border border-rose-800/60 bg-rose-950/30 text-rose-300 text-xs flex items-center justify-between">
+          <span>{fetchError}</span>
+        </div>
+      )}
+
       {/* ITEMS GRID OR EMPTY STATE */}
-      {sortedItems.length === 0 ? (
+      {paginatedItems.length === 0 && !isLoading ? (
         <div className="p-12 sm:p-16 text-center rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] my-8 shadow-sm">
           <Boxes className="h-16 w-16 text-[var(--text-sub,#B5BDC6)]/40 mx-auto mb-4" />
           
@@ -312,7 +485,10 @@ export const ItemsView: React.FC = () => {
                 {language === 'hu' ? 'Próbáld meg módosítani a keresési feltételeket vagy a szűrőket.' : 'Try adjusting your search keywords, category filters, or location parameters.'}
               </p>
               <button
-                onClick={resetFilters}
+                onClick={() => {
+                  resetFilters();
+                  setCurrentPage(1);
+                }}
                 className="mt-6 px-4 py-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] font-semibold text-xs inline-flex items-center gap-2 transition-colors"
               >
                 <RotateCcw className="h-4 w-4" /> {t('clear_filters')}
@@ -334,11 +510,111 @@ export const ItemsView: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-          {sortedItems.map(item => (
-            <ItemCard key={item.id} item={item} />
-          ))}
-        </div>
+        <>
+          {/* Main Grid */}
+          <div className="relative">
+            {isLoading && (
+              <div className="absolute inset-0 bg-[var(--app-bg,#2D3845)]/40 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-[14px]">
+                <div className="p-3 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] flex items-center gap-2 text-sm text-[var(--text-main,#E0E3E6)] shadow-lg">
+                  <Loader2 className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] animate-spin" />
+                  <span>{language === 'hu' ? 'Tárgyak betöltése...' : 'Loading items...'}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+              {paginatedItems.map(item => (
+                <ItemCard key={item.id} item={item} />
+              ))}
+            </div>
+          </div>
+
+          {/* PAGINATION TOOLBAR */}
+          <div className="mt-8 p-4 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs shadow-sm">
+            {/* Record range indicator */}
+            <div className="text-[var(--text-sub,#B5BDC6)] font-medium">
+              {language === 'hu'
+                ? `Megjelenítve: ${fromRecord}–${toRecord} / ${totalMatchingCount} tárgy`
+                : `Showing ${fromRecord}–${toRecord} of ${totalMatchingCount} items`}
+            </div>
+
+            {/* Page Navigation & Page Size */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Page Size Selector */}
+              <div className="flex items-center gap-1.5 mr-2">
+                <span className="text-[var(--text-sub,#B5BDC6)] text-[11px] font-semibold">
+                  {language === 'hu' ? 'Oldalanként:' : 'Per page:'}
+                </span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 rounded-lg border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-xs font-semibold focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                >
+                  {PAGE_SIZE_OPTIONS.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Prev Button */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage <= 1 || isLoading}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--surface-bg,#465362)]/80 transition-colors"
+                title="Előző oldal"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">{language === 'hu' ? 'Előző' : 'Prev'}</span>
+              </button>
+
+              {/* Page Number Pills */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = idx + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = idx + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + idx;
+                  } else {
+                    pageNum = currentPage - 2 + idx;
+                  }
+
+                  const isActive = pageNum === currentPage;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      disabled={isLoading}
+                      className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-colors ${
+                        isActive
+                          ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                          : 'border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]/80'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages || isLoading}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--surface-bg,#465362)]/80 transition-colors"
+                title="Következő oldal"
+              >
+                <span className="hidden sm:inline">{language === 'hu' ? 'Következő' : 'Next'}</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       <InsuranceInventoryModal

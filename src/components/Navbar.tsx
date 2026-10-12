@@ -22,6 +22,7 @@ import {
   Share2,
   Bell,
   QrCode,
+  Layers,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -48,7 +49,7 @@ export const Navbar: React.FC = () => {
   const isHu = language === 'hu';
 
   // Dropdown states for desktop
-  const [openDropdown, setOpenDropdown] = useState<'things' | 'tasks' | 'share' | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<'things' | 'modules' | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -81,8 +82,7 @@ export const Navbar: React.FC = () => {
 
   // Active state helpers for grouped menus
   const isThingsActive = currentView === 'items' || currentView === 'locations' || currentView === 'categories';
-  const isTasksActive = currentView === 'repairs' || currentView === 'financing';
-  const isShareActive = currentView === 'household';
+  const isModulesActive = currentView === 'repairs' || currentView === 'financing' || currentView === 'household';
 
   return (
     <>
@@ -183,30 +183,39 @@ export const Navbar: React.FC = () => {
                   <span>{t('documents')}</span>
                 </button>
 
-                {/* 4. Teendők (Grouped Dropdown) */}
+                {/* 4. Modulok & Teendők (Bővíthető Csoportosított Dropdown) */}
                 <div className="relative shrink-0">
                   <button
-                    onClick={() => setOpenDropdown(openDropdown === 'tasks' ? null : 'tasks')}
+                    onClick={() => setOpenDropdown(openDropdown === 'modules' ? null : 'modules')}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
-                      isTasksActive
+                      isModulesActive
                         ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
                         : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                     }`}
                   >
-                    <ListChecks className={`h-4 w-4 shrink-0 ${isTasksActive ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
-                    <span>{isHu ? 'Teendők' : 'Tasks'}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openDropdown === 'tasks' ? 'rotate-180' : ''}`} />
+                    <Layers className={`h-4 w-4 shrink-0 ${isModulesActive ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
+                    <span>{isHu ? 'Modulok' : 'Modules'}</span>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openDropdown === 'modules' ? 'rotate-180' : ''}`} />
                   </button>
 
-                  {openDropdown === 'tasks' && (
-                    <div className="absolute left-0 mt-2 w-48 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {openDropdown === 'modules' && (
+                    <div className="absolute left-0 mt-2 w-56 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
+                      <button
+                        onClick={() => handleNav('household')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          currentView === 'household' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                        }`}
+                      >
+                        <Users className="h-4 w-4 text-[var(--status-success,#34D399)] shrink-0" />
+                        <span>{isHu ? 'Családi megosztás' : 'Household Sharing'}</span>
+                      </button>
                       <button
                         onClick={() => handleNav('repairs')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
                           currentView === 'repairs' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <Wrench className="h-4 w-4 text-[var(--status-warning,#F59E0B)]" />
+                        <Wrench className="h-4 w-4 text-[var(--status-warning,#F59E0B)] shrink-0" />
                         <span>{t('repairs')}</span>
                       </button>
                       <button
@@ -215,54 +224,8 @@ export const Navbar: React.FC = () => {
                           currentView === 'financing' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
-                        <CreditCard className="h-4 w-4 text-[var(--cat-books,#818CF8)]" />
+                        <CreditCard className="h-4 w-4 text-[var(--cat-books,#818CF8)] shrink-0" />
                         <span>{t('financing')}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 5. Megosztás (Grouped Dropdown) */}
-                <div className="relative shrink-0">
-                  <button
-                    onClick={() => setOpenDropdown(openDropdown === 'share' ? null : 'share')}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
-                      isShareActive
-                        ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
-                        : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
-                    }`}
-                  >
-                    <Share2 className={`h-4 w-4 shrink-0 ${isShareActive ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
-                    <span>{isHu ? 'Megosztás' : 'Sharing'}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openDropdown === 'share' ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {openDropdown === 'share' && (
-                    <div className="absolute left-0 mt-2 w-60 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
-                      <button
-                        onClick={() => handleNav('household')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'household' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
-                        }`}
-                      >
-                        <Users className="h-4 w-4 text-[var(--status-success,#34D399)]" />
-                        <span>{isHu ? 'Családi megosztás' : 'Household Sharing'}</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleNav('items')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]`}
-                      >
-                        <Tag className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
-                        <span>{isHu ? 'Hirdetés / Eladás megosztás' : 'Listing / Sale Share'}</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleNav('items')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]`}
-                      >
-                        <Share2 className="h-4 w-4 text-[var(--status-warning,#F59E0B)]" />
-                        <span>{isHu ? 'Egyedi / Vendég megosztás' : 'One-time Guest Share'}</span>
                       </button>
                     </div>
                   )}
@@ -450,11 +413,11 @@ export const Navbar: React.FC = () => {
 
       {/* MOBILE BOTTOM NAVIGATION BAR (Logged In Users) */}
       {isAuthenticated && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-main,#303943)]/95 border-t border-[var(--border-color,#56616D)] backdrop-blur-md px-1 sm:px-2 py-1 flex items-center justify-around shadow-2xl">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-main,#303943)]/95 border-t border-[var(--border-color,#56616D)] backdrop-blur-md px-2 py-1 flex items-center justify-around shadow-2xl">
           {/* 1. Vezérlőpult */}
           <button
             onClick={() => handleNav('dashboard')}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
@@ -465,7 +428,7 @@ export const Navbar: React.FC = () => {
           {/* 2. Tárgyaim */}
           <button
             onClick={() => handleNav('items')}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'items' || currentView === 'locations' || currentView === 'categories'
                 ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
                 : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
@@ -475,23 +438,19 @@ export const Navbar: React.FC = () => {
             <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárgyaim' : 'Items'}</span>
           </button>
 
-          {/* 3. Teendők */}
+          {/* 3. Kiemelt Új Tárgy Hozzáadás Gomb (FAB) */}
           <button
-            onClick={() => handleNav('repairs')}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
-              currentView === 'repairs' || currentView === 'financing'
-                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
-                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
-            }`}
+            onClick={handleOpenAddModal}
+            className="flex items-center justify-center -mt-4 h-12 w-12 rounded-full bg-[var(--color-primary-blue,#2563EB)] text-white shadow-lg shadow-blue-500/40 hover:bg-blue-600 active:scale-95 transition-all shrink-0 border-2 border-[var(--bg-main,#303943)]"
+            title={t('add_thing')}
           >
-            <ListChecks className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] truncate max-w-full">{isHu ? 'Teendők' : 'Tasks'}</span>
+            <Plus className="h-6 w-6 stroke-[2.5]" />
           </button>
 
           {/* 4. Jegyzetek */}
           <button
             onClick={() => handleNav('notes')}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
               currentView === 'notes' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
@@ -502,7 +461,7 @@ export const Navbar: React.FC = () => {
           {/* 5. Menü (Drawer toggle) */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1.5 sm:px-3 rounded-xl transition flex-1 min-w-0 ${
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
               isMobileMenuOpen ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
@@ -519,7 +478,7 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
               <h3 className="font-bold text-[var(--text-primary,var(--text-main,#E0E3E6))] text-base flex items-center gap-2">
                 <Menu className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
-                {isHu ? 'Összes Menüpont' : 'Navigation Menu'}
+                {isHu ? 'Thingor Navigáció' : 'Navigation Menu'}
               </h3>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -530,130 +489,135 @@ export const Navbar: React.FC = () => {
             </div>
 
             {isAuthenticated ? (
-              <div className="space-y-1 text-sm">
-                <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-1">
-                  {isHu ? 'Tárgykezelés' : 'Item Management'}
-                </p>
+              <div className="space-y-4 text-sm">
+                {/* 1. Leltár & Áttekintés */}
+                <div>
+                  <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-1 pb-1.5">
+                    {isHu ? 'Leltár & Áttekintés' : 'Inventory & Overview'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      onClick={() => handleNav('dashboard')}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'dashboard' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                      <span>{t('dashboard')}</span>
+                    </button>
+                    <button
+                      onClick={() => handleNav('items')}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'items' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Boxes className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                      <span>{isHu ? 'Összes tárgy' : 'All items'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleNav('locations')}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'locations' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <MapPin className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                      <span>{t('locations')}</span>
+                    </button>
+                    <button
+                      onClick={() => handleNav('categories')}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'categories' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Tag className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                      <span>{t('categories')}</span>
+                    </button>
+                    <button
+                      onClick={() => handleNav('documents')}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors col-span-2 ${
+                        currentView === 'documents' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <FileText className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                      <span>{t('documents')}</span>
+                    </button>
+                  </div>
+                </div>
 
-                <button
-                  onClick={() => handleNav('items')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'items' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <Boxes className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
-                  <span>{isHu ? 'Összes tárgy' : 'All items'}</span>
-                </button>
+                {/* 2. Modulok & Teendők */}
+                <div>
+                  <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-1 pb-1.5">
+                    {isHu ? 'Modulok & Család' : 'Modules & Family'}
+                  </p>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => handleNav('household')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'household' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Users className="h-4 w-4 text-[var(--status-success,#34D399)] shrink-0" />
+                      <span>{isHu ? 'Családi megosztás' : 'Household Sharing'}</span>
+                    </button>
 
-                <button
-                  onClick={() => handleNav('locations')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'locations' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <MapPin className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
-                  <span>{t('locations')}</span>
-                </button>
+                    <button
+                      onClick={() => handleNav('repairs')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'repairs' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Wrench className="h-4 w-4 text-[var(--status-warning,#F59E0B)] shrink-0" />
+                      <span>{t('repairs')}</span>
+                    </button>
 
-                <button
-                  onClick={() => handleNav('categories')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'categories' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <Tag className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
-                  <span>{t('categories')}</span>
-                </button>
+                    <button
+                      onClick={() => handleNav('financing')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'financing' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4 text-[var(--cat-books,#818CF8)] shrink-0" />
+                      <span>{t('financing')}</span>
+                    </button>
 
-                <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-3">
-                  {isHu ? 'Dokumentumok & Feladatok' : 'Documents & Tasks'}
-                </p>
+                    <button
+                      onClick={() => handleNav('notes')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'notes' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <StickyNote className="h-4 w-4 text-[var(--status-warning,#F59E0B)] shrink-0" />
+                      <span>{t('quick_notes')}</span>
+                    </button>
+                  </div>
+                </div>
 
-                <button
-                  onClick={() => handleNav('documents')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'documents' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <FileText className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
-                  <span>{t('documents')}</span>
-                </button>
-
-                <button
-                  onClick={() => handleNav('repairs')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'repairs' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <Wrench className="h-5 w-5 text-[var(--status-warning,#F59E0B)]" />
-                  <span>{t('repairs')}</span>
-                </button>
-
-                <button
-                  onClick={() => handleNav('financing')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'financing' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <CreditCard className="h-5 w-5 text-[var(--cat-books,#818CF8)]" />
-                  <span>{t('financing')}</span>
-                </button>
-
-                <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-3">
-                  {isHu ? 'Megosztás & Jegyzetek' : 'Sharing & Notes'}
-                </p>
-
-                <button
-                  onClick={() => handleNav('household')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'household' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <Users className="h-5 w-5 text-[var(--status-success,#34D399)]" />
-                  <span>{t('household')}</span>
-                </button>
-
-                <button
-                  onClick={() => handleNav('notes')}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${
-                    currentView === 'notes' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                  }`}
-                >
-                  <StickyNote className="h-5 w-5 text-[var(--status-warning,#F59E0B)]" />
-                  <span>{t('quick_notes')}</span>
-                </button>
-
+                {/* 3. Adminisztráció (Ha admin) */}
                 {isAdmin && (
-                  <>
-                    <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-3 pt-3">
-                      Adminisztráció
+                  <div>
+                    <p className="text-[11px] font-bold text-[var(--text-secondary,var(--text-sub,#B5BDC6))] uppercase tracking-wider px-1 pb-1.5">
+                      {isHu ? 'Rendszerfelügyelet' : 'System Administration'}
                     </p>
                     <button
                       onClick={() => handleNav('admin')}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold ${
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-bold text-xs transition-colors ${
                         currentView === 'admin' ? 'bg-[var(--color-primary-blue,#2563EB)] text-white' : 'text-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--surface-bg,#465362)]/50'
                       }`}
                     >
-                      <ShieldCheck className="h-5 w-5 text-[var(--color-primary-blue,#2563EB)]" />
+                      <ShieldCheck className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                       <span>{t('admin_panel')}</span>
                     </button>
-                  </>
+                  </div>
                 )}
 
-                <div className="pt-4 border-t border-[var(--border-color,#56616D)] flex flex-col gap-2">
-                  <button
-                    onClick={handleOpenAddModal}
-                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-[var(--color-primary-blue,#2563EB)] text-white font-bold text-sm"
-                  >
-                    <Plus className="h-5 w-5 stroke-[2.5]" />
-                    {t('add_thing')}
-                  </button>
+                {/* Akciógombok */}
+                <div className="pt-3 border-t border-[var(--border-color,#56616D)] flex flex-col gap-2">
                   <button
                     onClick={() => {
                       logout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-950/40 text-rose-400 font-semibold text-sm border border-rose-900/40"
+                    className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-950/40 text-rose-400 font-semibold text-xs border border-rose-900/40 hover:bg-rose-950/60 transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
                     {t('log_out')}
