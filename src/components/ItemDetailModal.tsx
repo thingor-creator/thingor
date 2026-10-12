@@ -25,7 +25,9 @@ import {
   Link2,
   Check,
   ArrowLeft,
-  QrCode
+  QrCode,
+  Handshake,
+  Lock
 } from 'lucide-react';
 import { uploadFileToStorage } from '../lib/storage';
 import { ShareModal } from './ShareModal';
@@ -39,6 +41,7 @@ export const ItemDetailModal: React.FC = () => {
     documents,
     deleteItem,
     updateItem,
+    setItemVaultProtection,
     setEditingItem,
     setIsAddEditItemModalOpen,
     getLocationPath,
@@ -49,6 +52,7 @@ export const ItemDetailModal: React.FC = () => {
     deleteDocument,
     repairs,
     financings,
+    loans,
     recordInstallmentPayment,
     addItemRelation,
     deleteItemRelation,
@@ -216,6 +220,8 @@ export const ItemDetailModal: React.FC = () => {
     }
   }
 
+  const activeLoan = loans.find(l => l.item_id === selectedItemId && l.status === 'active');
+
   return (
     <div ref={topRef} className="space-y-6 pb-16 w-full text-[var(--text-main,#E0E3E6)] animate-in fade-in duration-200">
       {/* Top Back Navigation Bar */}
@@ -327,6 +333,32 @@ export const ItemDetailModal: React.FC = () => {
                       {isHu ? `${item.condition} állapot` : `${item.condition} condition`}
                     </span>
                   )}
+
+                  {activeLoan && (
+                    <span
+                      className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--color-primary-blue,#2563EB)]/20 text-[var(--color-primary-blue,#2563EB)] border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1.5"
+                      title={activeLoan.expected_return_date ? (isHu ? `Várható visszahozás: ${activeLoan.expected_return_date}` : `Expected return: ${activeLoan.expected_return_date}`) : undefined}
+                    >
+                      <Handshake className="h-3.5 w-3.5" />
+                      {isHu ? `Kölcsönadva: ${activeLoan.borrower_name}` : `Lent to: ${activeLoan.borrower_name}`}
+                    </span>
+                  )}
+
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await setItemVaultProtection(item.id, !item.is_vault_protected);
+                    }}
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                      item.is_vault_protected
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30'
+                        : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)]/50 hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                    title={item.is_vault_protected ? (isHu ? 'Kivétel a széfből' : 'Remove from vault') : (isHu ? 'Széfbe helyezés' : 'Protect in Vault')}
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    <span>{item.is_vault_protected ? (isHu ? 'Széfben védett' : 'In Vault') : (isHu ? 'Széfbe helyezés' : 'Protect in Vault')}</span>
+                  </button>
 
                   <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-medium flex items-center gap-1 ml-auto">
                     <Edit3 className="h-3 w-3 text-emerald-400" />

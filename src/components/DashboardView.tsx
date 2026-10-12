@@ -29,6 +29,7 @@ export const DashboardView: React.FC = () => {
 
   const {
     items,
+    dashboardMetrics,
     categories,
     locations,
     repairs,
@@ -45,10 +46,10 @@ export const DashboardView: React.FC = () => {
 
   const isHu = language === 'hu';
 
-  // 1. Core Metrics Calculation
-  const totalItems = items.length;
+  // 1. Core Metrics Calculation (server RPC metrics when available, local fallback)
+  const totalItems = dashboardMetrics?.total_items ?? items.length;
   
-  const totalCurrentValue = items.reduce((sum, item) => {
+  const totalCurrentValue = dashboardMetrics?.total_value ?? items.reduce((sum, item) => {
     return sum + (item.current_value ?? item.purchase_price ?? 0);
   }, 0);
 
@@ -60,7 +61,7 @@ export const DashboardView: React.FC = () => {
     i => i.current_value !== undefined && i.current_value !== null || i.purchase_price !== undefined && i.purchase_price !== null
   ).length;
 
-  const itemsWithoutValueCount = totalItems - itemsWithValueCount;
+  const itemsWithoutValueCount = Math.max(0, totalItems - itemsWithValueCount);
 
   // Purchase vs Current Value Comparison
   const valueDifference = totalCurrentValue - totalPurchasePrice;
@@ -75,7 +76,7 @@ export const DashboardView: React.FC = () => {
   const totalMonthlyInstallment = financings.reduce((sum, f) => f.remaining_installments > 0 ? sum + f.monthly_installment : sum, 0);
   const totalRemainingDebt = financings.reduce((sum, f) => sum + (f.remaining_debt || 0), 0);
   const totalRepairCosts = repairs.reduce((sum, r) => sum + (r.total_cost || 0), 0);
-  const pendingRepairsCount = repairs.filter(r => r.status === 'pending' || r.status === 'in_progress').length;
+  const pendingRepairsCount = dashboardMetrics?.pending_repairs ?? repairs.filter(r => r.status === 'pending' || r.status === 'in_progress').length;
   const netInventoryValue = Math.max(0, totalCurrentValue - totalRemainingDebt);
 
   // Calculate active warranties

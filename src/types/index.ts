@@ -26,6 +26,7 @@ export interface ItemDocument {
   document_type: 'Invoice' | 'Warranty' | 'Manual' | 'Certificate' | 'Photo' | 'Other';
   created_at: string;
   size_bytes?: number;
+  is_vault_protected?: boolean;
 }
 
 export type ItemStatus = 'Working' | 'Faulty' | 'UnderRepair' | 'Repaired' | 'Scrapped';
@@ -148,12 +149,30 @@ export interface Item {
   warranty_start?: string;
   warranty_end?: string;
   notes?: string;
+  is_vault_protected?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface VaultSettings {
+  id: string;
+  user_id: string;
+  pin_hash: string;
+  salt: string;
+  auto_lock_minutes: number;
   created_at: string;
   updated_at?: string;
 }
 
 export type UserRole = 'admin' | 'user';
 export type UserStatus = 'active' | 'suspended' | 'deleted';
+
+export interface UserPreferences {
+  pinned_modules?: string[];
+  module_order?: string[];
+  hidden_modules?: string[];
+  compact_mode?: boolean;
+}
 
 export interface UserProfile {
   id: string;
@@ -163,7 +182,17 @@ export interface UserProfile {
   role?: UserRole;
   status?: UserStatus;
   is_admin?: boolean;
+  preferences?: UserPreferences;
   created_at?: string;
+}
+
+export interface DashboardMetrics {
+  total_items: number;
+  total_value: number;
+  storage_spots: number;
+  active_warranties: number;
+  expiring_warranties: number;
+  pending_repairs: number;
 }
 
 export type SharePurpose = 'view' | 'sale' | 'loan';
@@ -325,7 +354,67 @@ export interface QuickNote {
   updated_at?: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'admin' | 'guest_share' | 'legal';
+export type LoanStatus = 'active' | 'returned' | 'overdue';
+
+export interface ItemLoan {
+  id: string;
+  user_id: string;
+  item_id: string;
+  borrower_name: string;
+  borrower_contact?: string;
+  borrower_email?: string;
+  lent_date: string;
+  expected_return_date?: string;
+  actual_return_date?: string;
+  status: LoanStatus;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface Collection {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  collection_type: 'books' | 'coins' | 'watches' | 'wine' | 'records' | 'general';
+  cover_image_url?: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CollectionItem {
+  id: string;
+  collection_id: string;
+  item_id: string;
+  collector_grade?: string;
+  rarity?: string;
+  acquired_year?: number;
+  catalog_number?: string;
+  estimated_collector_value?: number;
+  custom_attributes?: Record<string, any>;
+  created_at: string;
+}
+
+export interface PantryItem {
+  id: string;
+  user_id: string;
+  household_id?: string;
+  name: string;
+  category?: string;
+  current_quantity: number;
+  unit: string;
+  min_threshold: number;
+  expiration_date?: string;
+  location_id?: string;
+  notes?: string;
+  is_staple: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'lending' | 'collections' | 'pantry' | 'vault' | 'admin' | 'guest_share' | 'legal';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';
@@ -340,7 +429,7 @@ export interface FilterState {
 }
 
 // Notification Engine Module
-export type NotificationType = 'warranty' | 'financing' | 'repair' | 'system';
+export type NotificationType = 'warranty' | 'financing' | 'repair' | 'lending' | 'pantry' | 'system';
 
 export interface AppNotification {
   id: string;

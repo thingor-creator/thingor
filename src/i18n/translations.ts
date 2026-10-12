@@ -15,6 +15,10 @@ export interface TranslationKeys {
   documents: string;
   repairs: string;
   financing: string;
+  lending: string;
+  collections: string;
+  pantry: string;
+  vault: string;
   household: string;
   quick_notes: string;
   admin_panel: string;
@@ -98,6 +102,10 @@ export const translations: Record<Language, TranslationKeys> = {
     documents: 'Dokumentumok',
     repairs: 'Javítások',
     financing: 'Finanszírozás',
+    lending: 'Kölcsönadás',
+    collections: 'Gyűjtemények',
+    pantry: 'Spájz & Készletek',
+    vault: 'Védett Széf',
     household: 'Család / Háztartás',
     quick_notes: 'Jegyzetek',
     admin_panel: 'Adminisztráció',
@@ -174,6 +182,10 @@ export const translations: Record<Language, TranslationKeys> = {
     documents: 'Documents',
     repairs: 'Repairs',
     financing: 'Financing',
+    lending: 'Lending',
+    collections: 'Collections',
+    pantry: 'Pantry & Stock',
+    vault: 'Secure Vault',
     household: 'Household & Family',
     quick_notes: 'Quick Notes',
     admin_panel: 'Admin Panel',

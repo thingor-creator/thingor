@@ -12,6 +12,10 @@ import { FinancingView } from './components/FinancingView';
 import { HouseholdView } from './components/HouseholdView';
 import { NotesView } from './components/NotesView';
 import { AdminView } from './components/AdminView';
+import { LendingView } from './components/LendingView';
+import { CollectionsView } from './components/CollectionsView';
+import { PantryView } from './components/PantryView';
+import { VaultView } from './components/VaultView';
 import { SharedItemView } from './components/SharedItemView';
 import { ItemDetailModal } from './components/ItemDetailModal';
 import { ItemFormModal } from './components/ItemFormModal';
@@ -225,6 +229,10 @@ const AppContent: React.FC = () => {
               {currentView === 'financing' && <FinancingView />}
               {currentView === 'household' && <HouseholdView />}
               {currentView === 'notes' && <NotesView />}
+              {currentView === 'lending' && <LendingView />}
+              {currentView === 'collections' && <CollectionsView />}
+              {currentView === 'pantry' && <PantryView />}
+              {currentView === 'vault' && <VaultView />}
               {currentView === 'admin' && <AdminView />}
             </>
           )}

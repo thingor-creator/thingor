@@ -23,6 +23,10 @@ import {
   Bell,
   QrCode,
   Layers,
+  Handshake,
+  Library,
+  ShoppingBag,
+  Lock,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -82,7 +86,7 @@ export const Navbar: React.FC = () => {
 
   // Active state helpers for grouped menus
   const isThingsActive = currentView === 'items' || currentView === 'locations' || currentView === 'categories';
-  const isModulesActive = currentView === 'repairs' || currentView === 'financing' || currentView === 'household';
+  const isModulesActive = currentView === 'repairs' || currentView === 'financing' || currentView === 'household' || currentView === 'lending' || currentView === 'collections' || currentView === 'pantry' || currentView === 'vault';
 
   return (
     <>
@@ -226,6 +230,42 @@ export const Navbar: React.FC = () => {
                       >
                         <CreditCard className="h-4 w-4 text-[var(--cat-books,#818CF8)] shrink-0" />
                         <span>{t('financing')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleNav('lending')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          currentView === 'lending' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                        }`}
+                      >
+                        <Handshake className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                        <span>{t('lending')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleNav('collections')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          currentView === 'collections' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                        }`}
+                      >
+                        <Library className="h-4 w-4 text-[var(--cat-books,#818CF8)] shrink-0" />
+                        <span>{t('collections')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleNav('pantry')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          currentView === 'pantry' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                        }`}
+                      >
+                        <ShoppingBag className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span>{t('pantry')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleNav('vault')}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          currentView === 'vault' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                        }`}
+                      >
+                        <Lock className="h-4 w-4 text-amber-400 shrink-0" />
+                        <span>{isHu ? 'Széf & Védett tárgyak' : 'Vault & Secure Storage'}</span>
                       </button>
                     </div>
                   )}
@@ -578,6 +618,46 @@ export const Navbar: React.FC = () => {
                     >
                       <CreditCard className="h-4 w-4 text-[var(--cat-books,#818CF8)] shrink-0" />
                       <span>{t('financing')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleNav('lending')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'lending' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Handshake className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                      <span>{t('lending')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleNav('collections')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'collections' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Library className="h-4 w-4 text-[var(--cat-books,#818CF8)] shrink-0" />
+                      <span>{t('collections')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleNav('pantry')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'pantry' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <ShoppingBag className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <span>{t('pantry')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleNav('vault')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'vault' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Lock className="h-4 w-4 text-amber-400 shrink-0" />
+                      <span>{isHu ? 'Széf & Védett tárgyak' : 'Vault & Secure Storage'}</span>
                     </button>
 
                     <button

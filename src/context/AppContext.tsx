@@ -31,9 +31,17 @@ import type {
   ItemRelationType,
   QuickNote,
   AppNotification,
-  UserNotificationSettings
+  UserNotificationSettings,
+  UserPreferences,
+  DashboardMetrics,
+  ItemLoan,
+  Collection,
+  CollectionItem,
+  PantryItem,
+  VaultSettings
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { generateSalt, hashPin, verifyPin } from '../lib/vault';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
 import { isAdmin, isSuspended } from '../lib/permissions';
 
@@ -116,6 +124,10 @@ interface AppContextType {
   items: Item[];
   itemsVersion: number;
   refreshItems: () => void;
+  dashboardMetrics: DashboardMetrics | null;
+  refreshDashboardMetrics: () => Promise<void>;
+  userPreferences: UserPreferences;
+  updateUserPreferences: (prefs: Partial<UserPreferences>) => Promise<boolean>;
   categories: Category[];
   locations: LocationItem[];
   documents: ItemDocument[];
@@ -143,6 +155,40 @@ interface AppContextType {
   saveFinancing: (financing: Omit<ItemFinancing, 'id' | 'created_at'>) => Promise<ItemFinancing>;
   recordInstallmentPayment: (financingId: string) => Promise<void>;
   deleteFinancing: (financingId: string) => Promise<void>;
+
+  // Lending & Borrowing Module
+  loans: ItemLoan[];
+  addLoan: (loan: Omit<ItemLoan, 'id' | 'created_at'>) => Promise<ItemLoan>;
+  updateLoan: (id: string, updates: Partial<ItemLoan>) => Promise<void>;
+  returnLoan: (id: string) => Promise<void>;
+  deleteLoan: (id: string) => Promise<void>;
+
+  // Collections & Catalogs Module
+  collections: Collection[];
+  collectionItems: CollectionItem[];
+  addCollection: (col: Omit<Collection, 'id' | 'created_at'>) => Promise<Collection>;
+  updateCollection: (id: string, updates: Partial<Collection>) => Promise<void>;
+  deleteCollection: (id: string) => Promise<void>;
+  addItemToCollection: (collectionId: string, itemId: string, details?: Partial<CollectionItem>) => Promise<CollectionItem>;
+  removeItemFromCollection: (collectionId: string, itemId: string) => Promise<void>;
+  getCollectionItems: (collectionId: string) => CollectionItem[];
+
+  // Pantry & Consumables Module
+  pantryItems: PantryItem[];
+  addPantryItem: (item: Omit<PantryItem, 'id' | 'created_at'>) => Promise<PantryItem>;
+  updatePantryItem: (id: string, updates: Partial<PantryItem>) => Promise<void>;
+  deletePantryItem: (id: string) => Promise<void>;
+  adjustPantryQuantity: (id: string, delta: number) => Promise<void>;
+
+  // Vault & Secure Storage Module
+  vaultSettings: VaultSettings | null;
+  isVaultUnlocked: boolean;
+  unlockVault: (pin: string) => Promise<{ success: boolean; error?: string }>;
+  lockVault: () => void;
+  setupVaultPin: (pin: string) => Promise<boolean>;
+  changeVaultPin: (oldPin: string, newPin: string) => Promise<{ success: boolean; error?: string }>;
+  setItemVaultProtection: (itemId: string, protectedStatus: boolean) => Promise<void>;
+  setDocumentVaultProtection: (docId: string, protectedStatus: boolean) => Promise<void>;
 
   // Household & Family Sharing
   household: Household | null;
@@ -298,6 +344,70 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [itemsVersion, setItemsVersion] = useState(0);
   const refreshItems = useCallback(() => setItemsVersion(v => v + 1), []);
 
+  const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics | null>(() => {
+    const saved = localStorage.getItem('thingor_dashboard_metrics');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return null;
+  });
+
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>(() => {
+    const saved = localStorage.getItem('thingor_user_preferences');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      pinned_modules: ['dashboard', 'items', 'lending', 'locations'],
+      module_order: [],
+      hidden_modules: [],
+      compact_mode: false,
+    };
+  });
+
+  const refreshDashboardMetrics = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase || !user) return;
+    try {
+      const { data, error } = await supabase.rpc('get_dashboard_metrics');
+      if (!error && data) {
+        setDashboardMetrics(data as DashboardMetrics);
+        localStorage.setItem('thingor_dashboard_metrics', JSON.stringify(data));
+      }
+    } catch (err) {
+      console.warn('Failed to load dashboard metrics RPC:', err);
+    }
+  }, [user]);
+
+  const updateUserPreferences = async (newPrefs: Partial<UserPreferences>): Promise<boolean> => {
+    const updated: UserPreferences = { ...userPreferences, ...newPrefs };
+    setUserPreferences(updated);
+    localStorage.setItem('thingor_user_preferences', JSON.stringify(updated));
+
+    if (user) {
+      setUser(prev => prev ? { ...prev, preferences: updated } : null);
+      localStorage.setItem('thingor_user', JSON.stringify({ ...user, preferences: updated }));
+    }
+
+    if (isSupabaseConfigured && supabase && user) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ preferences: updated })
+          .eq('user_id', user.id);
+        return true;
+      } catch (e) {
+        console.warn('Failed to save preferences to Supabase:', e);
+      }
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    if (user && isSupabaseConfigured && supabase) {
+      refreshDashboardMetrics();
+    }
+  }, [user?.id, itemsVersion, refreshDashboardMetrics]);
+
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('thingor_categories');
     if (saved) {
@@ -350,6 +460,107 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return [];
   });
+
+  const [loans, setLoans] = useState<ItemLoan[]>(() => {
+    const saved = localStorage.getItem('thingor_loans');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('thingor_loans', JSON.stringify(loans));
+  }, [loans]);
+
+  const [collections, setCollections] = useState<Collection[]>(() => {
+    const saved = localStorage.getItem('thingor_collections');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [collectionItems, setCollectionItems] = useState<CollectionItem[]>(() => {
+    const saved = localStorage.getItem('thingor_collection_items');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('thingor_collections', JSON.stringify(collections));
+  }, [collections]);
+
+  useEffect(() => {
+    localStorage.setItem('thingor_collection_items', JSON.stringify(collectionItems));
+  }, [collectionItems]);
+
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>(() => {
+    const saved = localStorage.getItem('thingor_pantry_items');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('thingor_pantry_items', JSON.stringify(pantryItems));
+  }, [pantryItems]);
+
+  // Vault & Secure Storage State
+  const [vaultSettings, setVaultSettings] = useState<VaultSettings | null>(() => {
+    const saved = localStorage.getItem('thingor_vault_settings');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return null;
+  });
+
+  const [isVaultUnlocked, setIsVaultUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('thingor_vault_unlocked') === 'true';
+  });
+
+  useEffect(() => {
+    if (vaultSettings) {
+      localStorage.setItem('thingor_vault_settings', JSON.stringify(vaultSettings));
+    } else {
+      localStorage.removeItem('thingor_vault_settings');
+    }
+  }, [vaultSettings]);
+
+  useEffect(() => {
+    if (isVaultUnlocked) {
+      sessionStorage.setItem('thingor_vault_unlocked', 'true');
+    } else {
+      sessionStorage.removeItem('thingor_vault_unlocked');
+    }
+  }, [isVaultUnlocked]);
+
+  // Auto-lock vault on 5 minutes inactivity
+  useEffect(() => {
+    if (!isVaultUnlocked) return;
+    const timeoutMs = (vaultSettings?.auto_lock_minutes || 5) * 60 * 1000;
+    const timer = setTimeout(() => {
+      setIsVaultUnlocked(false);
+      sessionStorage.removeItem('thingor_vault_unlocked');
+    }, timeoutMs);
+
+    return () => clearTimeout(timer);
+  }, [isVaultUnlocked, vaultSettings?.auto_lock_minutes]);
 
   const [household, setHousehold] = useState<Household | null>(() => {
     const saved = localStorage.getItem('thingor_household');
@@ -667,13 +878,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('role, status, display_name')
+        .select('role, status, display_name, preferences')
         .eq('user_id', userId)
         .maybeSingle();
 
       const role: UserRole = profileData?.role === 'admin' ? 'admin' : 'user';
       const status: UserStatus = (profileData?.status as UserStatus) || 'active';
       const displayName = profileData?.display_name || fallbackDisplayName;
+      const preferences = (profileData as any)?.preferences as UserPreferences | undefined;
+      if (preferences) {
+        setUserPreferences(preferences);
+        localStorage.setItem('thingor_user_preferences', JSON.stringify(preferences));
+      }
 
       return {
         id: userId,
@@ -683,6 +899,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         role,
         status,
         is_admin: role === 'admin',
+        preferences,
       };
     } catch (e) {
       return {
@@ -943,6 +1160,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       });
 
+    // Load item loans
+    supabase
+      .from('item_loans')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setLoans(data as ItemLoan[]);
+        }
+      });
+
+    // Load collections & collection items
+    supabase
+      .from('collections')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setCollections(data as Collection[]);
+        }
+      });
+
+    supabase
+      .from('collection_items')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setCollectionItems(data as CollectionItem[]);
+        }
+      });
+
+    // Load pantry items
+    supabase
+      .from('pantry_items')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setPantryItems(data as PantryItem[]);
+        }
+      });
+
     // Load household data & members (syncing across devices by user_id or email)
     supabase
       .from('household_members')
@@ -1032,6 +1292,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
           setQuickNotes(data as QuickNote[]);
+        }
+      });
+
+    // Load vault settings
+    supabase
+      .from('vault_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!error && isMounted) {
+          if (data) {
+            setVaultSettings(data as VaultSettings);
+          } else {
+            setVaultSettings(null);
+          }
         }
       });
 
@@ -1301,6 +1577,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setReceivedInvites([]);
     setNotifications([]);
     setUserNotificationSettings(null);
+    setVaultSettings(null);
+    setIsVaultUnlocked(false);
+    sessionStorage.removeItem('thingor_vault_unlocked');
+    localStorage.removeItem('thingor_vault_settings');
     localStorage.removeItem('thingor_user');
     localStorage.removeItem('thingor_items');
     localStorage.removeItem('thingor_documents');
@@ -2026,6 +2306,437 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setFinancings(prev => prev.filter(f => f.id !== financingId));
     if (isSupabaseConfigured && supabase && isUUID(financingId)) {
       await supabase.from('item_financings').delete().eq('id', financingId);
+    }
+  };
+
+  // CRUD Lending & Borrowing Module
+  const addLoan = async (loanData: Omit<ItemLoan, 'id' | 'created_at'>): Promise<ItemLoan> => {
+    const newLoan: ItemLoan = {
+      ...loanData,
+      id: 'loan-' + Date.now(),
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const { data, error } = await supabase
+          .from('item_loans')
+          .insert([{
+            user_id: user.id,
+            item_id: loanData.item_id,
+            borrower_name: loanData.borrower_name,
+            borrower_contact: loanData.borrower_contact,
+            borrower_email: loanData.borrower_email,
+            lent_date: loanData.lent_date,
+            expected_return_date: loanData.expected_return_date,
+            actual_return_date: loanData.actual_return_date,
+            status: loanData.status || 'active',
+            notes: loanData.notes,
+          }])
+          .select()
+          .single();
+
+        if (!error && data) {
+          setLoans(prev => [data as ItemLoan, ...prev]);
+          return data as ItemLoan;
+        }
+      } catch (e) {
+        console.warn('Failed to insert loan in Supabase, saving locally:', e);
+      }
+    }
+
+    setLoans(prev => [newLoan, ...prev]);
+    return newLoan;
+  };
+
+  const updateLoan = async (id: string, updates: Partial<ItemLoan>): Promise<void> => {
+    setLoans(prev => prev.map(l => l.id === id ? { ...l, ...updates, updated_at: new Date().toISOString() } : l));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase
+          .from('item_loans')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+      } catch (e) {
+        console.warn('Failed to update loan in Supabase:', e);
+      }
+    }
+  };
+
+  const returnLoan = async (id: string): Promise<void> => {
+    const today = new Date().toISOString().split('T')[0];
+    await updateLoan(id, {
+      status: 'returned',
+      actual_return_date: today,
+    });
+  };
+
+  const deleteLoan = async (id: string): Promise<void> => {
+    setLoans(prev => prev.filter(l => l.id !== id));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase
+          .from('item_loans')
+          .delete()
+          .eq('id', id);
+      } catch (e) {
+        console.warn('Failed to delete loan from Supabase:', e);
+      }
+    }
+  };
+
+  // CRUD Collections & Curated Catalogs Module
+  const addCollection = async (colData: Omit<Collection, 'id' | 'created_at'>): Promise<Collection> => {
+    const newCol: Collection = {
+      ...colData,
+      id: 'col-' + Date.now(),
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const { data, error } = await supabase
+          .from('collections')
+          .insert([{
+            user_id: user.id,
+            name: colData.name,
+            description: colData.description,
+            collection_type: colData.collection_type || 'general',
+            cover_image_url: colData.cover_image_url,
+            is_public: colData.is_public ?? false,
+          }])
+          .select()
+          .single();
+
+        if (!error && data) {
+          setCollections(prev => [data as Collection, ...prev]);
+          return data as Collection;
+        }
+      } catch (e) {
+        console.warn('Failed to insert collection in Supabase, saving locally:', e);
+      }
+    }
+
+    setCollections(prev => [newCol, ...prev]);
+    return newCol;
+  };
+
+  const updateCollection = async (id: string, updates: Partial<Collection>): Promise<void> => {
+    setCollections(prev => prev.map(c => c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase
+          .from('collections')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+      } catch (e) {
+        console.warn('Failed to update collection in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteCollection = async (id: string): Promise<void> => {
+    setCollections(prev => prev.filter(c => c.id !== id));
+    setCollectionItems(prev => prev.filter(ci => ci.collection_id !== id));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase.from('collections').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Failed to delete collection from Supabase:', e);
+      }
+    }
+  };
+
+  const addItemToCollection = async (
+    collectionId: string,
+    itemId: string,
+    details?: Partial<CollectionItem>
+  ): Promise<CollectionItem> => {
+    const existing = collectionItems.find(ci => ci.collection_id === collectionId && ci.item_id === itemId);
+    if (existing) {
+      const updated = { ...existing, ...details };
+      setCollectionItems(prev => prev.map(ci => ci.id === existing.id ? updated : ci));
+      if (isSupabaseConfigured && supabase && isUUID(existing.id)) {
+        await supabase.from('collection_items').update(details || {}).eq('id', existing.id);
+      }
+      return updated;
+    }
+
+    const newItem: CollectionItem = {
+      id: 'ci-' + Date.now(),
+      collection_id: collectionId,
+      item_id: itemId,
+      collector_grade: details?.collector_grade,
+      rarity: details?.rarity,
+      acquired_year: details?.acquired_year,
+      catalog_number: details?.catalog_number,
+      estimated_collector_value: details?.estimated_collector_value,
+      custom_attributes: details?.custom_attributes || {},
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && isUUID(collectionId) && isUUID(itemId)) {
+      try {
+        const { data, error } = await supabase
+          .from('collection_items')
+          .insert([{
+            collection_id: collectionId,
+            item_id: itemId,
+            collector_grade: details?.collector_grade,
+            rarity: details?.rarity,
+            acquired_year: details?.acquired_year,
+            catalog_number: details?.catalog_number,
+            estimated_collector_value: details?.estimated_collector_value,
+            custom_attributes: details?.custom_attributes || {},
+          }])
+          .select()
+          .single();
+
+        if (!error && data) {
+          setCollectionItems(prev => [...prev, data as CollectionItem]);
+          return data as CollectionItem;
+        }
+      } catch (e) {
+        console.warn('Failed to insert collection_item in Supabase:', e);
+      }
+    }
+
+    setCollectionItems(prev => [...prev, newItem]);
+    return newItem;
+  };
+
+  const removeItemFromCollection = async (collectionId: string, itemId: string): Promise<void> => {
+    setCollectionItems(prev => prev.filter(ci => !(ci.collection_id === collectionId && ci.item_id === itemId)));
+
+    if (isSupabaseConfigured && supabase && isUUID(collectionId) && isUUID(itemId)) {
+      try {
+        await supabase
+          .from('collection_items')
+          .delete()
+          .eq('collection_id', collectionId)
+          .eq('item_id', itemId);
+      } catch (e) {
+        console.warn('Failed to remove item from collection in Supabase:', e);
+      }
+    }
+  };
+
+  const getCollectionItems = useCallback((collectionId: string): CollectionItem[] => {
+    return collectionItems.filter(ci => ci.collection_id === collectionId);
+  }, [collectionItems]);
+
+  // CRUD Pantry & Consumables Module
+  const addPantryItem = async (pantryData: Omit<PantryItem, 'id' | 'created_at'>): Promise<PantryItem> => {
+    const newItem: PantryItem = {
+      ...pantryData,
+      id: 'pantry-' + Date.now(),
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const { data, error } = await supabase
+          .from('pantry_items')
+          .insert([{
+            user_id: user.id,
+            household_id: pantryData.household_id || household?.id || null,
+            name: pantryData.name,
+            category: pantryData.category,
+            current_quantity: pantryData.current_quantity,
+            unit: pantryData.unit || 'db',
+            min_threshold: pantryData.min_threshold,
+            expiration_date: pantryData.expiration_date,
+            location_id: pantryData.location_id,
+            notes: pantryData.notes,
+            is_staple: pantryData.is_staple ?? true,
+          }])
+          .select()
+          .single();
+
+        if (!error && data) {
+          setPantryItems(prev => [data as PantryItem, ...prev]);
+          return data as PantryItem;
+        }
+      } catch (e) {
+        console.warn('Failed to insert pantry_item in Supabase:', e);
+      }
+    }
+
+    setPantryItems(prev => [newItem, ...prev]);
+    return newItem;
+  };
+
+  const updatePantryItem = async (id: string, updates: Partial<PantryItem>): Promise<void> => {
+    setPantryItems(prev => prev.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase
+          .from('pantry_items')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+      } catch (e) {
+        console.warn('Failed to update pantry_item in Supabase:', e);
+      }
+    }
+  };
+
+  const deletePantryItem = async (id: string): Promise<void> => {
+    setPantryItems(prev => prev.filter(p => p.id !== id));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase.from('pantry_items').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Failed to delete pantry_item from Supabase:', e);
+      }
+    }
+  };
+
+  const adjustPantryQuantity = async (id: string, delta: number): Promise<void> => {
+    const item = pantryItems.find(p => p.id === id);
+    if (!item) return;
+
+    const newQty = Math.max(0, Number(item.current_quantity) + delta);
+    await updatePantryItem(id, { current_quantity: newQty });
+  };
+
+  // Vault & Secure Storage Module CRUD & Crypto Logic
+  const unlockVault = async (pin: string): Promise<{ success: boolean; error?: string }> => {
+    if (!vaultSettings) {
+      return { success: false, error: 'A széf nincs konfigurálva. Állíts be PIN kódot!' };
+    }
+    const isValid = await verifyPin(pin, vaultSettings.salt, vaultSettings.pin_hash);
+    if (isValid) {
+      setIsVaultUnlocked(true);
+      sessionStorage.setItem('thingor_vault_unlocked', 'true');
+      return { success: true };
+    } else {
+      return { success: false, error: 'Helytelen PIN kód!' };
+    }
+  };
+
+  const lockVault = () => {
+    setIsVaultUnlocked(false);
+    sessionStorage.removeItem('thingor_vault_unlocked');
+  };
+
+  const setupVaultPin = async (pin: string): Promise<boolean> => {
+    if (!pin || pin.length < 4) return false;
+    const salt = generateSalt();
+    const pin_hash = await hashPin(pin, salt);
+    const newSettings: VaultSettings = {
+      id: 'vault-' + Date.now(),
+      user_id: user?.id || 'local-user',
+      pin_hash,
+      salt,
+      auto_lock_minutes: 5,
+      created_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const { data, error } = await supabase
+          .from('vault_settings')
+          .upsert({
+            user_id: user.id,
+            pin_hash,
+            salt,
+            auto_lock_minutes: 5,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' })
+          .select()
+          .single();
+
+        if (!error && data) {
+          setVaultSettings(data as VaultSettings);
+          setIsVaultUnlocked(true);
+          sessionStorage.setItem('thingor_vault_unlocked', 'true');
+          return true;
+        }
+      } catch (e) {
+        console.warn('Failed to upsert vault_settings in Supabase:', e);
+      }
+    }
+
+    setVaultSettings(newSettings);
+    setIsVaultUnlocked(true);
+    sessionStorage.setItem('thingor_vault_unlocked', 'true');
+    return true;
+  };
+
+  const changeVaultPin = async (oldPin: string, newPin: string): Promise<{ success: boolean; error?: string }> => {
+    if (!vaultSettings) {
+      return { success: false, error: 'A széf nincs konfigurálva.' };
+    }
+    const isOldValid = await verifyPin(oldPin, vaultSettings.salt, vaultSettings.pin_hash);
+    if (!isOldValid) {
+      return { success: false, error: 'A jelenlegi PIN kód helytelen.' };
+    }
+    if (!newPin || newPin.length < 4) {
+      return { success: false, error: 'Az új PIN kódnak legalább 4 számjegyből kell állnia.' };
+    }
+
+    const salt = generateSalt();
+    const pin_hash = await hashPin(newPin, salt);
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const { data, error } = await supabase
+          .from('vault_settings')
+          .update({
+            pin_hash,
+            salt,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (!error && data) {
+          setVaultSettings(data as VaultSettings);
+          return { success: true };
+        }
+      } catch (e) {
+        console.warn('Failed to update vault PIN in Supabase:', e);
+      }
+    }
+
+    setVaultSettings(prev => prev ? { ...prev, pin_hash, salt, updated_at: new Date().toISOString() } : null);
+    return { success: true };
+  };
+
+  const setItemVaultProtection = async (itemId: string, protectedStatus: boolean): Promise<void> => {
+    setItems(prev => prev.map(item => item.id === itemId ? { ...item, is_vault_protected: protectedStatus } : item));
+
+    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
+      try {
+        await supabase
+          .from('items')
+          .update({ is_vault_protected: protectedStatus, updated_at: new Date().toISOString() })
+          .eq('id', itemId);
+      } catch (e) {
+        console.warn('Failed to update item vault protection status in Supabase:', e);
+      }
+    }
+  };
+
+  const setDocumentVaultProtection = async (docId: string, protectedStatus: boolean): Promise<void> => {
+    setDocuments(prev => prev.map(doc => doc.id === docId ? { ...doc, is_vault_protected: protectedStatus } : doc));
+
+    if (isSupabaseConfigured && supabase && isUUID(docId)) {
+      try {
+        await supabase
+          .from('item_documents')
+          .update({ is_vault_protected: protectedStatus })
+          .eq('id', docId);
+      } catch (e) {
+        console.warn('Failed to update document vault protection status in Supabase:', e);
+      }
     }
   };
 
@@ -3276,6 +3987,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         items,
         itemsVersion,
         refreshItems,
+        dashboardMetrics,
+        refreshDashboardMetrics,
+        userPreferences,
+        updateUserPreferences,
         categories,
         locations,
         documents,
@@ -3298,6 +4013,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         saveFinancing,
         recordInstallmentPayment,
         deleteFinancing,
+
+        loans,
+        addLoan,
+        updateLoan,
+        returnLoan,
+        deleteLoan,
+
+        collections,
+        collectionItems,
+        addCollection,
+        updateCollection,
+        deleteCollection,
+        addItemToCollection,
+        removeItemFromCollection,
+        getCollectionItems,
+
+        pantryItems,
+        addPantryItem,
+        updatePantryItem,
+        deletePantryItem,
+        adjustPantryQuantity,
+
+        vaultSettings,
+        isVaultUnlocked,
+        unlockVault,
+        lockVault,
+        setupVaultPin,
+        changeVaultPin,
+        setItemVaultProtection,
+        setDocumentVaultProtection,
 
         household,
         householdMembers,
