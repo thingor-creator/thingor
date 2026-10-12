@@ -61,7 +61,7 @@ export const ItemsView: React.FC = () => {
 
   // Local debounced search input state for smooth 60fps typing
   const [searchInput, setSearchInput] = useState(filters.search);
-  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Synchronize local search input when filters.search is reset or modified externally
   useEffect(() => {
@@ -163,10 +163,19 @@ export const ItemsView: React.FC = () => {
           if (isCancelled) return;
 
           if (error) {
-            console.error('Supabase paginated items query error:', error.message);
-            setFetchError(error.message);
-            // Fallback to client data if network/table error
-            runClientSidePagination();
+            if (error.message?.includes('Requested range not satisfiable') || (error as any).code === 'PGRST103') {
+              if (currentPage > 1) {
+                setCurrentPage(1);
+                return;
+              }
+              setPaginatedItems([]);
+              setTotalMatchingCount(0);
+            } else {
+              console.error('Supabase paginated items query error:', error.message);
+              setFetchError(error.message);
+              // Fallback to client data if network/table error
+              runClientSidePagination();
+            }
           } else {
             setPaginatedItems(data as Item[]);
             setTotalMatchingCount(count ?? 0);

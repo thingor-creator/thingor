@@ -224,7 +224,7 @@ serve(async (req) => {
         const { data: profile } = await supabaseAdmin
           .from("profiles")
           .select("role")
-          .eq("id", user.id)
+          .or(`id.eq.${user.id},user_id.eq.${user.id}`)
           .maybeSingle();
 
         isAdmin = profile?.role === "admin";

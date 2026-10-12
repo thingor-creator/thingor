@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import type {
   Item,
   Category,
@@ -1421,6 +1421,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!error && data) {
         const addedItem = data as Item;
         setItems(prev => [addedItem, ...prev.filter(i => i.id !== addedItem.id)]);
+        refreshItems();
         return addedItem;
       }
 
@@ -1438,6 +1439,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (!fbError && fbData) {
             const addedItem = fbData as Item;
             setItems(prev => [addedItem, ...prev.filter(i => i.id !== addedItem.id)]);
+            refreshItems();
             return addedItem;
           }
         }
