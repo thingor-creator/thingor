@@ -201,9 +201,7 @@ serve(async (req) => {
     const r2VaultBucket = (
       Deno.env.get("R2_VAULT_BUCKET") ||
       Deno.env.get("VITE_R2_VAULT_BUCKET") ||
-      Deno.env.get("R2_BUCKET_NAME") ||
-      Deno.env.get("VITE_R2_BUCKET_NAME") ||
-      "thingor"
+      "thingor-vault"
     ).trim();
     const getBucketForFolder = (folderName: string) => {
       return folderName === "documents" ? r2VaultBucket : r2PhotosBucket;

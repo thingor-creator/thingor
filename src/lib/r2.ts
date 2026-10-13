@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 
 export const r2BucketName = (import.meta.env.VITE_R2_BUCKET_NAME || 'thingor').trim();
 export const r2PhotosBucket = (import.meta.env.VITE_R2_PHOTOS_BUCKET || import.meta.env.VITE_R2_BUCKET_NAME || 'thingor').trim();
-export const r2VaultBucket = (import.meta.env.VITE_R2_VAULT_BUCKET || import.meta.env.VITE_R2_BUCKET_NAME || 'thingor').trim();
+export const r2VaultBucket = (import.meta.env.VITE_R2_VAULT_BUCKET || 'thingor-vault').trim();
 export const r2PublicDomain = (import.meta.env.VITE_R2_PUBLIC_DOMAIN || '').trim().replace(/\/$/, '');
 
 // R2 is considered configured when either public assets CDN domain or Supabase edge functions are available
