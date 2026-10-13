@@ -4,13 +4,20 @@ import { openR2DocumentSecurely } from '../lib/r2';
 import { FileText, Search, ExternalLink, Trash2, Boxes } from 'lucide-react';
 
 export const DocumentsView: React.FC = () => {
-  const { documents, items, deleteDocument, setSelectedItemId, language } = useApp();
+  const { documents, items, deleteDocument, setSelectedItemId, language, isVaultUnlocked } = useApp();
   const isHu = language === 'hu';
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
 
   const filteredDocs = documents.filter(doc => {
+    // Hide vault-protected documents and documents belonging to vault-protected items when vault is locked
+    if (!isVaultUnlocked) {
+      if (doc.is_vault_protected) return false;
+      const parentItem = items.find(i => i.id === doc.item_id);
+      if (parentItem?.is_vault_protected) return false;
+    }
+
     if (search.trim()) {
       const q = search.toLowerCase();
       const item = items.find(i => i.id === doc.item_id);

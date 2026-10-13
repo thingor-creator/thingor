@@ -49,6 +49,7 @@ export const ItemsView: React.FC = () => {
     t,
     language,
     user,
+    isVaultUnlocked,
   } = useApp();
 
   // Server-side pagination and data state
@@ -112,6 +113,11 @@ export const ItemsView: React.FC = () => {
           let query = supabase
             .from('items')
             .select('*', { count: 'exact' });
+
+          // Exclude vault-protected items when vault is locked
+          if (!isVaultUnlocked) {
+            query = query.eq('is_vault_protected', false);
+          }
 
           // 1.1 Text search across name, description, notes
           const searchTokens = filters.search.trim()
@@ -203,6 +209,9 @@ export const ItemsView: React.FC = () => {
         : [];
 
       const filtered = localItems.filter(item => {
+        // Exclude vault-protected items when vault is locked
+        if (!isVaultUnlocked && item.is_vault_protected) return false;
+
         if (searchTokens.length > 0) {
           const normName = normalizeSearchText(item.name);
           const normDesc = normalizeSearchText(item.description);
@@ -268,6 +277,7 @@ export const ItemsView: React.FC = () => {
     };
   }, [
     user?.id,
+    isVaultUnlocked,
     filters.search,
     filters.categoryId,
     filters.locationId,
