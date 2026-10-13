@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { isR2Configured, uploadFileToR2, getR2FileSignedUrl, deleteFileFromR2, r2BucketName } from './r2';
+import { isR2Configured, uploadFileToR2, getR2FileSignedUrl, deleteFileFromR2, r2BucketName, openR2DocumentSecurely } from './r2';
+export { openR2DocumentSecurely };
 
 export interface StorageUploadResult {
   path?: string;
@@ -183,7 +184,13 @@ export async function uploadFileToStorage(
  */
 export async function getFileSignedUrl(pathOrUrl: string): Promise<string> {
   if (!pathOrUrl) return '';
-  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://') || pathOrUrl.startsWith('data:')) {
+  if (pathOrUrl.startsWith('data:') || pathOrUrl.startsWith('blob:')) {
+    return pathOrUrl;
+  }
+
+  // Documents: ALWAYS route through Edge Function to enforce authorization and get signed GET URL
+  const isDocument = pathOrUrl.includes('/documents/');
+  if (!isDocument && (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://'))) {
     return pathOrUrl;
   }
 

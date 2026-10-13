@@ -29,7 +29,7 @@ import {
   Handshake,
   Lock
 } from 'lucide-react';
-import { uploadFileToStorage } from '../lib/storage';
+import { uploadFileToStorage, openR2DocumentSecurely } from '../lib/storage';
 import { ShareModal } from './ShareModal';
 import { QRCodeModal } from './QRCodeModal';
 
@@ -1349,14 +1349,13 @@ export const ItemDetailModal: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <a
-                          href={doc.file_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--border-color,#56616D)]/50 text-xs flex items-center gap-1"
+                        <button
+                          type="button"
+                          onClick={() => openR2DocumentSecurely(doc.file_url)}
+                          className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--border-color,#56616D)]/50 text-xs flex items-center gap-1 cursor-pointer"
                         >
                           <ExternalLink className="h-3.5 w-3.5" /> {isHu ? 'Megtekintés' : 'View'}
-                        </a>
+                        </button>
                         <button
                           onClick={() => deleteDocument(doc.id)}
                           className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-rose-400"

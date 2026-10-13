@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { openR2DocumentSecurely } from '../lib/r2';
 import { FileText, Search, ExternalLink, Trash2, Boxes } from 'lucide-react';
 
 export const DocumentsView: React.FC = () => {
@@ -157,14 +158,13 @@ export const DocumentsView: React.FC = () => {
                   </span>
 
                   <div className="flex items-center gap-2">
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] flex items-center gap-1 text-[11px] transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => openR2DocumentSecurely(doc.file_url)}
+                      className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] flex items-center gap-1 text-[11px] transition-colors cursor-pointer"
                     >
                       <ExternalLink className="h-3.5 w-3.5" /> {isHu ? 'Megtekintés' : 'View'}
-                    </a>
+                    </button>
                     <button
                       onClick={() => deleteDocument(doc.id)}
                       className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 transition-colors"

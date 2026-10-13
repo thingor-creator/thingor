@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 
 export const r2BucketName = (import.meta.env.VITE_R2_BUCKET_NAME || 'thingor').trim();
+export const r2PhotosBucket = (import.meta.env.VITE_R2_PHOTOS_BUCKET || import.meta.env.VITE_R2_BUCKET_NAME || 'thingor').trim();
+export const r2VaultBucket = (import.meta.env.VITE_R2_VAULT_BUCKET || import.meta.env.VITE_R2_BUCKET_NAME || 'thingor').trim();
 export const r2PublicDomain = (import.meta.env.VITE_R2_PUBLIC_DOMAIN || '').trim().replace(/\/$/, '');
 
 // R2 is considered configured when either public assets CDN domain or Supabase edge functions are available
@@ -55,8 +57,13 @@ export async function uploadFileToR2(
       return await uploadDirectToEdgeFunction(file, folder);
     }
 
-    const publicUrl = data.publicUrl || (r2PublicDomain ? `${r2PublicDomain}/${data.path}` : data.uploadUrl);
-    return { path: data.path, signedUrl: publicUrl };
+    if (folder === 'photos') {
+      const publicUrl = data.publicUrl || (r2PublicDomain ? `${r2PublicDomain}/${data.path}` : data.uploadUrl);
+      return { path: data.path, signedUrl: publicUrl };
+    }
+
+    // Documents are strictly private: return persistent path for DB storage, NEVER save transient signed URLs
+    return { path: data.path, signedUrl: data.path };
   } catch (err: any) {
     console.warn('Upload error, attempting fallback:', err);
     return await uploadDirectToEdgeFunction(file, folder);
@@ -98,8 +105,13 @@ async function uploadDirectToEdgeFunction(
       return { error: error?.message || data?.error || 'Edge Function direct upload failed' };
     }
 
-    const publicUrl = data.publicUrl || (r2PublicDomain ? `${r2PublicDomain}/${data.path}` : '');
-    return { path: data.path, signedUrl: publicUrl };
+    if (folder === 'photos') {
+      const publicUrl = data.publicUrl || (r2PublicDomain ? `${r2PublicDomain}/${data.path}` : '');
+      return { path: data.path, signedUrl: publicUrl };
+    }
+
+    // Return persistent path for DB storage
+    return { path: data.path, signedUrl: data.path };
   } catch (err: any) {
     return { error: err.message || 'Direct upload fallback failed' };
   }
@@ -107,18 +119,31 @@ async function uploadDirectToEdgeFunction(
 
 /**
  * Resolves a public or signed URL for an R2 file path.
- * If a public domain is configured (e.g. assets.thingor.com), constructs the URL instantly without network overhead.
+ * - Photos: Can be resolved directly via public CDN domain if configured.
+ * - Documents: ALWAYS resolved through the authenticated Edge Function using time-limited Pre-Signed URLs.
  */
 export async function getR2FileSignedUrl(pathOrUrl: string): Promise<string> {
   if (!pathOrUrl) return '';
-  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://') || pathOrUrl.startsWith('data:')) {
+  if (pathOrUrl.startsWith('data:') || pathOrUrl.startsWith('blob:')) {
     return pathOrUrl;
   }
 
-  if (r2PublicDomain) {
+  // Detect whether this is a document path or URL
+  const isDocument = pathOrUrl.includes('/documents/');
+
+  // Photos: resolve directly via public CDN domain if configured and not already a full URL
+  if (!isDocument && r2PublicDomain && !pathOrUrl.startsWith('http://') && !pathOrUrl.startsWith('https://')) {
     return `${r2PublicDomain}/${pathOrUrl}`;
   }
 
+  // Photos: if already an absolute HTTP/HTTPS URL, return directly
+  if (!isDocument && (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://'))) {
+    return pathOrUrl;
+  }
+
+  // Documents: ALWAYS invoke the Edge Function to authenticate and generate
+  // an authorized, time-limited S3 Pre-Signed GET URL.
+  // Never resolve a document directly against r2PublicDomain!
   if (!supabase) return pathOrUrl;
 
   try {
@@ -129,6 +154,39 @@ export async function getR2FileSignedUrl(pathOrUrl: string): Promise<string> {
   } catch {
     return pathOrUrl;
   }
+}
+
+/**
+ * Safely opens a private document in a new tab by fetching a fresh, authenticated
+ * Pre-Signed GET URL from the Edge Function.
+ * Pre-allocates window.open to prevent browser popup blockers on asynchronous calls.
+ */
+export async function openR2DocumentSecurely(pathOrUrl: string): Promise<boolean> {
+  if (!pathOrUrl) return false;
+  if (pathOrUrl === '#' || pathOrUrl.trim() === '') return false;
+
+  // Local data/blob URLs can be opened directly
+  if (pathOrUrl.startsWith('data:') || pathOrUrl.startsWith('blob:')) {
+    window.open(pathOrUrl, '_blank', 'noopener,noreferrer');
+    return true;
+  }
+
+  // Avoid popup blocker by creating window handle before await
+  const newTab = window.open('about:blank', '_blank', 'noopener,noreferrer');
+  try {
+    const signedUrl = await getR2FileSignedUrl(pathOrUrl);
+    if (signedUrl && signedUrl !== '#' && newTab) {
+      newTab.location.href = signedUrl;
+      return true;
+    }
+  } catch (err) {
+    console.error('Error opening secure document:', err);
+  }
+
+  if (newTab) {
+    newTab.close();
+  }
+  return false;
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
 } from "npm:@aws-sdk/client-s3@^3.500.0";
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@^3.500.0";
 
@@ -18,6 +19,119 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+/**
+ * Normalizes and validates an R2 storage path.
+ * Enforces structure: <uuid-owner-id>/<photos|documents>/<filename>
+ * Prevents directory traversal, leading slashes, backslashes, and URL-encoding bypasses.
+ */
+function validateAndNormalizePath(rawPath: unknown): {
+  valid: boolean;
+  normalizedPath?: string;
+  ownerId?: string;
+  folder?: string;
+  error?: string;
+} {
+  if (!rawPath || typeof rawPath !== "string") {
+    return { valid: false, error: "Missing or invalid file path" };
+  }
+
+  let cleaned = rawPath.trim();
+  if (!cleaned) {
+    return { valid: false, error: "File path cannot be empty" };
+  }
+
+  // If path is a full URL, extract the pathname portion
+  if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
+    try {
+      const url = new URL(cleaned);
+      cleaned = url.pathname;
+    } catch {
+      return { valid: false, error: "Invalid URL format" };
+    }
+  }
+
+  // Remove leading and trailing slashes
+  cleaned = cleaned.replace(/^\/+|\/+$/g, "");
+
+  // Detect and recursively decode percent-encoding to catch obfuscated traversal (e.g. %2e%2e)
+  try {
+    let decoded = cleaned;
+    while (decoded.includes("%")) {
+      const prev = decoded;
+      decoded = decodeURIComponent(decoded);
+      if (decoded === prev) break;
+    }
+    cleaned = decoded.trim().replace(/^\/+|\/+$/g, "");
+  } catch {
+    return { valid: false, error: "Invalid URL encoding in path" };
+  }
+
+  // Reject path traversal, backslashes, null bytes, or multi-slashes
+  if (
+    cleaned.includes("..") ||
+    cleaned.includes("\\") ||
+    cleaned.includes("\0") ||
+    cleaned.includes("//")
+  ) {
+    return { valid: false, error: "Path traversal or invalid characters detected" };
+  }
+
+  const parts = cleaned.split("/");
+  if (parts.length < 3) {
+    return {
+      valid: false,
+      error: "Path must match format: <user_id>/<folder>/<fileName>",
+    };
+  }
+
+  const [ownerId, folder, ...rest] = parts;
+
+  // Strict UUID validation for owner segment
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(ownerId)) {
+    return { valid: false, error: "Invalid user identifier in path" };
+  }
+
+  // Folder validation (strictly photos or documents)
+  if (folder !== "photos" && folder !== "documents") {
+    return { valid: false, error: "Invalid folder. Only 'photos' and 'documents' are allowed" };
+  }
+
+  // Ensure fileName and any sub-segments are not empty or dots
+  if (rest.some((part) => !part || part === "." || part === "..")) {
+    return { valid: false, error: "Invalid file name segment" };
+  }
+
+  return {
+    valid: true,
+    normalizedPath: `${ownerId.toLowerCase()}/${folder}/${rest.join("/")}`,
+    ownerId: ownerId.toLowerCase(),
+    folder,
+  };
+}
+
+/**
+ * Verifies whether the user has admin role in profiles.
+ */
+async function checkIsAdmin(
+  supabaseUrl: string,
+  supabaseServiceKey: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .or(`id.eq.${userId},user_id.eq.${userId}`)
+      .maybeSingle();
+
+    return profile?.role === "admin";
+  } catch {
+    return false;
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -77,11 +191,23 @@ serve(async (req) => {
       Deno.env.get("VITE_R2_SECRET_ACCESS_KEY") ||
       ""
     ).trim();
-    const r2BucketName = (
+    const r2PhotosBucket = (
+      Deno.env.get("R2_PHOTOS_BUCKET") ||
+      Deno.env.get("VITE_R2_PHOTOS_BUCKET") ||
       Deno.env.get("R2_BUCKET_NAME") ||
       Deno.env.get("VITE_R2_BUCKET_NAME") ||
       "thingor"
     ).trim();
+    const r2VaultBucket = (
+      Deno.env.get("R2_VAULT_BUCKET") ||
+      Deno.env.get("VITE_R2_VAULT_BUCKET") ||
+      Deno.env.get("R2_BUCKET_NAME") ||
+      Deno.env.get("VITE_R2_BUCKET_NAME") ||
+      "thingor"
+    ).trim();
+    const getBucketForFolder = (folderName: string) => {
+      return folderName === "documents" ? r2VaultBucket : r2PhotosBucket;
+    };
     const r2PublicDomain = (
       Deno.env.get("R2_PUBLIC_DOMAIN") ||
       Deno.env.get("VITE_R2_PUBLIC_DOMAIN") ||
@@ -130,15 +256,18 @@ serve(async (req) => {
       const sanitizedName = (fileName || "upload").replace(/[^a-zA-Z0-9.-]/g, "_");
       // Enforce strict user isolation: path is ALWAYS prefixed with user.id
       const filePath = `${user.id}/${folder}/${Date.now()}_${sanitizedName}`;
+      const targetBucket = getBucketForFolder(folder);
 
       const putCommand = new PutObjectCommand({
-        Bucket: r2BucketName,
+        Bucket: targetBucket,
         Key: filePath,
         ContentType: fileType || "application/octet-stream",
       });
 
       const uploadUrl = await getSignedUrl(s3Client, putCommand, { expiresIn: 600 });
-      const publicUrl = r2PublicDomain ? `${r2PublicDomain}/${filePath}` : uploadUrl;
+      // Public URL is ONLY available for photos when r2PublicDomain is configured.
+      // Documents are strictly private and NEVER receive a public CDN URL.
+      const publicUrl = folder === "photos" && r2PublicDomain ? `${r2PublicDomain}/${filePath}` : "";
 
       return new Response(
         JSON.stringify({
@@ -185,15 +314,17 @@ serve(async (req) => {
       const sanitizedName = (fileName || "upload").replace(/[^a-zA-Z0-9.-]/g, "_");
       const filePath = `${user.id}/${folder}/${Date.now()}_${sanitizedName}`;
 
+      const targetBucket = getBucketForFolder(folder);
       const putCommand = new PutObjectCommand({
-        Bucket: r2BucketName,
+        Bucket: targetBucket,
         Key: filePath,
         Body: bytes,
         ContentType: fileType || "application/octet-stream",
       });
 
       await s3Client.send(putCommand);
-      const publicUrl = r2PublicDomain ? `${r2PublicDomain}/${filePath}` : "";
+      // Public URL is ONLY available for photos when r2PublicDomain is configured.
+      const publicUrl = folder === "photos" && r2PublicDomain ? `${r2PublicDomain}/${filePath}` : "";
 
       return new Response(
         JSON.stringify({
@@ -206,28 +337,25 @@ serve(async (req) => {
 
     // 5. ACTION: delete (Secure deletion with strict ownership & admin check)
     if (action === "delete") {
-      const { path: filePath } = body;
-
-      if (!filePath || typeof filePath !== "string") {
+      const { path: rawPath } = body;
+      const pathValidation = validateAndNormalizePath(rawPath);
+      if (!pathValidation.valid) {
         return new Response(
-          JSON.stringify({ error: "Missing or invalid file path" }),
+          JSON.stringify({ error: pathValidation.error || "Missing or invalid file path" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
+      const filePath = pathValidation.normalizedPath!;
+      const fileOwnerId = pathValidation.ownerId!;
+      const fileFolder = pathValidation.folder!;
+
       // Check ownership
-      const isOwner = filePath.startsWith(`${user.id}/`);
+      const isOwner = fileOwnerId === user.id.toLowerCase();
       let isAdmin = false;
 
       if (!isOwner) {
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-        const { data: profile } = await supabaseAdmin
-          .from("profiles")
-          .select("role")
-          .or(`id.eq.${user.id},user_id.eq.${user.id}`)
-          .maybeSingle();
-
-        isAdmin = profile?.role === "admin";
+        isAdmin = await checkIsAdmin(supabaseUrl, supabaseServiceKey, user.id);
       }
 
       if (!isOwner && !isAdmin) {
@@ -237,12 +365,22 @@ serve(async (req) => {
         );
       }
 
+      const targetBucket = getBucketForFolder(fileFolder);
       const deleteCommand = new DeleteObjectCommand({
-        Bucket: r2BucketName,
+        Bucket: targetBucket,
         Key: filePath,
       });
 
       await s3Client.send(deleteCommand);
+
+      // If document and vault bucket is separate from photos bucket, also delete from legacy bucket if present
+      if (fileFolder === "documents" && r2VaultBucket !== r2PhotosBucket) {
+        try {
+          await s3Client.send(new DeleteObjectCommand({ Bucket: r2PhotosBucket, Key: filePath }));
+        } catch {
+          // Ignore if not present in legacy bucket
+        }
+      }
 
       return new Response(
         JSON.stringify({ success: true }),
@@ -252,23 +390,57 @@ serve(async (req) => {
 
     // 6. ACTION: get-signed-url (Private file download link)
     if (action === "get-signed-url") {
-      const { path: filePath } = body;
-      if (!filePath) {
+      const { path: rawPath } = body;
+      const pathValidation = validateAndNormalizePath(rawPath);
+      if (!pathValidation.valid) {
         return new Response(
-          JSON.stringify({ error: "Missing file path" }),
+          JSON.stringify({ error: pathValidation.error || "Missing or invalid file path" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      if (r2PublicDomain) {
+      const filePath = pathValidation.normalizedPath!;
+      const fileOwnerId = pathValidation.ownerId!;
+      const fileFolder = pathValidation.folder!;
+
+      // Enforce strict authorization: file owner or verified admin
+      const isOwner = fileOwnerId === user.id.toLowerCase();
+      let isAdmin = false;
+
+      if (!isOwner) {
+        isAdmin = await checkIsAdmin(supabaseUrl, supabaseServiceKey, user.id);
+      }
+
+      if (!isOwner && !isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: You are not authorized to access this file" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ONLY "photos" may be served via public CDN domain if configured.
+      // "documents" are STRICTLY PRIVATE: NEVER return public CDN URL!
+      if (fileFolder === "photos" && r2PublicDomain) {
         return new Response(
           JSON.stringify({ signedUrl: `${r2PublicDomain}/${filePath}` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
+      let targetBucket = getBucketForFolder(fileFolder);
+      // For documents: if vault bucket is configured separately, check if object exists there first.
+      // If not yet migrated, fall back gracefully to legacy photos bucket so downloads don't fail!
+      if (fileFolder === "documents" && r2VaultBucket !== r2PhotosBucket) {
+        try {
+          await s3Client.send(new HeadObjectCommand({ Bucket: r2VaultBucket, Key: filePath }));
+          targetBucket = r2VaultBucket;
+        } catch {
+          targetBucket = r2PhotosBucket;
+        }
+      }
+
       const getCommand = new GetObjectCommand({
-        Bucket: r2BucketName,
+        Bucket: targetBucket,
         Key: filePath,
       });
 

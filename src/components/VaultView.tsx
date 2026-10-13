@@ -9,15 +9,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Eye,
-  EyeOff,
   Plus,
-  Trash2,
   ExternalLink,
-  ChevronRight,
   FolderLock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import type { Item, ItemDocument } from '../types';
+import { openR2DocumentSecurely } from '../lib/r2';
 
 export const VaultView: React.FC = () => {
   const {
@@ -32,7 +29,6 @@ export const VaultView: React.FC = () => {
     setItemVaultProtection,
     setDocumentVaultProtection,
     setSelectedItemId,
-    language
   } = useApp();
 
   // PIN Input states
@@ -71,23 +67,6 @@ export const VaultView: React.FC = () => {
     setErrorMessage(null);
   };
 
-  // Keyboard support for PIN entry
-  useEffect(() => {
-    if (isVaultUnlocked) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= '0' && e.key <= '9') {
-        if (pin.length < 6) setPin(prev => prev + e.key);
-      } else if (e.key === 'Backspace') {
-        setPin(prev => prev.slice(0, -1));
-      } else if (e.key === 'Enter') {
-        handleUnlock();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pin, isVaultUnlocked, vaultSettings]);
-
   // Handle Unlock
   const handleUnlock = async () => {
     if (!pin) {
@@ -110,6 +89,23 @@ export const VaultView: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Keyboard support for PIN entry
+  useEffect(() => {
+    if (isVaultUnlocked) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        if (pin.length < 6) setPin(prev => prev + e.key);
+      } else if (e.key === 'Backspace') {
+        setPin(prev => prev.slice(0, -1));
+      } else if (e.key === 'Enter') {
+        handleUnlock();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pin, isVaultUnlocked, vaultSettings]);
 
   // Handle Initial PIN setup
   const handleSetupPin = async (e: React.FormEvent) => {
@@ -605,15 +601,14 @@ export const VaultView: React.FC = () => {
 
                       <div className="flex items-center gap-2">
                         {doc.file_url && (
-                          <a
-                            href={doc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-[var(--surface-bg)] hover:bg-[var(--border-color)] text-[var(--text-main)] transition-colors"
+                          <button
+                            type="button"
+                            onClick={() => openR2DocumentSecurely(doc.file_url)}
+                            className="p-2 rounded-lg bg-[var(--surface-bg)] hover:bg-[var(--border-color)] text-[var(--text-main)] transition-colors cursor-pointer"
                             title="Megnyitás"
                           >
                             <ExternalLink className="w-4 h-4 text-indigo-400" />
-                          </a>
+                          </button>
                         )}
                         <button
                           onClick={() => setDocumentVaultProtection(doc.id, false)}
