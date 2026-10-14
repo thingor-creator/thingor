@@ -7,17 +7,15 @@ import {
   AlertCircle,
   Plus,
   Trash2,
-  Calendar,
   User,
   Phone,
   Mail,
   Search,
   Package,
   X,
-  Edit2,
-  ArrowRight
+  Edit2
 } from 'lucide-react';
-import type { ItemLoan, LoanStatus } from '../types';
+import type { ItemLoan } from '../types';
 
 export const LendingView: React.FC = () => {
   const { items, loans, addLoan, updateLoan, returnLoan, deleteLoan, setSelectedItemId, language } = useApp();
@@ -329,8 +327,8 @@ export const LendingView: React.FC = () => {
                       className="flex items-center gap-3 cursor-pointer group flex-1 min-w-0"
                     >
                       <div className="w-11 h-11 rounded-xl bg-[var(--surface-bg,#465362)] overflow-hidden shrink-0 flex items-center justify-center border border-[var(--border-color,#56616D)]">
-                        {item?.image_url ? (
-                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        {item?.photo_url ? (
+                          <img src={item.photo_url} alt={item.name} className="w-full h-full object-cover" />
                         ) : (
                           <Package className="h-5 w-5 text-[var(--text-sub,#B5BDC6)]" />
                         )}

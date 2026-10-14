@@ -14,14 +14,11 @@ import {
   X,
   Search,
   ArrowLeft,
-  DollarSign,
   Sparkles,
-  ExternalLink,
   ChevronRight,
-  Shield,
-  Tag
+  Shield
 } from 'lucide-react';
-import type { Collection, CollectionItem } from '../types';
+import type { Collection } from '../types';
 
 export const CollectionsView: React.FC = () => {
   const {
@@ -196,7 +193,7 @@ export const CollectionsView: React.FC = () => {
       collector_grade: collectorGrade.trim() || undefined,
       rarity: rarity.trim() || undefined,
       acquired_year: acquiredYear ? Number(acquiredYear) : undefined,
-      catalogNumber: catalogNumber.trim() || undefined,
+      catalog_number: catalogNumber.trim() || undefined,
       estimated_collector_value: estimatedCollectorValue ? Number(estimatedCollectorValue) : undefined,
     });
 
@@ -506,8 +503,8 @@ export const CollectionsView: React.FC = () => {
                           className="flex items-center gap-3 cursor-pointer group flex-1 min-w-0"
                         >
                           <div className="w-12 h-12 rounded-xl bg-[var(--surface-bg,#465362)] overflow-hidden shrink-0 flex items-center justify-center border border-[var(--border-color,#56616D)]">
-                            {item?.photo_url || item?.image_url ? (
-                              <img src={item.photo_url || item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                            {item?.photo_url ? (
+                              <img src={item.photo_url} alt={item.name} className="w-full h-full object-cover" />
                             ) : (
                               <Package className="h-5 w-5 text-[var(--text-sub,#B5BDC6)]" />
                             )}

@@ -18,8 +18,6 @@ import {
   ChevronDown,
   Globe,
   ShieldCheck,
-  ListChecks,
-  Share2,
   Bell,
   QrCode,
   Layers,
