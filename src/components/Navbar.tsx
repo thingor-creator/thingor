@@ -73,6 +73,7 @@ export const Navbar: React.FC = () => {
   const handleNav = (view: ViewMode) => {
     setCurrentView(view);
     setIsMobileMenuOpen(false);
+    setIsUserDropdownOpen(false);
     setOpenDropdown(null);
   };
 
@@ -415,9 +416,13 @@ export const Navbar: React.FC = () => {
                     )}
                     <button
                       onClick={() => handleNav('settings')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)] hover:text-white rounded-lg transition-colors"
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        currentView === 'settings'
+                          ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-semibold'
+                          : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)] hover:text-white'
+                      }`}
                     >
-                      <Settings className="h-3.5 w-3.5 text-[var(--text-secondary,var(--text-sub,#B5BDC6))]" />
+                      <Settings className={`h-3.5 w-3.5 ${currentView === 'settings' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                       {language === 'hu' ? 'Beállítások' : 'Settings'}
                     </button>
                     <div className="my-1 border-t border-[var(--border-color,#56616D)]" />
