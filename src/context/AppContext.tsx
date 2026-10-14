@@ -42,6 +42,7 @@ import type {
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { generateSalt, hashPin, verifyPin } from '../lib/vault';
+import { deleteFileFromStorage } from '../lib/storage';
 import { translations, type Language, type TranslationKeys } from '../i18n/translations';
 import { isAdmin, isSuspended } from '../lib/permissions';
 
@@ -533,6 +534,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isVaultUnlocked, setIsVaultUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem('thingor_vault_unlocked') === 'true';
   });
+  const [vaultFailedAttempts, setVaultFailedAttempts] = useState<number>(0);
+  const [vaultLockoutUntil, setVaultLockoutUntil] = useState<number>(0);
 
   useEffect(() => {
     if (vaultSettings) {
@@ -1797,6 +1800,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteItem = async (id: string): Promise<void> => {
+    const targetItem = items.find(item => item.id === id);
+    const relatedDocs = documents.filter(doc => doc.item_id === id);
+
+    if (targetItem?.photo_url) {
+      deleteFileFromStorage(targetItem.photo_url).catch(err => console.warn('Failed to delete item photo from storage:', err));
+    }
+    if (targetItem?.additional_photos && targetItem.additional_photos.length > 0) {
+      targetItem.additional_photos.forEach(photo => {
+        if (photo) deleteFileFromStorage(photo).catch(err => console.warn('Failed to delete additional photo from storage:', err));
+      });
+    }
+    relatedDocs.forEach(doc => {
+      if (doc.file_url) {
+        deleteFileFromStorage(doc.file_url).catch(err => console.warn('Failed to delete doc file from storage:', err));
+      }
+    });
+
     if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
       await supabase.from('items').delete().eq('id', id);
     }
@@ -1916,6 +1936,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteDocument = async (docId: string): Promise<void> => {
+    const docToDelete = documents.find(d => d.id === docId);
+    if (docToDelete?.file_url) {
+      deleteFileFromStorage(docToDelete.file_url).catch(err => console.warn('Failed to delete document from storage:', err));
+    }
+
     if (isSupabaseConfigured && supabase && user?.id && isUUID(docId)) {
       await supabase.from('item_documents').delete().eq('id', docId).eq('user_id', user.id);
     }
@@ -2608,15 +2633,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Vault & Secure Storage Module CRUD & Crypto Logic
   const unlockVault = async (pin: string): Promise<{ success: boolean; error?: string }> => {
     if (!vaultSettings) {
-      return { success: false, error: 'A széf nincs konfigurálva. Állíts be PIN kódot!' };
+      return { success: false, error: language === 'hu' ? 'A széf nincs konfigurálva. Állíts be PIN kódot!' : 'The vault is not configured. Please set up a PIN!' };
     }
+
+    const now = Date.now();
+    if (vaultLockoutUntil > now) {
+      const remainingSec = Math.ceil((vaultLockoutUntil - now) / 1000);
+      return {
+        success: false,
+        error: language === 'hu'
+          ? `Túl sok hibás próbálkozás! Kérjük, várj még ${remainingSec} másodpercet.`
+          : `Too many failed attempts! Please wait ${remainingSec} seconds.`
+      };
+    }
+
     const isValid = await verifyPin(pin, vaultSettings.salt, vaultSettings.pin_hash);
     if (isValid) {
+      setVaultFailedAttempts(0);
+      setVaultLockoutUntil(0);
       setIsVaultUnlocked(true);
       sessionStorage.setItem('thingor_vault_unlocked', 'true');
       return { success: true };
     } else {
-      return { success: false, error: 'Helytelen PIN kód!' };
+      const newAttempts = vaultFailedAttempts + 1;
+      setVaultFailedAttempts(newAttempts);
+      if (newAttempts >= 5) {
+        const lockoutTime = now + 60 * 1000; // 60 seconds lockout
+        setVaultLockoutUntil(lockoutTime);
+        return {
+          success: false,
+          error: language === 'hu'
+            ? 'Túl sok hibás próbálkozás! A széf 60 másodpercre zárolva.'
+            : 'Too many failed attempts! Vault locked for 60 seconds.'
+        };
+      }
+      const attemptsLeft = 5 - newAttempts;
+      return {
+        success: false,
+        error: language === 'hu'
+          ? `Helytelen PIN kód! (${attemptsLeft} próbálkozás maradt)`
+          : `Incorrect PIN! (${attemptsLeft} attempts remaining)`
+      };
     }
   };
 

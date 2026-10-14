@@ -6,6 +6,7 @@ export const CategoriesView: React.FC = () => {
   const {
     categories,
     items,
+    isVaultUnlocked,
     addCategory,
     isCategoryModalOpen,
     setIsCategoryModalOpen,
@@ -113,7 +114,7 @@ export const CategoriesView: React.FC = () => {
       {/* CATEGORIES GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map(cat => {
-          const catItems = items.filter(i => i.category_id === cat.id);
+          const catItems = items.filter(i => i.category_id === cat.id && (isVaultUnlocked || !i.is_vault_protected));
           const totalCount = catItems.length;
           const totalVal = catItems.reduce((s, i) => s + (i.current_value ?? i.purchase_price ?? 0), 0);
           const displayName = getCategoryName(cat.id);

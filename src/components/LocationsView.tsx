@@ -12,6 +12,7 @@ export const LocationsView: React.FC = () => {
   const {
     locations,
     items,
+    isVaultUnlocked,
     addLocation,
     deleteLocation,
     isLocationModalOpen,
@@ -63,7 +64,7 @@ export const LocationsView: React.FC = () => {
 
   const renderLocationBranch = (loc: LocationItem, depth = 0) => {
     const children = locations.filter(l => l.parent_id === loc.id);
-    const locItems = items.filter(i => i.location_id === loc.id);
+    const locItems = items.filter(i => i.location_id === loc.id && (isVaultUnlocked || !i.is_vault_protected));
     const totalItemCount = locItems.length;
     const totalVal = locItems.reduce((s, i) => s + (i.current_value ?? i.purchase_price ?? 0), 0);
     const isDeleting = deletingLocId === loc.id;
