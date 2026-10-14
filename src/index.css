@@ -131,3 +131,13 @@ input:-webkit-autofill:active {
     z-index: 99999 !important;
   }
 }
+
+/* Compact view mode */
+html.compact-mode .theme-card {
+  padding: 0.75rem !important;
+}
+html.compact-mode table td,
+html.compact-mode table th {
+  padding-top: 0.375rem !important;
+  padding-bottom: 0.375rem !important;
+}

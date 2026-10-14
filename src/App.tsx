@@ -17,6 +17,7 @@ import { CollectionsView } from './components/CollectionsView';
 import { PantryView } from './components/PantryView';
 import { VaultView } from './components/VaultView';
 import { SharedItemView } from './components/SharedItemView';
+import { SettingsView } from './components/SettingsView';
 import { ItemDetailModal } from './components/ItemDetailModal';
 import { ItemFormModal } from './components/ItemFormModal';
 import { AuthModal } from './components/AuthModal';
@@ -46,6 +47,7 @@ const AppContent: React.FC = () => {
     setCurrentView,
     language,
     isAuthenticated,
+    userPreferences,
   } = useApp();
 
   const [shareToken, setShareToken] = useState<string | null>(null);
@@ -64,6 +66,14 @@ const AppContent: React.FC = () => {
       setIsLegalModalOpen(true);
     }
   }, [currentView]);
+
+  useEffect(() => {
+    if (userPreferences?.compact_mode) {
+      document.documentElement.classList.add('compact-mode');
+    } else {
+      document.documentElement.classList.remove('compact-mode');
+    }
+  }, [userPreferences?.compact_mode]);
 
   useEffect(() => {
     const parseUrlParameters = () => {
@@ -234,6 +244,7 @@ const AppContent: React.FC = () => {
               {currentView === 'pantry' && <PantryView />}
               {currentView === 'vault' && <VaultView />}
               {currentView === 'admin' && <AdminView />}
+              {currentView === 'settings' && <SettingsView />}
             </>
           )}
         </main>

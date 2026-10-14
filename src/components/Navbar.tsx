@@ -25,6 +25,7 @@ import {
   Library,
   ShoppingBag,
   Lock,
+  Settings,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -412,6 +413,13 @@ export const Navbar: React.FC = () => {
                         {t('admin_panel')}
                       </button>
                     )}
+                    <button
+                      onClick={() => handleNav('settings')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)] hover:text-white rounded-lg transition-colors"
+                    >
+                      <Settings className="h-3.5 w-3.5 text-[var(--text-secondary,var(--text-sub,#B5BDC6))]" />
+                      {language === 'hu' ? 'Beállítások' : 'Settings'}
+                    </button>
                     <div className="my-1 border-t border-[var(--border-color,#56616D)]" />
                     <button
                       onClick={logout}
@@ -690,6 +698,15 @@ export const Navbar: React.FC = () => {
 
                 {/* Akciógombok */}
                 <div className="pt-3 border-t border-[var(--border-color,#56616D)] flex flex-col gap-2">
+                  <button
+                    onClick={() => handleNav('settings')}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                      currentView === 'settings' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                    }`}
+                  >
+                    <Settings className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                    <span>{language === 'hu' ? 'Beállítások' : 'Settings'}</span>
+                  </button>
                   <button
                     onClick={() => {
                       logout();

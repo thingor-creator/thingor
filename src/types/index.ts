@@ -172,6 +172,8 @@ export interface UserPreferences {
   module_order?: string[];
   hidden_modules?: string[];
   compact_mode?: boolean;
+  language?: 'hu' | 'en';
+  currency?: 'HUF' | 'EUR' | 'USD';
 }
 
 export interface UserProfile {
@@ -414,7 +416,7 @@ export interface PantryItem {
   updated_at?: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'lending' | 'collections' | 'pantry' | 'vault' | 'admin' | 'guest_share' | 'legal';
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'lending' | 'collections' | 'pantry' | 'vault' | 'admin' | 'guest_share' | 'legal' | 'settings';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';
