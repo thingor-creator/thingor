@@ -136,13 +136,13 @@ export const HouseholdView: React.FC = () => {
   const getRoleBadge = (role: HouseholdRole) => {
     switch (role) {
       case 'owner':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-950/50 text-[var(--color-warning,#F59E0B)] border border-amber-500/40 flex items-center gap-1"><Crown className="w-3.5 h-3.5 text-amber-400" /> {language === 'hu' ? 'Családfő (Tulajdonos)' : 'Owner'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-950/50 text-[var(--color-warning,#F59E0B)] border border-amber-500/40 flex items-center gap-1 whitespace-nowrap shrink-0"><Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" /> {language === 'hu' ? 'Családfő (Tulajdonos)' : 'Owner'}</span>;
       case 'admin':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-950/50 text-blue-300 border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" /> {language === 'hu' ? 'Adminisztrátor' : 'Admin'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-950/50 text-blue-300 border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1 whitespace-nowrap shrink-0"><Shield className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)] shrink-0" /> {language === 'hu' ? 'Adminisztrátor' : 'Admin'}</span>;
       case 'member':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-950/50 text-[var(--color-status-success,#34D399)] border border-emerald-500/40 flex items-center gap-1"><Users className="w-3.5 h-3.5 text-emerald-400" /> {language === 'hu' ? 'Családtag' : 'Member'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-950/50 text-[var(--color-status-success,#34D399)] border border-emerald-500/40 flex items-center gap-1 whitespace-nowrap shrink-0"><Users className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {language === 'hu' ? 'Családtag' : 'Member'}</span>;
       case 'viewer':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] flex items-center gap-1"><Eye className="w-3.5 h-3.5 text-[var(--text-sub,#B5BDC6)]" /> {language === 'hu' ? 'Megtekintő' : 'Viewer'}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] flex items-center gap-1 whitespace-nowrap shrink-0"><Eye className="w-3.5 h-3.5 text-[var(--text-sub,#B5BDC6)] shrink-0" /> {language === 'hu' ? 'Megtekintő' : 'Viewer'}</span>;
     }
   };
 
@@ -420,7 +420,7 @@ export const HouseholdView: React.FC = () => {
       )}
 
       {/* Members List */}
-      <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-6 shadow-sm space-y-4">
+      <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-4 sm:p-6 shadow-sm space-y-4">
         <h2 className="text-lg font-bold text-[var(--text-main,#E0E3E6)]">
           {language === 'hu' ? 'Háztartás Tagjai' : 'Household Members'} ({householdMembers.length})
         </h2>
@@ -480,36 +480,38 @@ export const HouseholdView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {getRoleBadge(member.role)}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto pt-1 sm:pt-0">
+                <div className="self-start sm:self-auto shrink-0">
+                  {getRoleBadge(member.role)}
+                </div>
 
                 {isOwnerOrAdmin && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                     <button
                       onClick={() => handleOpenEditMember(member)}
-                      className="px-2.5 py-1.5 text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg transition flex items-center gap-1"
+                      className="px-2.5 py-1.5 text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg transition flex items-center gap-1 whitespace-nowrap"
                       title={language === 'hu' ? 'Családtag szerkesztése' : 'Edit Member'}
                     >
-                      <Edit2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <Edit2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       <span>{language === 'hu' ? 'Szerkesztés' : 'Edit'}</span>
                     </button>
 
                     <button
                       onClick={() => handleOpenSharingMember(member)}
-                      className="px-2.5 py-1.5 text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg transition flex items-center gap-1"
+                      className="px-2.5 py-1.5 text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-lg transition flex items-center gap-1 whitespace-nowrap"
                       title={language === 'hu' ? 'Megosztási helyszínek beállítása' : 'Configure Sharing'}
                     >
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                       <span>{language === 'hu' ? 'Megosztás' : 'Sharing'}</span>
                     </button>
 
                     {member.role !== 'owner' && member.user_id !== user?.id && (
                       <button
                         onClick={() => removeHouseholdMember(member.id)}
-                        className="p-1.5 text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition"
+                        className="p-1.5 text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition shrink-0"
                         title={language === 'hu' ? 'Tag eltávolítása' : 'Remove Member'}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 text-rose-400" />
                       </button>
                     )}
                   </div>
