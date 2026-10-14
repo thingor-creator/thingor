@@ -387,29 +387,32 @@ export const VaultView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
           <button
             onClick={() => setIsAddItemModalOpen(true)}
-            className="flex-1 md:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Tárgy széfbe helyezése</span>
           </button>
-          <button
-            onClick={() => setIsChangePinOpen(true)}
-            className="px-3.5 py-2.5 bg-[var(--surface-bg)] hover:bg-[var(--border-color)] text-[var(--text-main)] rounded-xl text-sm font-medium border border-[var(--border-color)] transition-colors flex items-center gap-2"
-            title="PIN kód módosítása"
-          >
-            <KeyRound className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">PIN módosítása</span>
-          </button>
-          <button
-            onClick={lockVault}
-            className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
-          >
-            <Lock className="w-4 h-4" />
-            <span>Lezárás most</span>
-          </button>
+
+          <div className="grid grid-cols-2 sm:flex items-center gap-2.5">
+            <button
+              onClick={() => setIsChangePinOpen(true)}
+              className="px-3 py-2.5 bg-[var(--surface-bg)] hover:bg-[var(--border-color)] text-[var(--text-main)] rounded-xl text-xs sm:text-sm font-medium border border-[var(--border-color)] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+              title="PIN kód módosítása"
+            >
+              <KeyRound className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>PIN módosítása</span>
+            </button>
+            <button
+              onClick={lockVault}
+              className="px-3.5 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>Lezárás most</span>
+            </button>
+          </div>
         </div>
       </div>
 
