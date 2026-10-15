@@ -39,6 +39,7 @@ export const ItemsView: React.FC = () => {
     itemsVersion,
     categories,
     locations,
+    household,
     filters,
     setFilters,
     resetFilters,
@@ -50,6 +51,7 @@ export const ItemsView: React.FC = () => {
     language,
     user,
     isVaultUnlocked,
+    dashboardMetrics,
   } = useApp();
 
   // Server-side pagination and data state
@@ -57,8 +59,16 @@ export const ItemsView: React.FC = () => {
   const [pageSize, setPageSize] = useState(24);
   const [paginatedItems, setPaginatedItems] = useState<Item[]>([]);
   const [totalMatchingCount, setTotalMatchingCount] = useState<number>(0);
+  const [totalInventoryCount, setTotalInventoryCount] = useState<number>(() => dashboardMetrics?.total_items ?? 0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Synchronize total inventory count directly with central dashboard metrics
+  useEffect(() => {
+    if (dashboardMetrics?.total_items !== undefined && dashboardMetrics.total_items !== null) {
+      setTotalInventoryCount(dashboardMetrics.total_items);
+    }
+  }, [dashboardMetrics?.total_items]);
 
   // Local debounced search input state for smooth 60fps typing
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -110,9 +120,23 @@ export const ItemsView: React.FC = () => {
         setFetchError(null);
 
         try {
+          const isFiltering = Boolean(filters.search.trim()) ||
+            (filters.categoryId && filters.categoryId !== 'all') ||
+            (filters.locationId && filters.locationId !== 'all') ||
+            (filters.condition && filters.condition !== 'all');
+
           let query = supabase
             .from('items')
             .select('*', { count: 'exact' });
+
+          // Scope query to current user and their household (prevents admin from loading entire system's items in personal inventory view)
+          if (user?.id) {
+            if (household?.id) {
+              query = query.or(`user_id.eq.${user.id},household_id.eq.${household.id}`);
+            } else {
+              query = query.eq('user_id', user.id);
+            }
+          }
 
           // Exclude vault-protected items when vault is locked
           if (!isVaultUnlocked) {
@@ -176,15 +200,48 @@ export const ItemsView: React.FC = () => {
               }
               setPaginatedItems([]);
               setTotalMatchingCount(0);
+              if (!isFiltering) {
+                setTotalInventoryCount(0);
+              }
             } else {
               console.error('Supabase paginated items query error:', error.message);
               setFetchError(error.message);
               // Fallback to client data if network/table error
               runClientSidePagination();
+              return;
             }
           } else {
             setPaginatedItems(data as Item[]);
             setTotalMatchingCount(count ?? 0);
+            if (!isFiltering && !dashboardMetrics) {
+              setTotalInventoryCount(count ?? 0);
+            }
+          }
+
+          // Ensure total unfiltered inventory count matches dashboardMetrics (or runs identical scope HEAD query)
+          if (dashboardMetrics?.total_items !== undefined && dashboardMetrics.total_items !== null) {
+            setTotalInventoryCount(dashboardMetrics.total_items);
+          } else if (!error) {
+            try {
+              let totalQuery = supabase
+                .from('items')
+                .select('*', { count: 'exact', head: true });
+
+              if (user?.id) {
+                if (household?.id) {
+                  totalQuery = totalQuery.or(`user_id.eq.${user.id},household_id.eq.${household.id}`);
+                } else {
+                  totalQuery = totalQuery.eq('user_id', user.id);
+                }
+              }
+
+              const { count: totalCount, error: totalErr } = await totalQuery;
+              if (!isCancelled && !totalErr && totalCount !== null && totalCount !== undefined) {
+                setTotalInventoryCount(totalCount);
+              }
+            } catch (totalErr) {
+              console.warn('Failed to fetch total inventory count:', totalErr);
+            }
           }
         } catch (err: any) {
           if (!isCancelled) {
@@ -265,6 +322,8 @@ export const ItemsView: React.FC = () => {
       const from = (currentPage - 1) * pageSize;
       const slice = sorted.slice(from, from + pageSize);
 
+      const baseInventoryCount = dashboardMetrics?.total_items ?? localItems.length;
+      setTotalInventoryCount(baseInventoryCount);
       setTotalMatchingCount(sorted.length);
       setPaginatedItems(slice);
       setIsLoading(false);
@@ -277,6 +336,8 @@ export const ItemsView: React.FC = () => {
     };
   }, [
     user?.id,
+    household?.id,
+    dashboardMetrics?.total_items,
     isVaultUnlocked,
     filters.search,
     filters.categoryId,
@@ -317,8 +378,11 @@ export const ItemsView: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main,#E0E3E6)] tracking-tight">
               {t('my_things')}
             </h1>
-            <span className="px-3 py-1 rounded-full bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)] font-bold text-xs">
-              {totalMatchingCount} {language === 'hu' ? 'tárgy' : 'items'}
+            <span
+              className="px-3 py-1 rounded-full bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)] font-bold text-xs"
+              title={language === 'hu' ? 'Összes nyilvántartott tárgy' : 'Total inventory items'}
+            >
+              {totalInventoryCount} {language === 'hu' ? 'tárgy' : 'items'}
             </span>
             {isLoading && (
               <Loader2 className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] animate-spin" />
@@ -468,10 +532,10 @@ export const ItemsView: React.FC = () => {
         {/* Clear Filters & Active Filter Count Indicator */}
         {hasActiveFilters && (
           <div className="pt-2 flex items-center justify-between border-t border-[var(--border-color,#56616D)]/60 text-xs">
-            <span className="text-[var(--text-sub,#B5BDC6)]">
+            <span className="text-[var(--text-sub,#B5BDC6)] font-semibold">
               {language === 'hu'
-                ? `Találatok: ${totalMatchingCount} tárgy`
-                : `Results: ${totalMatchingCount} items`}
+                ? `Találatok a szűrés alapján: ${totalMatchingCount} / ${totalInventoryCount} tárgy`
+                : `Filter results: ${totalMatchingCount} of ${totalInventoryCount} items`}
             </span>
             <button
               onClick={() => {

@@ -1370,7 +1370,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHouseholdMembers([]);
     setHouseholdInvites([]);
     setReceivedInvites([]);
+    setDashboardMetrics(null);
     localStorage.removeItem('thingor_items');
+    localStorage.removeItem('thingor_items_backup');
+    localStorage.removeItem('thingor_dashboard_metrics');
     localStorage.removeItem('thingor_documents');
     localStorage.removeItem('thingor_locations');
     localStorage.removeItem('thingor_household');
@@ -1449,7 +1452,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHouseholdMembers([]);
     setHouseholdInvites([]);
     setReceivedInvites([]);
+    setDashboardMetrics(null);
     localStorage.removeItem('thingor_items');
+    localStorage.removeItem('thingor_items_backup');
+    localStorage.removeItem('thingor_dashboard_metrics');
     localStorage.removeItem('thingor_documents');
     localStorage.removeItem('thingor_locations');
     localStorage.removeItem('thingor_household');
@@ -1586,6 +1592,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('thingor_vault_settings');
     localStorage.removeItem('thingor_user');
     localStorage.removeItem('thingor_items');
+    localStorage.removeItem('thingor_items_backup');
+    localStorage.removeItem('thingor_dashboard_metrics');
+    setDashboardMetrics(null);
     localStorage.removeItem('thingor_documents');
     localStorage.removeItem('thingor_locations');
     localStorage.removeItem('thingor_household');
@@ -2780,6 +2789,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.warn('Failed to update item vault protection status in Supabase:', e);
       }
     }
+    refreshItems();
   };
 
   const setDocumentVaultProtection = async (docId: string, protectedStatus: boolean): Promise<void> => {
