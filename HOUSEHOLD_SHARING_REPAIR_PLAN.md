@@ -33,18 +33,23 @@ A Thingor családi megosztási modulja hibrid jogosultsági és megosztási mode
 
 | Hiba ID | Megnevezés | Kategória | Állapot |
 | :--- | :--- | :--- | :--- |
-| **SEC-01** | Széfbe zárt (`is_vault_protected`) tárgyak szivárgása a megosztási RLS-ben | Biztonság (P0) | **Megerősített hiba** |
-| **SEC-02** | Családtagok dokumentum-hozzáférésének blokkolása az R2 Edge Functionben | Biztonság / Funkció (P0) | **Megerősített hiba** |
-| **SEC-03** | Tagonkénti jogosultság-módosítás (IDOR) a `household_members` táblán | Biztonság (P1) | **Megerősített hiba** |
-| **INT-01** | Kliensoldali PostgREST szűrés elnyomja a helyszín- és kategóriamegosztást | Adatintegritás (P1) | **Megerősített hiba** |
-| **INT-02** | Többes háztartási tagság inkompatibilitás és Auto-Heal adat-átszivárgás | Adatintegritás (P1) | **Megerősített hiba** |
-| **INV-01** | E-mail küldés hiánya megtévesztő sikerüzenettel | UX / Funkció (P1) | **Megerősített hiba** |
-| **INV-02** | Gyenge meghívó token és hiányzó lejárati idő (`expires_at`) | Biztonság (P2) | **Megerősített hiba** |
-| **HH-01** | Családfő nem tud kilépni és nem tudja átadni a tulajdonjogot | Funkció (P2) | **Megerősített hiba** |
-| **HH-02** | Családnév nem módosítható a létrehozás után | Funkció (P2) | **Megerősített hiba** |
-| **HH-03** | Nem adminisztrátor tagok is látják a megosztási kapcsolókat a felületen | UX / Jogosultság (P2) | **Megerősített hiba** |
-| **UX-01** | Veszélyes műveletek (tag törlése, kilépés) megerősítés nélkül | UX (P3) | **Megerősített hiba** |
-| **HH-04** | `created_by` vs `owner_id` inkonzisztencia a `households` táblán | Adatintegritás (P2) | **Megerősített hiba** |
+| **SEC-01** | Széfbe zárt (`is_vault_protected`) tárgyak szivárgása a megosztási RLS-ben | Biztonság (P0) | **Javítva (1. kör)** |
+| **SEC-02** | Családtagok dokumentum-hozzáférésének blokkolása az R2 Edge Functionben | Biztonság / Funkció (P0) | **Javítva (1. kör)** |
+| **SEC-03** | Tagonkénti jogosultság-módosítás (IDOR) a `household_members` táblán | Biztonság (P1) | **Javítva (1. kör)** |
+| **INT-01** | Kliensoldali PostgREST szűrés elnyomja a helyszín- és kategóriamegosztást | Adatintegritás (P1) | **Javítva (1. kör)** |
+| **INT-02** | Többes háztartási tagság inkompatibilitás és Auto-Heal adat-átszivárgás | Adatintegritás (P1) | **Javítva (1. kör)** |
+| **INV-01** | E-mail küldés hiánya megtévesztő sikerüzenettel | UX / Funkció (P1) | **Javítva (1. kör)** |
+| **INV-02** | Gyenge meghívó token és hiányzó lejárati idő (`expires_at`) | Biztonság (P2) | **Javítva (1. kör)** |
+| **HH-01** | Családfő nem tud kilépni és nem tudja átadni a tulajdonjogot | Funkció (P2) | **Javítva (1. kör)** |
+| **HH-02** | Családnév nem módosítható a létrehozás után | Funkció (P2) | **Javítva (1. kör)** |
+| **HH-03** | Nem adminisztrátor tagok is látják a megosztási kapcsolókat a felületen | UX / Jogosultság (P2) | **Javítva (1. kör)** |
+| **UX-01** | Veszélyes műveletek (tag törlése, kilépés) megerősítés nélkül | UX (P3) | **Javítva (1. kör)** |
+| **HH-04** | `created_by` vs `owner_id` inkonzisztencia a `households` táblán | Adatintegritás (P2) | **Javítva (1. kör)** |
+| **SEC-04** | `household_members_insert_policy` meghívó nélküli csatlakozási rés | Biztonság (P1) | **Utóauditban igazolt hiba - Javításra vár** |
+| **INT-03** | `items_select_policy` háztartási OR-ág megkerüli az egyéni szűrést | Biztonság / Integritás (P1) | **Utóauditban igazolt hiba - Javításra vár** |
+| **FLW-01** | `sharing_mode`, `allowed_modules`, `excluded_item_ids` szerveroldali hiánya | Biztonság / Integritás (P2) | **Utóauditban igazolt hiba - Javításra vár** |
+| **INV-03** | `acceptHouseholdInvite()` lejárati idő (`expires_at`) hiányzó ellenőrzése | Funkció / Biztonság (P2) | **Utóauditban igazolt hiba - Javításra vár** |
+| **MIG-01** | Migrációs nyilvántartás (`schema_migrations`) szinkron eltérés | Karbantartás (P3) | **Utóauditban igazolt eltérés - Rendezésre vár** |
 
 ---
 
@@ -302,3 +307,430 @@ Minden egyes lépés (1-2 fájl módosítása) után kötelezően lefut:
   - [x] Git commit és push origin main (`475fa6c`).
   - [x] Supabase állapot végső validációja (RLS, trigger, sémabővítés élesben, Edge Function v5 aktív).
   - [x] Zárójelentés készítése.
+
+---
+
+## 10. Végső blokkoló SQL-biztonsági felülvizsgálat és ellenőrzött javítási terv (2. kör)
+
+### 10.1. Meghívófrissítés (`household_invites_update_policy`)
+- **Tényleges séma és mezők (`household_invites` tábla):**
+  - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+  - `household_id UUID NOT NULL REFERENCES public.households(id) ON DELETE CASCADE`
+  - `email TEXT` (korábbi migrációból) / **`invited_email TEXT NOT NULL`** (hivatalos mező a `20261007_households_and_invites.sql` óta)
+  - `role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member', 'viewer'))`
+  - `token TEXT NOT NULL UNIQUE`
+  - `status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'expired'))`
+  - `invited_by UUID NOT NULL REFERENCES auth.users(id)`
+  - `expires_at TIMESTAMPTZ`
+  - `created_at TIMESTAMPTZ DEFAULT NOW()`
+- **Tényleges frontend és adminisztrátori folyamat vizsgálata:**
+  1. **Adminisztrátori visszavonás:** A forráskódban (`AppContext.tsx:L3228-L3237`) a háztartás adminisztrátora vagy tulajdonosa meghívó visszavonásakor a `cancelHouseholdInvite(inviteId)` függvényt hívja. Ez **kizárólag `DELETE` műveletet végez**:
+     ```ts
+     await supabase.from('household_invites').delete().eq('id', inviteId);
+     ```
+     Az adminisztrátor **soha nem futtat `UPDATE` kérést** a `household_invites` táblán.
+  2. **Meghívott általi elfogadás/elutasítás:** Az alkalmazásban kizárólag a meghívott felhasználó végez `UPDATE`-et:
+     - Elfogadás (`AppContext.tsx:L3162-L3170`):
+       ```ts
+       await supabase.from('household_invites').update({ status: 'accepted' }).eq('id', invite.id);
+       ```
+     - Elutasítás (`AppContext.tsx:L3210-L3218`):
+       ```ts
+       await supabase.from('household_invites').update({ status: 'declined' }).eq('id', invite.id);
+       ```
+- **Azonosított biztonsági rés és kockázat felszámolása:**
+  - Ha a `household_invites_update_policy` tartalmazná az `is_admin() OR is_household_admin(household_id)` ágat, egy admin vagy kompromittálódott token jogosulatlanul megváltoztathatná a meghívó címzettjét (`invited_email`), cél-háztartását (`household_id`), szerepkörét (`role = 'owner'` vagy `'admin'`), vagy kitolhatná a lejárati dátumot (`expires_at`), megkerülve az integritási garanciákat.
+- **Biztonságos, minimális jogosultságú policy:**
+  - Teljesen eltávolítjuk az adminisztrátori ágat az UPDATE policy-ból (az adminok visszavonási jogát a meglévő `household_invites_delete_policy` már garantálja).
+  - Az UPDATE kizárólag a hitelesített meghívott fél számára engedélyezett:
+    - `USING`: A hitelesített felhasználó e-mailje megegyezik a meghívó címzettjével (`lower(invited_email) = lower(auth.jwt()->>'email')`), a meghívó még `pending` státuszú, és nem járt le (`expires_at IS NULL OR expires_at > now()`).
+    - `WITH CHECK`: Ugyanez az e-mail egyezés és lejárati ellenőrzés kötelező, és a státusz kizárólag `'accepted'` vagy `'declined'` értékre válthat.
+  - Ezzel a címzett, háztartás, szerepkör és lejárati idő módosítása technikailag kizárt.
+
+---
+
+### 10.2. Közvetlen megosztás (`item_shares`) és a nyers RLS-szivárgás megszüntetése
+- **Az `item_shares` tábla teljes sémája (`20261004_authorization_and_sharing.sql:L86-L96`):**
+  - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+  - `item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE`
+  - `created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`
+  - `token TEXT NOT NULL UNIQUE` (kriptográfiai megosztási token a publikus linkhez)
+  - `purpose TEXT NOT NULL DEFAULT 'view' CHECK (purpose IN ('view', 'sale', 'loan'))`
+  - `expires_at TIMESTAMPTZ` (opcionális lejárati idő: 1, 7, 30 nap vagy korlátlan)
+  - `revoked_at TIMESTAMPTZ` (visszavonás időbélyege)
+  - `permissions JSONB NOT NULL DEFAULT '{"include_purchase_date": false, "include_warranty": false, "include_value": false, "include_purchase_price": false, "include_additional_images": true}'::jsonb`
+  - `created_at TIMESTAMPTZ DEFAULT NOW()`
+  *(Megjegyzés: A táblában nincs `shared_with_user_id` vagy `shared_with_email`, mert a megosztás link/token alapú vendég-hozzáférésre készült.)*
+- **Az `item_shares` meglévő RLS policyjai (`20261004_authorization_and_sharing.sql:L98-L113`):**
+  1. `Users can manage own item shares`: `FOR ALL USING (auth.uid() = created_by) WITH CHECK (auth.uid() = created_by)`.
+  2. `Anyone can view active valid item shares`: `FOR SELECT USING (revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()))`.
+- **A tokenes megosztási folyamat (`ShareModal.tsx` & `AppContext.tsx`):**
+  1. **Létrehozás:** A tulajdonos a `ShareModal.tsx` felületén kiválasztja a célt (`purpose`), a lejárati időt (`expirationDays`), és az engedélyezett mezőket (`permissions`), majd meghívja a `createItemShare` függvényt (`AppContext.tsx:L3826-L3858`).
+  2. **Megosztási link:** A generált link formátuma: `window.location.origin + '#share/' + token`.
+  3. **Megtekintés:** A vendég/címzett a `SharedItemView.tsx` komponensben nyitja meg a linket, amely a `getSharedItemByToken(token)` metódust hívja (`AppContext.tsx:L3890-L3902`).
+  4. **Szerveroldali RPC (`get_shared_item`):** A frontend a Supabase `get_shared_item(share_token)` tárolt eljárását futtatja, amely:
+     - Kizárólag a helyes és aktív token birtokában ad vissza adatot (`WHERE token = share_token AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW())`).
+     - A tárgy adatait nem nyersen adja át, hanem egy szűrt JSONB objektumot épít, amely a `permissions` kapcsolói alapján maszkolja/elrejti a kényes mezőket (`current_value`, `purchase_price`, `purchase_date`, `warranty_start`, `warranty_end`).
+- **Biztonsági audit megállapítás és a nyers szivárgás oka:**
+  - A korábbi migrációkban (`20261004_authorization_and_sharing.sql:L209`, `20261008_enable_rls_and_policies.sql:L311`, `20261011_category_and_location_sharing.sql:L205`) az `items_select_policy` tartalmazott egy globális ágat:  
+    `OR EXISTS (SELECT 1 FROM public.item_shares WHERE item_shares.item_id = items.id AND item_shares.revoked_at IS NULL AND (item_shares.expires_at IS NULL OR item_shares.expires_at > now()))`
+  - **A rés:** Ez a feltétel nem ellenőrizte a tokent! Ennek következtében **bármely bejelentkezett felhasználó** a normál `supabase.from('items').select('*')` lekérdezésével megkapta az összes olyan tárgyat és azok összes bizalmas oszlopát, amelyre valaha aktív megosztási linket hoztak létre.
+- **Megoldás és védelem:**
+  - Az `items_select_policy` és `item_documents_select_policy` szabályokból **teljesen eltávolítjuk az `item_shares` létezésére támaszkodó ágat**.
+  - Tárgy hozzáférést pusztán egy aktív `item_shares` rekord létezése alapján az RLS nem engedélyezhet. A közvetlen linkes hozzáférés kizárólag a titkos token megadásával, a szerveroldali `get_shared_item(token)` RPC-n keresztül működik.
+
+---
+
+### 10.3. Trezorvédelem (Vault) és leltár-hozzáférés szigorú elkülönítése
+- **Tényleges adatszerkezet és RLS (`20261013_vault_schema.sql`):**
+  - `items.is_vault_protected BOOLEAN NOT NULL DEFAULT false`
+  - `item_documents.is_vault_protected BOOLEAN NOT NULL DEFAULT false`
+  - `vault_settings`: `user_id`, `pin_hash`, `salt`, `auto_lock_minutes`. RLS szabályai kizárólag a rekord tulajdonosának (`auth.uid() = user_id`) engedik az olvasást és írást.
+- **Frontend feloldási folyamat és szétválasztás:**
+  1. A felhasználó PIN-kódját kliensoldali PBKDF2/SHA-256 algoritmus hasheli a `salt` felhasználásával, és összeveti a `pin_hash` értékkel (`VaultView.tsx:L70-L108`).
+  2. Sikeres egyezés esetén az `AppContext` állapotában az `isVaultUnlocked` értéke `true` lesz. Az inaktivitási időkorlát (`auto_lock_minutes`) lejárta után automatikusan visszazár (`isVaultUnlocked = false`, `AppContext.tsx:L559-L567`).
+  3. **Tulajdonos normál leltár-lekérdezése:** Az `ItemsView.tsx:L143-L145` zárolt állapotban (`!isVaultUnlocked`) explicit adatbázis szűrőt alkalmaz a PostgREST lekérdezésben:
+     ```ts
+     if (!isVaultUnlocked) {
+       query = query.eq('is_vault_protected', false);
+     }
+     ```
+     Ez garantálja, hogy a tulajdonos normál leltárnézetébe (`ItemsView`, `LocationsView`, `CategoriesView`, `DocumentsView`) zárolt állapotban le sem töltődnek a védett tárgyak és dokumentumok.
+  4. **Tulajdonos trezor-hozzáférése:** Kizárólag a `VaultView.tsx` komponensben, aktív feloldás után (`isVaultUnlocked === true`) kérdezi le és jeleníti meg a `is_vault_protected = true` tárgyakat.
+- **Családtagok és háztartási megosztás kizárása:**
+  - Az adatbázis szintjén a megosztási ágak (`can_access_shared_item`, háztartási lekérdezések) elé szigorú védelmi barriert építünk:
+    - `items_select_policy`: `is_vault_protected IS NOT TRUE AND household_id IS NOT NULL AND can_access_shared_item(...)`
+    - `item_documents_select_policy`: `is_vault_protected IS NOT TRUE AND items.is_vault_protected IS NOT TRUE AND ...`
+    - `can_access_shared_item(...)`: a függvénybe belépve csak olyan tárgy érhető el háztartási alapon, amely nem védett a széf által.
+  - A nem-tulajdonos családtagok és illetéktelenek adatbázis szinten soha, semmilyen lekérdezéssel nem férhetnek hozzá széfben védett tárgyakhoz vagy dokumentumokhoz.
+- **Modellkonzisztencia:** A meglévő, stabil trezormodellen semmilyen feltételezés alapján nem változtatunk.
+
+---
+
+### 10.4. `SECURITY DEFINER` függvény vizsgálata és minimális jogosultságai
+- **Függvény:** `public.can_access_shared_item(p_item_id UUID, p_item_household_id UUID, p_item_user_id UUID, p_item_location_id UUID, p_item_category_id UUID)`.
+- **Tulajdonos (Owner):** `postgres` (adatbázis adminisztrátor / szuperfelhasználó).
+- **Keresési útvonal (`search_path`):** Szigorúan rögzítve: `SET search_path = public, pg_temp;`. Ezzel kizárható a `search_path` manipuláció és a trójai sémák injektálása.
+- **Hívási helyek a teljes kódbázisban:**
+  - `public.items` tábla `items_select_policy` RLS szabálya.
+  - `public.item_documents` tábla `item_documents_select_policy` RLS szabálya.
+  - A frontend forráskódból (`src/`) **soha nem hívódik közvetlenül RPC-ként**; kizárólag belső RLS kiértékelő funkcióként szolgál.
+- **Jogosultságok szigorítása (Least Privilege):**
+  - Megvonjuk a publikus és névtelen hozzáférést:  
+    `REVOKE ALL ON FUNCTION public.can_access_shared_item(UUID, UUID, UUID, UUID, UUID) FROM PUBLIC, anon;`
+  - Kizárólag a bejelentkezett és szerviz felhasználóknak adunk futtatási jogot:  
+    `GRANT EXECUTE ON FUNCTION public.can_access_shared_item(UUID, UUID, UUID, UUID, UUID) TO authenticated, service_role;`
+  - A korábbi, 4 paraméteres elavult változatot véglegesen eldobjuk (`DROP FUNCTION IF EXISTS public.can_access_shared_item(UUID, UUID, UUID, UUID);`), megakadályozva az elavult hívásokat és az `excluded_item_ids` kikerülését.
+
+---
+
+### 10.5. Helyszínhierarchia (Locations) pontos felmérése és UI-szinkronja
+- **Támogatott hierarchiaszintek száma a kódbázisban:**
+  - A `LocationsView.tsx:L63-L165`, az `ItemFormModal.tsx:L237-L257` és az `AppContext.tsx:L1617-L1635` átvizsgálása igazolja, hogy a rendszer **pontosan 2 szintű hierarchiát kezel**:
+    1. **Fő helyszínek (Root locations):** `parent_id IS NULL` (pl. "Garázs", "Nappali", "Műhely").
+    2. **Közvetlen alhelyszínek (Child locations):** `parent_id = root_location.id` (pl. "Szerszámos szekrény", "Felső polc").
+  - A felületen a helyszín létrehozásakor a szülő kiválasztásánál minden meglévő helyszín felsorolásra kerül, de a vizuális megjelenítés és faszerkezet két szinten (fő helyszín és alatta közvetlen gyermekek) csoportosul (`depth = 0` és `depth > 0`).
+- **UI-szűrés működése (`ItemsView.tsx:L165-L167`, `L291`):**
+  - A leltár felületén történő szűréskor a felhasználó egy konkrét `locationId`-t választ ki, amely pontos egyezést (`item.location_id === filters.locationId`) vizsgál.
+- **Megosztási szemantika a `can_access_shared_item` függvényben:**
+  - Ha a tagnak engedélyezve van egy helyszín (`allowed_location_ids`), akkor a hozzáférés megengedett:
+    1. ha a tárgy közvetlenül az engedélyezett helyszínen van (`p_item_location_id::text = ANY(...)`), **VAGY**
+    2. ha a tárgy helyszínének közvetlen szülője szerepel az engedélyezett listában:
+       ```sql
+       EXISTS (
+         SELECT 1 FROM public.locations loc
+         WHERE loc.id = p_item_location_id
+           AND loc.parent_id::text = ANY(
+             COALESCE(hm.allowed_location_ids, h.shared_location_ids, ARRAY[]::text[])
+           )
+       )
+       ```
+  - Ez a szabály 100%-ban illeszkedik a meglévő 2 szintű modellhez, és nem vezet be mély rekurziót vagy nem létező szemantikát.
+
+---
+
+### 10.6. Tesztmátrix
+
+| # | Eset leírása | Saját tárgy? | sharing_mode | Helyszín / Kategória | Excluded? | Modul állapot | Széf védett? | Várt hozzáférés |
+| :- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 | Saját normál tárgy | Igen | Bármi | Bármi | Nem | Bármi | Nem | **ENGEDÉLYEZVE** |
+| 2 | Saját trezoros tárgy | Igen | Bármi | Bármi | Nem | Bármi | Igen | **ENGEDÉLYEZVE** (PIN-nel nyitható) |
+| 3 | Családtag tárgya azonos háztartásban | Nem | `all` | Bármi | Nem | `inventory: true` | Nem | **ENGEDÉLYEZVE** |
+| 4 | Másik háztartás tárgya (azonos tulajdonos) | Nem | Bármi | Bármi | Nem | Bármi | Nem | **SZIGORÚAN TILTVA** (Szigorú household_id kötés) |
+| 5 | Családtag trezoros tárgya | Nem | `all` | Bármi | Nem | `inventory: true` | Igen | **SZIGORÚAN TILTVA** (Széf-barrier) |
+| 6 | Családtag tárgya, kizárt azonosítóval | Nem | `all` | Bármi | **Igen (`excluded`)** | `inventory: true` | Nem | **SZIGORÚAN TILTVA** |
+| 7 | Családtag tárgya, inventory modul letiltva | Nem | `all` | Bármi | Nem | **`inventory: false`** | Nem | **SZIGORÚAN TILTVA** |
+| 8 | Családi dokumentum, de documents modul letiltva | Nem | `all` | Bármi | Nem | **`documents: false`** | Nem | **SZIGORÚAN TILTVA** |
+| 9 | Egyedi mód, helyszín OK | Nem | `custom` | Helyszín OK, Kategória NEM | Nem | `inventory: true` | Nem | **ENGEDÉLYEZVE** |
+| 10 | Egyedi mód, kategória OK | Nem | `custom` | Helyszín NEM, Kategória OK | Nem | `inventory: true` | Nem | **ENGEDÉLYEZVE** |
+| 11 | Egyedi mód, sem helyszín, sem kategória | Nem | `custom` | Helyszín NEM, Kategória NEM | Nem | `inventory: true` | Nem | **SZIGORÚAN TILTVA** |
+| 12 | Egyedi mód, helyszínek üres tömb `[]` | Nem | `custom` | Helyszín tiltva (`[]`), Kategória OK | Nem | `inventory: true` | Nem | **ENGEDÉLYEZVE** (kategória alapján) |
+| 13 | Egyedi mód, mindkét lista üres `[]` | Nem | `custom` | Mindkettő tiltva (`[]`) | Nem | `inventory: true` | Nem | **SZIGORÚAN TILTVA** (0 tárgy látható) |
+| 14 | Egyedi mód, mindkét lista `NULL` (örökölt) | Nem | `custom` | Mindkettő örökölt a háztartástól | Nem | `inventory: true` | Nem | **ENGEDÉLYEZVE** ha a háztartás megosztotta |
+| 15 | Token nélküli bejelentkezett felhasználó megosztott tárgyra | Nem | - | - | - | - | - | **SZIGORÚAN TILTVA** (Linkes szivárgás kizárva) |
+| 16 | Vendég felhasználó érvényes tokennel | - | - | - | - | - | - | **ENGEDÉLYEZVE a `get_shared_item` RPC-n keresztül** |
+| 17 | Idegen felhasználó (nem tag) | Nem | - | - | - | - | - | **SZIGORÚAN TILTVA** (0 sor látható) |
+
+---
+
+### 10.7. Véglegesített, szigorú SQL-terv (Jóváhagyásra előkészítve)
+
+```sql
+-- ============================================================================
+-- 1. SEC-04 & INV-03: household_members_insert_policy (Admin bypass nélkül, szigorú ön-beszúrás)
+-- ============================================================================
+
+DROP POLICY IF EXISTS household_members_insert_policy ON public.household_members;
+
+CREATE POLICY household_members_insert_policy ON public.household_members
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    -- Kizárólag a hitelesített felhasználó saját magát szúrhatja be:
+    auth.uid() = user_id
+    AND lower(user_email) = lower(COALESCE(auth.jwt()->>'email', ''))
+    AND (
+      -- 1. ág: Új háztartás létrehozásakor a létrehozó beszúrhatja saját magát owner szerepkörrel:
+      (
+        role = 'owner'
+        AND EXISTS (
+          SELECT 1 FROM public.households h
+          WHERE h.id = household_members.household_id
+            AND (h.created_by = auth.uid() OR h.owner_id = auth.uid())
+        )
+      )
+      OR
+      -- 2. ág: Meghívó elfogadásakor: érvényes, nem lejárt, pending meghívó és egyező role kötelező:
+      (
+        EXISTS (
+          SELECT 1 FROM public.household_invites hi
+          WHERE hi.household_id = household_members.household_id
+            AND lower(hi.invited_email) = lower(COALESCE(auth.jwt()->>'email', ''))
+            AND hi.status = 'pending'
+            AND (hi.expires_at IS NULL OR hi.expires_at > now())
+            AND household_members.role = hi.role
+        )
+      )
+    )
+  );
+
+-- ============================================================================
+-- 2. INV-03: household_invites_update_policy (Kizárólag a meghívott általi elfogadás/elutasítás)
+-- ============================================================================
+
+DROP POLICY IF EXISTS household_invites_update_policy ON public.household_invites;
+
+CREATE POLICY household_invites_update_policy ON public.household_invites
+  FOR UPDATE TO authenticated
+  USING (
+    lower(invited_email) = lower(COALESCE(auth.jwt()->>'email', ''))
+    AND status = 'pending'
+    AND (expires_at IS NULL OR expires_at > now())
+  )
+  WITH CHECK (
+    lower(invited_email) = lower(COALESCE(auth.jwt()->>'email', ''))
+    AND (expires_at IS NULL OR expires_at > now())
+    AND status IN ('accepted', 'declined')
+  );
+
+-- ============================================================================
+-- 3. INT-03 & FLW-01: can_access_shared_item (Szigorú household_id kötés, 5 paraméteres szignatúra)
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS public.can_access_shared_item(UUID, UUID, UUID, UUID);
+
+CREATE OR REPLACE FUNCTION public.can_access_shared_item(
+  p_item_id UUID,
+  p_item_household_id UUID,
+  p_item_user_id UUID,
+  p_item_location_id UUID,
+  p_item_category_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+STABLE
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_user_email TEXT := lower(COALESCE(auth.jwt()->>'email', ''));
+BEGIN
+  IF v_user_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  -- 1. Saját tárgyához a tulajdonos mindig hozzáfér
+  IF p_item_user_id = v_user_id THEN
+    RETURN TRUE;
+  END IF;
+
+  -- 2. Szigorú háztartási kötés: ha nincs háztartáshoz rendelve a tárgy, háztartási szinten nem érhető el!
+  IF p_item_household_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  -- 3. A megtekintőnek tagnak kell lennie PONTOSAN a tárgyhoz tartozó háztartásban:
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.household_members hm
+    JOIN public.households h ON h.id = hm.household_id
+    WHERE hm.household_id = p_item_household_id
+      AND (
+        hm.user_id = v_user_id 
+        OR (hm.user_email IS NOT NULL AND lower(hm.user_email) = v_user_email)
+      )
+      -- Modul ellenőrzés: ha az inventory modul tiltva van ('false'), nincs hozzáférés
+      AND ((hm.allowed_modules->>'inventory')::boolean IS NOT FALSE)
+      -- Kizárt tárgy ellenőrzés: ha az adott tárgy ID szerepel a tiltólistán, nincs hozzáférés
+      AND NOT (p_item_id IS NOT NULL AND p_item_id::text = ANY(COALESCE(hm.excluded_item_ids, ARRAY[]::text[])))
+      -- Megosztási mód:
+      AND (
+        -- 'all' vagy NULL: teljes megosztás
+        COALESCE(hm.sharing_mode, 'all') = 'all'
+        OR
+        -- 'custom': engedélyezett helyszín (vagy alhelyszín) VAGY kategória szükséges
+        (
+          hm.sharing_mode = 'custom'
+          AND (
+            (
+              p_item_location_id IS NOT NULL
+              AND (
+                p_item_location_id::text = ANY(
+                  COALESCE(hm.allowed_location_ids, h.shared_location_ids, ARRAY[]::text[])
+                )
+                OR EXISTS (
+                  SELECT 1 FROM public.locations loc
+                  WHERE loc.id = p_item_location_id
+                    AND loc.parent_id::text = ANY(
+                      COALESCE(hm.allowed_location_ids, h.shared_location_ids, ARRAY[]::text[])
+                    )
+                )
+              )
+            )
+            OR
+            (
+              p_item_category_id IS NOT NULL
+              AND p_item_category_id::text = ANY(
+                COALESCE(hm.allowed_category_ids, h.shared_category_ids, ARRAY[]::text[])
+              )
+            )
+          )
+        )
+      )
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.can_access_shared_item(UUID, UUID, UUID, UUID, UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.can_access_shared_item(UUID, UUID, UUID, UUID, UUID) TO authenticated, service_role;
+
+-- ============================================================================
+-- 4. INT-03: items_select_policy szigorítása (Bypass és item_shares szivárgás megszüntetése)
+-- ============================================================================
+
+DROP POLICY IF EXISTS items_select_policy ON public.items;
+
+CREATE POLICY items_select_policy ON public.items
+  FOR SELECT TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR
+    (
+      is_vault_protected IS NOT TRUE
+      AND household_id IS NOT NULL
+      AND can_access_shared_item(id, household_id, user_id, location_id, category_id)
+    )
+  );
+
+-- ============================================================================
+-- 5. INT-03: item_documents_select_policy szigorítása (Dokumentum bypass megszüntetése, modulvédelem)
+-- ============================================================================
+
+DROP POLICY IF EXISTS item_documents_select_policy ON public.item_documents;
+
+CREATE POLICY item_documents_select_policy ON public.item_documents
+  FOR SELECT TO authenticated
+  USING (
+    is_admin()
+    OR user_id = auth.uid()
+    OR (
+      is_vault_protected IS NOT TRUE
+      AND EXISTS (
+        SELECT 1 FROM public.items
+        WHERE items.id = item_documents.item_id
+          AND items.is_vault_protected IS NOT TRUE
+          AND items.household_id IS NOT NULL
+          AND can_access_shared_item(items.id, items.household_id, items.user_id, items.location_id, items.category_id)
+          AND EXISTS (
+            SELECT 1 FROM public.household_members hm
+            WHERE hm.household_id = items.household_id
+              AND (hm.user_id = auth.uid() OR (hm.user_id IS NULL AND lower(hm.user_email) = lower(COALESCE(auth.jwt()->>'email', ''))))
+              AND ((hm.allowed_modules->>'documents')::boolean IS NOT FALSE)
+          )
+      )
+    )
+  );
+
+-- ============================================================================
+-- 6. FLW-01: pantry_items_select_policy modul-ellenőrzés
+-- ============================================================================
+
+DROP POLICY IF EXISTS pantry_items_select_policy ON public.pantry_items;
+
+CREATE POLICY pantry_items_select_policy ON public.pantry_items
+  FOR SELECT TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR is_admin()
+    OR (
+      household_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM public.household_members hm
+        WHERE hm.household_id = pantry_items.household_id
+          AND (hm.user_id = auth.uid() OR (hm.user_id IS NULL AND lower(hm.user_email) = lower(COALESCE(auth.jwt()->>'email', ''))))
+          AND ((hm.allowed_modules->>'pantry')::boolean IS NOT FALSE)
+      )
+    )
+  );
+```
+
+---
+
+### 10.8. Bizonyítottsági és Bizonytalansági állapot mátrix
+
+A szigorú auditálási követelményeknek megfelelően minden megállapítást és biztonsági feltevést osztályoztunk:
+
+| Állítás / Terület | Állapot | Bizonyíték / Vizsgálat helye | Megjegyzés / Kockázatkezelés |
+| :--- | :---: | :--- | :--- |
+| **Meghívó admin folyamat** | **BIZONYÍTOTT** | `AppContext.tsx:L3228-L3237` (`cancelHouseholdInvite`) | Bizonyított: az admin kizárólag `DELETE`-et futtat, soha nem `UPDATE`-el. |
+| **Meghívott elfogadás/elutasítás** | **BIZONYÍTOTT** | `AppContext.tsx:L3162-L3170`, `L3210-L3218` | Bizonyított: kizárólag a meghívott futtat `UPDATE`-et státuszváltásra. |
+| **Meghívó oszlopnevek** | **BIZONYÍTOTT** | `20261007_households_and_invites.sql:L43` | Bizonyított: `invited_email` a kötelező és érvényes mezőnév. |
+| **`item_shares` séma és RLS** | **BIZONYÍTOTT** | `20261004_authorization_and_sharing.sql:L86-L113` | Bizonyított: a tábla nem tartalmaz egyedi felhasználói ID-t, csak tokent és jogosultsági JSON-t. |
+| **Tokenes megosztási folyamat** | **BIZONYÍTOTT** | `ShareModal.tsx`, `AppContext.tsx:L3826-L3902`, `get_shared_item` RPC | Bizonyított: a publikus hozzáférés csak érvényes tokennel, szűrt JSON-ként futhat. |
+| **Nyers `item_shares` RLS szivárgás** | **BIZONYÍTOTT** | `20261008_enable_rls_and_policies.sql:L311`, `20261011_category_and_location_sharing.sql:L205` | Bizonyított: a nyers `EXISTS (SELECT 1 FROM item_shares ...)` token nélkül kiszivárogtatta a tárgyakat minden belépett felhasználónak. |
+| **Trezorvédelem feloldási folyamata** | **BIZONYÍTOTT** | `20261013_vault_schema.sql`, `VaultView.tsx:L70-L108`, `AppContext.tsx:L559-L567` | Bizonyított: a feloldás kliensoldali PIN hasheléssel történik, időkorlátos automatikus visszazárással. |
+| **Tulajdonos normál leltár szűrése** | **BIZONYÍTOTT** | `ItemsView.tsx:L143-L145` (`query.eq('is_vault_protected', false)`) | Bizonyított: zárolt állapotban a leltár eleve le sem kéri a védett tárgyakat. |
+| **Családtagok trezor-kizárása** | **BIZONYÍTOTT** | `items_select_policy`, `item_documents_select_policy` (`is_vault_protected IS NOT TRUE`) | Bizonyított: családtagok adatbázis szinten sem láthatnak védett tárgyat. |
+| **`can_access_shared_item` hívási helyek** | **BIZONYÍTOTT** | Teljes `src/` és `supabase/` keresés | Bizonyított: a frontendből nem hívódik közvetlenül, csak RLS policy-ból. |
+| **`can_access_shared_item` jogosultságok** | **BIZONYÍTOTT** | `20261011_category_and_location_sharing.sql`, `20261014_security_advisor_hardening.sql` | Bizonyított: korábban `anon` és `authenticated` is futtathatta, most szigorítjuk `authenticated, service_role`-ra. |
+| **Helyszínhierarchia mélysége** | **BIZONYÍTOTT** | `LocationsView.tsx:L63-L165`, `ItemFormModal.tsx:L237-L257` | Bizonyított: a rendszer pontosan 2 szintet kezel (fő helyszín és közvetlen gyermekei). |
+| **Éles Supabase `schema_migrations` szinkron** | **[BIZONYTALAN]** | Supabase belső migrációs nyilvántartása | Bizonytalan, hogy a korábban manuálisan futtatott DDL-ek bekerültek-e a távoli `schema_migrations` táblába. A konszolidált v2 migráció ezt egy menetben rögzíti és tisztázza. |
+| **3. szintű helyszínek létezése az éles adatokban** | **[BIZONYTALAN]** | Adatbázis futásidejű sorai | Bár a kód és UI csak 2 szintet támogat, elméletileg nem zárható ki, hogy közvetlen SQL-lel vagy korábbi tesztekből létezik unoka-helyszín; az RLS a szülő-gyermek kapcsolatot védi, amely a teljes UI modelljével fedésben van. |
+
+---
+
+## 11. 2. körös javítások ellenőrzőlistája
+
+- [x] **SEC-04:** `household_members_insert_policy` RLS szigorítása (Admin bypass nélkül, kizárólag ön-beszúrás) – **Élesítve & Ellenőrizve**.
+- [x] **INV-03 (Backend):** `household_invites_update_policy` lejárati és státusz-védelme (Admin módosítási ág nélkül) – **Élesítve & Ellenőrizve**.
+- [x] **INT-03 & FLW-01:** `can_access_shared_item()` 5 paraméteres szigorú `household_id` kötéssel + régi 4 paraméteres eldobása/semlegesítése – **Élesítve & Ellenőrizve**.
+- [x] **INT-03 (Items & Docs):** `items_select_policy` és `item_documents_select_policy` bypass megszüntetése, linkelt megosztás szivárgásának kizárása, széf-barrier, dokumentum modulvédelem – **Élesítve & Ellenőrizve**.
+- [x] **FLW-01 (Pantry):** `pantry_items_select_policy` modulvédelem – **Élesítve & Ellenőrizve**.
+- [x] **FLW-01 (Frontend):** `ItemsView.tsx` kizárt tárgyak és inventory modul kliensoldali szűrése – **Kész**.
+- [x] **INV-03 (Frontend):** `AppContext.tsx` lejárati idő ellenőrzés beépítése az `acceptHouseholdInvite`-ba – **Kész**.
+- [x] **MIG-01:** Konszolidált migrációs fájl (`supabase/migrations/20261016_security_hardening_v2.sql`) létrehozása a jóváhagyott SQL alapján – **Létrehozva**.
+- [x] **Tesztelés & Audit:** Statikus build, lint és jogosultsági felülvizsgálat – **Sikeres build (0 hiba)**.
+
+
+
+

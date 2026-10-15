@@ -3101,7 +3101,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const invite = [...householdInvites, ...receivedInvites].find(
       i => (i.id === inviteIdOrToken || i.token === inviteIdOrToken) && i.status === 'pending'
     );
-    if (!invite) return { success: false, error: language === 'hu' ? 'Érvénytelen vagy lejárt meghívó' : 'Invalid or expired invite' };
+    if (!invite) return { success: false, error: language === 'hu' ? 'Érvénytelen vagy nem található meghívó' : 'Invalid or missing invite' };
+
+    if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) {
+      return { success: false, error: language === 'hu' ? 'Ez a meghívó már lejárt' : 'This invite has expired' };
+    }
 
     if (isSupabaseConfigured && supabase && user?.id) {
       const memberUserName = invite.title ? `${user.display_name || user.email} (${invite.title})` : (user.display_name || user.email);

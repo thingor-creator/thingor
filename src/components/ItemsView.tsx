@@ -40,6 +40,7 @@ export const ItemsView: React.FC = () => {
     categories,
     locations,
     household,
+    householdMembers,
     filters,
     setFilters,
     resetFilters,
@@ -53,6 +54,8 @@ export const ItemsView: React.FC = () => {
     isVaultUnlocked,
     dashboardMetrics,
   } = useApp();
+
+  const currentUserMember = householdMembers?.find(m => m.user_id === user?.id);
 
   // Server-side pagination and data state
   const [currentPage, setCurrentPage] = useState(1);
@@ -269,6 +272,12 @@ export const ItemsView: React.FC = () => {
       const filtered = localItems.filter(item => {
         // Exclude vault-protected items when vault is locked
         if (!isVaultUnlocked && item.is_vault_protected) return false;
+
+        // Enforce member inventory module and excluded items permissions for household items not owned by current user
+        if (currentUserMember && item.user_id !== user?.id) {
+          if (currentUserMember.allowed_modules?.inventory === false) return false;
+          if (currentUserMember.excluded_item_ids?.includes(item.id)) return false;
+        }
 
         if (searchTokens.length > 0) {
           const normName = normalizeSearchText(item.name);
