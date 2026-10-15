@@ -129,8 +129,9 @@ export const ItemsView: React.FC = () => {
             .from('items')
             .select('*', { count: 'exact' });
 
-          // Scope query to current user and their household (prevents admin from loading entire system's items in personal inventory view)
-          if (user?.id) {
+          // Scope query: global admins scope to their own items/household so unrelated system items aren't pulled in.
+          // Non-admin users rely on Supabase RLS (items_select_policy) which securely scopes to user, household, and shared items/locations/categories.
+          if (user?.id && (user.role === 'admin' || user.is_admin)) {
             if (household?.id) {
               query = query.or(`user_id.eq.${user.id},household_id.eq.${household.id}`);
             } else {
@@ -227,7 +228,7 @@ export const ItemsView: React.FC = () => {
                 .from('items')
                 .select('*', { count: 'exact', head: true });
 
-              if (user?.id) {
+              if (user?.id && (user.role === 'admin' || user.is_admin)) {
                 if (household?.id) {
                   totalQuery = totalQuery.or(`user_id.eq.${user.id},household_id.eq.${household.id}`);
                 } else {

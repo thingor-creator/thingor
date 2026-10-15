@@ -133,6 +133,32 @@ async function checkIsAdmin(
   }
 }
 
+/**
+ * Verifies whether the requesting user has access to a document file via shared item_documents.
+ * Leverages Supabase RLS through the authenticated user client.
+ */
+async function checkItemDocumentAccess(
+  supabaseUserClient: any,
+  filePath: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabaseUserClient
+      .from("item_documents")
+      .select("id, is_vault_protected")
+      .eq("file_path", filePath)
+      .maybeSingle();
+
+    if (error || !data) {
+      return false;
+    }
+
+    // Vault-protected documents are strictly accessible by their owner only
+    return !data.is_vault_protected;
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -401,15 +427,20 @@ serve(async (req) => {
       const fileOwnerId = pathValidation.ownerId!;
       const fileFolder = pathValidation.folder!;
 
-      // Enforce strict authorization: file owner or verified admin
+      // Enforce strict authorization: file owner, verified admin, or authorized household member for shared documents
       const isOwner = fileOwnerId === user.id.toLowerCase();
       let isAdmin = false;
+      let hasSharedAccess = false;
 
       if (!isOwner) {
         isAdmin = await checkIsAdmin(supabaseUrl, supabaseServiceKey, user.id);
       }
 
-      if (!isOwner && !isAdmin) {
+      if (!isOwner && !isAdmin && fileFolder === "documents") {
+        hasSharedAccess = await checkItemDocumentAccess(supabaseUserClient, filePath);
+      }
+
+      if (!isOwner && !isAdmin && !hasSharedAccess) {
         return new Response(
           JSON.stringify({ error: "Forbidden: You are not authorized to access this file" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

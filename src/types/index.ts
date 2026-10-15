@@ -98,6 +98,13 @@ export interface Household {
   created_at: string;
 }
 
+export interface HouseholdMemberAllowedModules {
+  inventory?: boolean;
+  documents?: boolean;
+  pantry?: boolean;
+  lending?: boolean;
+}
+
 export interface HouseholdMember {
   id: string;
   household_id: string;
@@ -111,6 +118,9 @@ export interface HouseholdMember {
   joined_at: string;
   allowed_location_ids?: string[] | null;
   allowed_category_ids?: string[] | null;
+  sharing_mode?: 'all' | 'custom';
+  allowed_modules?: HouseholdMemberAllowedModules | null;
+  excluded_item_ids?: string[] | null;
 }
 
 export interface HouseholdInvite {

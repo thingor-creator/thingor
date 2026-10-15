@@ -209,6 +209,7 @@ interface AppContextType {
   leaveHousehold: () => Promise<void>;
   updateHouseholdSharedLocations: (locationIds: string[]) => Promise<void>;
   updateHouseholdSharedCategories: (categoryIds: string[]) => Promise<void>;
+  updateHouseholdName: (newName: string) => Promise<boolean>;
 
   // Item Relationships
   itemRelations: ItemRelation[];
@@ -1212,19 +1213,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .select('*')
       .or(`user_id.eq.${user.id},user_email.ilike.${user.email}`)
       .then(async ({ data: memberList }) => {
-        const memberData = memberList?.[0];
+        const savedHhId = localStorage.getItem('thingor_active_household_id');
+        const memberData = memberList?.find(m => m.household_id === savedHhId) || memberList?.[0];
         if (memberData && isMounted) {
           const { data: hhData } = await supabase.from('households').select('*').eq('id', memberData.household_id).maybeSingle();
           if (hhData && isMounted) {
             setHousehold(hhData as Household);
+            localStorage.setItem('thingor_active_household_id', hhData.id);
 
-            // AUTO-HEAL: Ensure all items owned by user with ownership_scope = 'household' have this valid household_id in Supabase
+            // AUTO-HEAL: Ensure only unassigned items owned by user with ownership_scope = 'household' have this valid household_id in Supabase
             if (hhData.id && isUUID(hhData.id)) {
               await supabase
                 .from('items')
                 .update({ household_id: hhData.id })
                 .eq('user_id', user.id)
-                .eq('ownership_scope', 'household');
+                .eq('ownership_scope', 'household')
+                .is('household_id', null);
             }
 
             const { data: allMembers } = await supabase.from('household_members').select('*').eq('household_id', memberData.household_id);
@@ -2841,7 +2845,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const hhName = targetHh?.name || `${user.display_name || 'Családi'} Háztartása`;
       const { data: createdHh, error: hhErr } = await supabase
         .from('households')
-        .insert([{ name: hhName, owner_id: user.id }])
+        .insert([{ name: hhName, owner_id: user.id, created_by: user.id }])
         .select()
         .single();
 
@@ -2914,7 +2918,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       }
 
-      const { data: hhData, error: hhErr } = await supabase.from('households').insert([{ name, owner_id: user.id }]).select().single();
+      const { data: hhData, error: hhErr } = await supabase.from('households').insert([{ name, owner_id: user.id, created_by: user.id }]).select().single();
       if (!hhErr && hhData) {
         const { data: mData } = await supabase.from('household_members').insert([{
           household_id: hhData.id,
@@ -2963,7 +2967,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isSupabaseConfigured && supabase && user?.id && (!activeHousehold.id || !isUUID(activeHousehold.id))) {
       const { data: realHh, error: realHhErr } = await supabase
         .from('households')
-        .insert([{ name: activeHousehold.name, owner_id: user.id }])
+        .insert([{ name: activeHousehold.name, owner_id: user.id, created_by: user.id }])
         .select()
         .single();
 
@@ -3017,6 +3021,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
 
+    const expiresAtDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const generatedToken = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : ('inv-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10));
+
     const newInvite: HouseholdInvite = {
       id: 'inv-' + Date.now(),
       household_id: activeHousehold.id,
@@ -3024,8 +3033,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       title: cleanTitle,
       role,
       invited_by: user?.id || 'guest',
-      token: Math.random().toString(36).substring(2, 10),
+      token: generatedToken,
       status: 'pending',
+      expires_at: expiresAtDate,
       created_at: new Date().toISOString(),
       household_name: activeHousehold.name
     };
@@ -3033,7 +3043,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     let createdInvite: HouseholdInvite = newInvite;
 
     if (isSupabaseConfigured && supabase && user?.id && isUUID(activeHousehold.id)) {
-      // 1. First attempt insert with title column
+      // 1. First attempt insert with title and expires_at columns
       let { data, error } = await supabase.from('household_invites').insert([{
         household_id: activeHousehold.id,
         invited_email: cleanEmail,
@@ -3041,7 +3051,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         role,
         invited_by: user.id,
         token: newInvite.token,
-        status: 'pending'
+        status: 'pending',
+        expires_at: expiresAtDate
       }]).select().single();
 
       // 2. Fallback if 'title' column missing in Supabase schema cache
@@ -3053,7 +3064,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           role,
           invited_by: user.id,
           token: newInvite.token,
-          status: 'pending'
+          status: 'pending',
+          expires_at: expiresAtDate
         }]).select().single();
 
         if (retry.error) {
@@ -3071,11 +3083,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const statusMsg = isRegisteredUser
       ? (language === 'hu'
-          ? `A(z) ${cleanEmail} e-mail cím regisztrált felhasználó a Thingorban! A meghívó megjelent a fiókjában (felugró ablakban azonnal elfogadhatja), így külső e-mail nem került kiküldésre.`
+          ? `A(z) ${cleanEmail} e-mail cím regisztrált felhasználó a Thingorban! A meghívás megjelent a fiókjában (felugró ablakban azonnal elfogadhatja).`
           : `User ${cleanEmail} is registered! Invite delivered to their in-app modal window.`)
       : (language === 'hu'
-          ? `A(z) ${cleanEmail} e-mail cím még nincs regisztrálva a rendszerben. Meghívó e-mail kiküldésre került a megadott címre!`
-          : `Email ${cleanEmail} is not registered yet. An invitation email has been sent!`);
+          ? `Meghívás sikeresen rögzítve a(z) ${cleanEmail} címre (14 napig érvényes). Amint a meghívott regisztrál ezzel az e-mail címmel, azonnal csatlakozhat a háztartáshoz!`
+          : `Invite created for ${cleanEmail} (valid for 14 days). Once registered with this email, they will be prompted to join!`);
 
     return {
       success: true,
@@ -3278,6 +3290,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const { data: itemData } = await supabase.from('items').select('*').order('created_at', { ascending: false });
       if (itemData) setItems(itemData as Item[]);
     }
+  };
+
+  const updateHouseholdName = async (newName: string): Promise<boolean> => {
+    if (!household || !user?.id || !newName.trim()) return false;
+    const trimmed = newName.trim();
+    setHousehold(prev => prev ? { ...prev, name: trimmed } : null);
+    if (isSupabaseConfigured && supabase && isUUID(household.id)) {
+      const { error } = await supabase.from('households').update({ name: trimmed }).eq('id', household.id);
+      if (error) {
+        console.error('Failed to update household name in Supabase:', error);
+        return false;
+      }
+    }
+    return true;
   };
 
   // CRUD Item Relations
@@ -4128,6 +4154,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         leaveHousehold,
         updateHouseholdSharedLocations,
         updateHouseholdSharedCategories,
+        updateHouseholdName,
 
         itemRelations,
         addItemRelation,
