@@ -297,8 +297,8 @@ Minden egyes lépés (1-2 fájl módosítása) után kötelezően lefut:
 - [x] **4. fázis: Családtagonkénti megosztási rendszer (3. fázis megvalósítása):**
   - [x] **Lépés 4.1:** Sémabővítési terv és jóváhagyás (`sharing_mode`, `allowed_modules`, `excluded_item_ids`).
   - [x] **Lépés 4.2:** Frontend típusok, Context és UI komponensek elkészítése.
-- [ ] **5. fázis: Záró tesztelés és szinkronizáció:**
+- [x] **5. fázis: Záró tesztelés és szinkronizáció:**
   - [x] Teljes `npm run build` és linter ellenőrzés (0 hiba).
-  - [ ] Git commit és push origin main.
-  - [x] Supabase állapot végső validációja.
-  - [ ] Zárójelentés készítése.
+  - [x] Git commit és push origin main (`475fa6c`).
+  - [x] Supabase állapot végső validációja (RLS, trigger, sémabővítés élesben, Edge Function v5 aktív).
+  - [x] Zárójelentés készítése.
