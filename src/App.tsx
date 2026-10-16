@@ -70,6 +70,12 @@ const AppContent: React.FC = () => {
   }, [currentView]);
 
   useEffect(() => {
+    if (isStorageViewOpen && window.location.hash !== '#storage' && !window.location.hash.startsWith('#storage/')) {
+      setIsStorageViewOpen(false);
+    }
+  }, [currentView, isStorageViewOpen]);
+
+  useEffect(() => {
     if (userPreferences?.compact_mode) {
       document.documentElement.classList.add('compact-mode');
     } else {

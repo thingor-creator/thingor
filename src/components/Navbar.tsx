@@ -26,6 +26,7 @@ import {
   ShoppingBag,
   Lock,
   Settings,
+  Package,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -71,6 +72,9 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const handleNav = (view: ViewMode) => {
+    if (window.location.hash.includes('storage')) {
+      window.location.hash = '';
+    }
     setCurrentView(view);
     setIsMobileMenuOpen(false);
     setIsUserDropdownOpen(false);
@@ -498,15 +502,19 @@ export const Navbar: React.FC = () => {
             <Plus className="h-6 w-6 stroke-[2.5]" />
           </button>
 
-          {/* 4. Jegyzetek */}
+          {/* 4. Fizikai tárolók és raktározás */}
           <button
-            onClick={() => handleNav('notes')}
+            onClick={() => {
+              window.location.hash = '#storage';
+              setIsMobileMenuOpen(false);
+            }}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              currentView === 'notes' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+              window.location.hash === '#storage' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
+            title={isHu ? 'Fizikai tárolók és raktározás' : 'Storage'}
           >
-            <StickyNote className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] truncate max-w-full">{isHu ? 'Jegyzetek' : 'Notes'}</span>
+            <Package className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárolók' : 'Storage'}</span>
           </button>
 
           {/* 5. Menü (Drawer toggle) */}
@@ -585,12 +593,24 @@ export const Navbar: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleNav('documents')}
-                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors col-span-2 ${
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
                         currentView === 'documents' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                       }`}
                     >
                       <FileText className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                       <span>{t('documents')}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        window.location.hash = '#storage';
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        window.location.hash === '#storage' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <Package className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                      <span>{isHu ? 'Tárolók és raktározás' : 'Storage'}</span>
                     </button>
                   </div>
                 </div>
