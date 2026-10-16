@@ -9,6 +9,56 @@ export const r2PublicDomain = (import.meta.env.VITE_R2_PUBLIC_DOMAIN || '').trim
 export const isR2Configured = Boolean(r2PublicDomain || import.meta.env.VITE_SUPABASE_URL);
 
 /**
+ * Safely extracts detailed error messages from Supabase Edge Function invocation failures.
+ */
+async function extractEdgeFunctionError(error: any, data: any, fallback: string): Promise<string> {
+  if (data?.details) return String(data.details);
+  if (data?.error) return String(data.error);
+
+  if (error) {
+    if (error.context && typeof error.context.json === 'function') {
+      try {
+        const body = await error.context.json();
+        if (body?.details) return String(body.details);
+        if (body?.error) return String(body.error);
+      } catch {
+        // Response body already read or not JSON
+      }
+    }
+    if (error.message && error.message !== 'Edge Function returned a non-2xx status code') {
+      return error.message;
+    }
+  }
+
+  return fallback;
+}
+
+/**
+ * Ensures user has an active session and refreshes if near expiration.
+ */
+async function ensureValidSession(): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData?.session;
+    if (!session) {
+      // Try refresh
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      return Boolean(refreshData?.session);
+    }
+
+    const expiresAt = session.expires_at;
+    // If expires within 2 minutes, refresh proactively
+    if (expiresAt && expiresAt * 1000 - Date.now() < 120000) {
+      await supabase.auth.refreshSession();
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Uploads a file securely to Cloudflare R2 via server-side Supabase Edge Function 'storage-r2'.
  * Primary strategy: Presigned PUT URL directly from Edge Function (fast & secure).
  * Fallback strategy: Direct binary upload via Edge Function if presigned PUT encounters network/CORS issues.
@@ -26,9 +76,12 @@ export async function uploadFileToR2(
     return { error: 'File size exceeds 15MB limit' };
   }
 
+  // Pre-validate session before initiating upload
+  await ensureValidSession();
+
   try {
     // 1. Request presigned upload URL from Edge Function
-    const { data, error } = await supabase.functions.invoke('storage-r2', {
+    let { data, error } = await supabase.functions.invoke('storage-r2', {
       body: {
         action: 'get-upload-url',
         folder,
@@ -37,6 +90,24 @@ export async function uploadFileToR2(
         fileSize: file.size,
       },
     });
+
+    // If 401 Unauthorized, refresh session and retry once
+    if (error && (error.status === 401 || String(error.message).includes('401'))) {
+      const refreshed = await ensureValidSession();
+      if (refreshed) {
+        const retryRes = await supabase.functions.invoke('storage-r2', {
+          body: {
+            action: 'get-upload-url',
+            folder,
+            fileName: file.name,
+            fileType: file.type || 'application/octet-stream',
+            fileSize: file.size,
+          },
+        });
+        data = retryRes.data;
+        error = retryRes.error;
+      }
+    }
 
     if (error || !data?.uploadUrl) {
       console.warn('Presigned upload URL generation failed, attempting direct upload fallback:', error);
@@ -91,7 +162,7 @@ async function uploadDirectToEdgeFunction(
     }
     const base64 = btoa(binary);
 
-    const { data, error } = await supabase.functions.invoke('storage-r2', {
+    let { data, error } = await supabase.functions.invoke('storage-r2', {
       body: {
         action: 'upload-direct',
         folder,
@@ -101,8 +172,27 @@ async function uploadDirectToEdgeFunction(
       },
     });
 
+    // If 401 Unauthorized, refresh session and retry once
+    if (error && (error.status === 401 || String(error.message).includes('401'))) {
+      const refreshed = await ensureValidSession();
+      if (refreshed) {
+        const retryRes = await supabase.functions.invoke('storage-r2', {
+          body: {
+            action: 'upload-direct',
+            folder,
+            fileName: file.name,
+            fileType: file.type || 'application/octet-stream',
+            fileData: base64,
+          },
+        });
+        data = retryRes.data;
+        error = retryRes.error;
+      }
+    }
+
     if (error || data?.error) {
-      return { error: error?.message || data?.error || 'Edge Function direct upload failed' };
+      const errMsg = await extractEdgeFunctionError(error, data, 'Edge Function direct upload failed');
+      return { error: errMsg };
     }
 
     if (folder === 'photos') {
