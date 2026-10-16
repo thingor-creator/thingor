@@ -862,6 +862,13 @@ CREATE POLICY container_items_delete_policy ON public.container_items
 REVOKE ALL ON FUNCTION public.adjust_container_item_quantity(UUID, NUMERIC) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.adjust_container_item_quantity(UUID, NUMERIC) TO authenticated, service_role;
 
+-- 4.4. Trigger függvények közvetlen RPC hívásának letiltása (triggerek kizárólag belsőleg futnak)
+REVOKE EXECUTE ON FUNCTION public.prevent_storage_container_delete() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.check_storage_container_integrity() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.cascade_storage_container_location_update() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.validate_item_container_assignment() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_container_item_scope() FROM PUBLIC, anon, authenticated;
+
 
 -- ============================================================================
 -- 5. FÁZIS: POSTGREST SÉMA GYORSÍTÓTÁR ÉRVÉNYTELENÍTÉSE
