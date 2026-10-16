@@ -245,12 +245,12 @@ const AppContent: React.FC = () => {
       ) : (
         <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-10">
           {/* Storage MVP Quick Access Banner */}
-          <div className="mb-6 flex items-center justify-between gap-3 bg-[var(--card-bg,#3A4551)]/80 border border-[var(--border-color,#56616D)] rounded-2xl p-3 sm:px-4 sm:py-3 shadow-md backdrop-blur-sm">
-            <div className="flex items-center gap-3 min-w-0 pr-2">
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[var(--card-bg,#3A4551)]/80 border border-[var(--border-color,#56616D)] rounded-2xl p-3 sm:px-4 sm:py-3 shadow-md backdrop-blur-sm">
+            <div className="flex items-center gap-3 min-w-0 pr-1 w-full sm:w-auto">
               <div className="p-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)] shrink-0">
                 <Package className="w-5 h-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs sm:text-sm font-bold text-white">Tárolókezelő Rendszer</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
@@ -267,7 +267,7 @@ const AppContent: React.FC = () => {
                 window.location.hash = '#storage';
                 setIsStorageViewOpen(true);
               }}
-              className="px-3.5 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2 min-h-[38px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
             >
               <Box className="w-3.5 h-3.5" />
               <span>Megnyitás</span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Boxes,
@@ -9,6 +9,7 @@ import {
   QrCode,
   Search,
   ArrowLeft,
+  ArrowUp,
   X,
   Package,
   Layers,
@@ -156,6 +157,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
   // Form states for creating new container
   const [newContainerName, setNewContainerName] = useState('');
   const [newContainerType, setNewContainerType] = useState<ContainerType>('box');
@@ -178,6 +181,15 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
       }
       return next;
     });
+  };
+
+  const handleSelectContainer = (containerId: string, shouldScroll = false) => {
+    setSelectedContainerId(containerId);
+    if (shouldScroll && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setTimeout(() => {
+        detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 60);
+    }
   };
 
   const selectedContainer = containers.find(c => c.id === selectedContainerId) || null;
@@ -243,6 +255,11 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     setNewContainerDesc('');
 
     showToast(`"${newEntry.name}" tároló sikeresen hozzáadva a helyi mintához!`);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setTimeout(() => {
+        detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 60);
+    }
   };
 
   // Filter root containers
@@ -262,17 +279,24 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     const totalItems = container.items.length;
     const totalBulkTypes = container.bulkItems.length;
 
+    // Indentation scale: gentle on mobile so it doesn't crush width
+    const depthIndent = depth === 0
+      ? ''
+      : depth === 1
+      ? 'ml-2 sm:ml-4 border-l-2 border-l-[var(--color-primary-blue,#2563EB)]'
+      : 'ml-3.5 sm:ml-7 border-l-2 border-l-[var(--color-primary-blue,#2563EB)]';
+
     return (
       <div key={container.id} className="space-y-1.5">
         <div
-          onClick={() => setSelectedContainerId(container.id)}
-          className={`group flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
+          onClick={() => handleSelectContainer(container.id, false)}
+          className={`group flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${
             isSelected
               ? 'bg-[var(--card-bg,#3A4551)] border-[var(--color-primary-blue,#2563EB)] shadow-lg shadow-[var(--color-primary-blue,#2563EB)]/10 ring-1 ring-[var(--color-primary-blue,#2563EB)]/50'
               : 'bg-[var(--card-bg,#3A4551)]/60 hover:bg-[var(--card-bg,#3A4551)] border-[var(--border-color,#56616D)]/80 hover:border-[var(--color-primary-blue,#2563EB)]/50'
-          } ${depth > 0 ? 'ml-4 sm:ml-7 border-l-2 border-l-[var(--color-primary-blue,#2563EB)]' : ''}`}
+          } ${depthIndent}`}
         >
-          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 pr-1.5 sm:pr-2">
             {hasChildren ? (
               <button
                 type="button"
@@ -280,7 +304,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   e.stopPropagation();
                   toggleExpand(container.id);
                 }}
-                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors"
+                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors shrink-0"
+                aria-label={isExpanded ? 'Összecsukás' : 'Kibontás'}
               >
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
@@ -289,12 +314,12 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 )}
               </button>
             ) : (
-              <div className="w-6 flex items-center justify-center">
+              <div className="w-7 sm:w-8 flex items-center justify-center shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-sub,#B5BDC6)]/40" />
               </div>
             )}
 
-            <div className={`p-2 rounded-xl transition-colors ${
+            <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-colors ${
               isSelected
                 ? 'bg-[var(--color-primary-blue,#2563EB)] text-white'
                 : 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] group-hover:bg-[var(--surface-bg,#465362)]/80'
@@ -303,22 +328,22 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-bold text-white truncate group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
                   {container.name}
                 </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)]/50">
+                <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)]/50 shrink-0">
                   {CONTAINER_TYPE_LABELS[container.containerType]?.hu || container.containerType}
                 </span>
               </div>
-              <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] truncate">
+              <p className="text-[10px] sm:text-[11px] text-[var(--text-sub,#B5BDC6)] truncate">
                 {container.code} • {container.locationName}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <div className="text-right hidden sm:block">
+            <div className="text-right hidden md:block">
               <span className="text-xs font-semibold text-white block">
                 {totalItems} tárgy
               </span>
@@ -331,9 +356,10 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setSelectedContainerId(container.id);
+                handleSelectContainer(container.id, true);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--color-primary-blue,#2563EB)] text-white text-xs font-semibold flex items-center gap-1 transition-colors border border-[var(--border-color,#56616D)]/50"
+              className="px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--color-primary-blue,#2563EB)] text-white text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[var(--border-color,#56616D)]/50 shrink-0 cursor-pointer active:scale-95"
+              title="Tároló megnyitása és részletei"
             >
               <span>Megnyitás</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -351,76 +377,76 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 sm:space-y-6 animate-fadeIn pb-12 w-full max-w-full overflow-x-hidden">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[var(--card-bg,#3A4551)] border border-[var(--color-primary-blue,#2563EB)] text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-bold animate-slideUp">
-          <Check className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 bg-[var(--card-bg,#3A4551)] border border-[var(--color-primary-blue,#2563EB)] text-white px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-bold animate-slideUp">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Header & MVP Notice */}
-      <div className="rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 sm:p-8 space-y-4 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-2.5 rounded-2xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white transition-colors border border-[var(--border-color,#56616D)]"
+                className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white transition-colors border border-[var(--border-color,#56616D)] shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
                 title="Vissza a fő nézetre"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
               </button>
             )}
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-                  <Package className="w-6 h-6 text-[var(--color-primary-blue,#2563EB)]" />
-                  Fizikai Tárolók és Raktározás
+                <h1 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                  <span>Fizikai Tárolók és Raktározás</span>
                 </h1>
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-[var(--color-primary-blue,#2563EB)] border border-blue-500/20">
-                  MVP Látványterv & Előnézet
+                <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-[var(--color-primary-blue,#2563EB)] border border-blue-500/20 shrink-0">
+                  MVP Előnézet
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
+              <p className="text-[11px] sm:text-xs md:text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
                 Fizikai tárolódobozok, szekrények, polcok hierarchikus rendszere és QR-címkézése.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pt-1 sm:pt-0">
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer active:scale-95"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 shrink-0" />
               <span>+ Új tároló létrehozása</span>
             </button>
           </div>
         </div>
 
         {/* Local Mock Badge Callout */}
-        <div className="p-3.5 rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-3">
+        <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-2.5 sm:gap-3">
           <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
-            <strong className="text-white font-semibold">Helyi demonstrációs minta:</strong> Az alábbi tárolók, tárgyak és mennyiségi tételek helyi mintaként működnek a felület kipróbálásához. Közvetlen Supabase-módosítás vagy éles adatbázis-írás nem történik.
+          <div className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
+            <strong className="text-white font-semibold">Helyi demonstrációs minta:</strong> Az alábbi tárolók és tételek helyi mintaként működnek a felület kipróbálásához. Közvetlen Supabase-módosítás vagy éles adatbázis-írás nem történik.
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Tree Column (Left) & Detail Drawer (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* Main Grid: Tree Column (Left on Desktop, Top on Mobile) & Detail Drawer (Right on Desktop, Below on Mobile) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         {/* Left Column: Container Hierarchy Tree */}
-        <div className="lg:col-span-6 space-y-4">
+        <div className="lg:col-span-6 space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <FolderTree className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+              <FolderTree className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+              <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
                 Tárolók Hierarchiája
               </h2>
             </div>
-            <span className="text-xs text-[var(--text-sub,#B5BDC6)]">
+            <span className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)]">
               {containers.length} db tároló
             </span>
           </div>
@@ -433,7 +459,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Keresés tároló nevére vagy kódjára..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
+              className="w-full pl-10 pr-4 py-2 sm:py-2.5 min-h-[40px] rounded-xl sm:rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
             />
           </div>
 
@@ -442,7 +468,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
             {rootContainers.length > 0 ? (
               rootContainers.map(container => renderContainerNode(container, 0))
             ) : (
-              <div className="text-center py-8 rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-sub,#B5BDC6)]">
+              <div className="text-center py-8 rounded-xl sm:rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-sub,#B5BDC6)]">
                 Nincs a keresésnek megfelelő tároló.
               </div>
             )}
@@ -450,68 +476,82 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
         </div>
 
         {/* Right Column: Selected Container Detail Panel */}
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-6" ref={detailPanelRef}>
           {selectedContainer ? (
-            <div className="rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 space-y-6 shadow-xl sticky top-24">
+            <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-xl lg:sticky lg:top-24">
               {/* Detail Header & Breadcrumb */}
-              <div className="space-y-2 pb-4 border-b border-[var(--border-color,#56616D)]/60">
-                <div className="flex items-center gap-1.5 text-xs text-[var(--text-sub,#B5BDC6)] flex-wrap">
-                  {getBreadcrumbs(selectedContainer.id).map((crumb, idx, arr) => (
-                    <React.Fragment key={crumb.id}>
-                      <button
-                        onClick={() => setSelectedContainerId(crumb.id)}
-                        className={`hover:text-white transition-colors font-medium ${
-                          idx === arr.length - 1 ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : ''
-                        }`}
-                      >
-                        {crumb.name}
-                      </button>
-                      {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]/60" />}
-                    </React.Fragment>
-                  ))}
+              <div className="space-y-2.5 pb-4 border-b border-[var(--border-color,#56616D)]/60">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-[var(--text-sub,#B5BDC6)] flex-wrap">
+                    {getBreadcrumbs(selectedContainer.id).map((crumb, idx, arr) => (
+                      <React.Fragment key={crumb.id}>
+                        <button
+                          onClick={() => handleSelectContainer(crumb.id, false)}
+                          className={`hover:text-white transition-colors font-medium truncate max-w-[140px] ${
+                            idx === arr.length - 1 ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : ''
+                          }`}
+                        >
+                          {crumb.name}
+                        </button>
+                        {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]/60 shrink-0" />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  {/* Jump back button on mobile */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="lg:hidden text-[10px] text-[var(--color-primary-blue,#2563EB)] hover:text-white flex items-center gap-1 font-semibold shrink-0 py-1 cursor-pointer"
+                  >
+                    <ArrowUp className="w-3 h-3" />
+                    <span>Fel a fához</span>
+                  </button>
                 </div>
 
-                <div className="flex items-start justify-between gap-4 pt-1">
-                  <div>
-                    <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-2 pt-1">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-lg sm:text-xl font-black text-white tracking-tight break-words flex items-center gap-2">
                       {selectedContainer.name}
                     </h2>
-                    <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] mt-0.5">
                       {selectedContainer.description || 'Nincs leírás megadva ehhez a tárolóhoz.'}
                     </p>
                   </div>
-                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-[var(--surface-bg,#465362)] text-white border border-[var(--border-color,#56616D)] shrink-0">
+                  <span className="self-start px-2.5 sm:px-3 py-1 rounded-xl text-[10px] sm:text-xs font-bold bg-[var(--surface-bg,#465362)] text-white border border-[var(--border-color,#56616D)] shrink-0">
                     {CONTAINER_TYPE_LABELS[selectedContainer.containerType]?.hu || selectedContainer.containerType}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
-                  <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50">
-                    <span className="text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1 mb-0.5">
-                      <Tag className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1 mb-0.5">
+                      <Tag className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                       Azonosító kód
                     </span>
-                    <span className="text-xs font-extrabold text-white">{selectedContainer.code}</span>
+                    <span className="text-xs font-extrabold text-white truncate block">{selectedContainer.code}</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50">
-                    <span className="text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1 mb-0.5">
-                      <MapPin className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1 mb-0.5">
+                      <MapPin className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                       Helyszín
                     </span>
                     <span className="text-xs font-extrabold text-white truncate block">{selectedContainer.locationName}</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50 col-span-2 sm:col-span-1">
-                    <span className="text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] block mb-0.5">Kapacitás</span>
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50 xs:col-span-2 sm:col-span-1">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] block mb-0.5">Kapacitás</span>
                     <span className="text-xs font-extrabold text-emerald-400">Raktározásra kész</span>
                   </div>
                 </div>
               </div>
 
               {/* QR-kód Előnézet szekció */}
-              <div className="p-4 rounded-2xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)] space-y-3">
+              <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)] space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <QrCode className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    <QrCode className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                     <h3 className="text-xs font-bold text-white uppercase tracking-wider">
                       Tároló QR Címke Előnézet
                     </h3>
@@ -521,7 +561,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div className="flex flex-col xs:flex-row items-center xs:items-start gap-3 sm:gap-4 bg-white/5 p-3 rounded-xl border border-white/5 text-center xs:text-left">
                   <div className="p-2 bg-white rounded-xl shadow-inner shrink-0">
                     <QRCodeSVG
                       value={`thingor://storage/${selectedContainer.code}`}
@@ -531,12 +571,12 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="text-xs font-bold text-white truncate">{selectedContainer.code}</p>
-                    <p className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
+                    <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] leading-relaxed">
                       Fizikai dobozra vagy polcra ragasztható azonosító QR kód.
                     </p>
                     <button
                       onClick={() => setIsQrModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 text-xs text-[var(--color-primary-blue,#2563EB)] hover:text-white font-semibold transition-colors mt-1"
+                      className="inline-flex items-center gap-1.5 text-xs text-[var(--color-primary-blue,#2563EB)] hover:text-white font-semibold transition-colors mt-1 py-1 cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5" /> Nagyított címke megtekintése
                     </button>
@@ -548,7 +588,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Boxes className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    <Boxes className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                     <h3 className="text-xs font-bold text-white uppercase tracking-wider">
                       Benne lévő Tárgyak ({selectedContainer.items.length})
                     </h3>
@@ -560,13 +600,13 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     {selectedContainer.items.map(item => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60"
+                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 gap-2"
                       >
-                        <div className="min-w-0 pr-2">
+                        <div className="min-w-0 flex-1 pr-1">
                           <span className="text-xs font-bold text-white block truncate">{item.name}</span>
-                          <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{item.category} • {item.code}</span>
+                          <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] block truncate">{item.category} • {item.code}</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--card-bg,#3A4551)] text-white border border-[var(--border-color,#56616D)]/50 shrink-0">
+                        <span className="px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold bg-[var(--card-bg,#3A4551)] text-white border border-[var(--border-color,#56616D)]/50 shrink-0">
                           Egyedi tárgy
                         </span>
                       </div>
@@ -581,15 +621,15 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
               {/* Egyszerű mennyiségi tételek */}
               <div className="space-y-3 pt-2 border-t border-[var(--border-color,#56616D)]/60">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-400" />
+                    <Layers className="w-4 h-4 text-emerald-400 shrink-0" />
                     <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Ömlesztett / Mennyiségi Tételek ({selectedContainer.bulkItems.length})
+                      Ömlesztett Tételek ({selectedContainer.bulkItems.length})
                     </h3>
                   </div>
                   <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]">
-                    Interaktív teszt: +/- gombok
+                    Interaktív teszt (+/-)
                   </span>
                 </div>
 
@@ -598,30 +638,32 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     {selectedContainer.bulkItems.map(bulk => (
                       <div
                         key={bulk.id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60"
+                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 gap-2"
                       >
-                        <div className="min-w-0 pr-2">
+                        <div className="min-w-0 flex-1 pr-1">
                           <span className="text-xs font-bold text-white block truncate">{bulk.name}</span>
-                          <span className="text-[10px] text-emerald-400 font-bold">
+                          <span className="text-[10px] text-emerald-400 font-bold block truncate">
                             {bulk.quantity} {bulk.unit}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                           <button
                             onClick={() => handleAdjustQuantity(selectedContainer.id, bulk.id, -1)}
                             disabled={bulk.quantity <= 0}
-                            className="p-1.5 rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-rose-600 disabled:opacity-30 disabled:hover:bg-[var(--card-bg,#3A4551)] text-white transition-colors"
+                            className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-rose-600 disabled:opacity-30 disabled:hover:bg-[var(--card-bg,#3A4551)] text-white transition-colors active:scale-95 cursor-pointer"
                             title="Csökkentés (-1)"
+                            aria-label="Csökkentés"
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="text-xs font-mono font-bold text-white px-1.5 min-w-[32px] text-center">
+                          <span className="text-xs font-mono font-bold text-white px-1 min-w-[28px] sm:min-w-[32px] text-center">
                             {bulk.quantity}
                           </span>
                           <button
                             onClick={() => handleAdjustQuantity(selectedContainer.id, bulk.id, 1)}
-                            className="p-1.5 rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-emerald-600 text-white transition-colors"
+                            className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-emerald-600 text-white transition-colors active:scale-95 cursor-pointer"
                             title="Növelés (+1)"
+                            aria-label="Növelés"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
@@ -637,7 +679,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-8 text-center text-[var(--text-sub,#B5BDC6)] text-xs space-y-2">
+            <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 sm:p-8 text-center text-[var(--text-sub,#B5BDC6)] text-xs space-y-2">
               <Box className="w-8 h-8 text-[var(--text-sub,#B5BDC6)]/40 mx-auto" />
               <p>Válassz ki egy tárolót a bal oldali fa struktúrából a részletek megtekintéséhez.</p>
             </div>
@@ -645,26 +687,29 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
         </div>
       </div>
 
-      {/* Modal: Create Container Form */}
+      {/* Modal: Create Container Form - Mobile Keyboard Friendly with overflow */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 sm:p-8 space-y-5 shadow-2xl animate-scaleUp">
-            <div className="flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl my-auto overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-[var(--border-color,#56616D)]/60 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
                   <Box className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-black text-white">Új Tároló Létrehozása</h3>
+                <h3 className="text-base sm:text-lg font-black text-white">Új Tároló Létrehozása</h3>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1.5 rounded-xl hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors"
+                className="p-1.5 rounded-xl hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors cursor-pointer"
+                aria-label="Bezárás"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateContainer} className="space-y-4">
+            {/* Modal Body: Scrollable */}
+            <form onSubmit={handleCreateContainer} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 sm:space-y-4">
               <div>
                 <label className="text-xs font-bold text-white block mb-1">Tároló Neve *</label>
                 <input
@@ -673,7 +718,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   value={newContainerName}
                   onChange={(e) => setNewContainerName(e.target.value)}
                   placeholder="Pl. Kis alkatrészes fiók, Kerti szerszámtartó"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                 />
               </div>
 
@@ -683,7 +728,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   <select
                     value={newContainerType}
                     onChange={(e) => setNewContainerType(e.target.value as ContainerType)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                   >
                     {Object.entries(CONTAINER_TYPE_LABELS).map(([val, label]) => (
                       <option key={val} value={val} className="bg-[var(--card-bg,#3A4551)]">
@@ -698,7 +743,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   <select
                     value={newContainerParentId}
                     onChange={(e) => setNewContainerParentId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                   >
                     <option value="" className="bg-[var(--card-bg,#3A4551)]">-- Fő szintű tároló (Nincs szülő) --</option>
                     {containers.map(c => (
@@ -717,7 +762,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   value={newContainerLocation}
                   onChange={(e) => setNewContainerLocation(e.target.value)}
                   placeholder="Pl. Műhely, Garázs, Földszint"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                 />
               </div>
 
@@ -728,21 +773,22 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   value={newContainerDesc}
                   onChange={(e) => setNewContainerDesc(e.target.value)}
                   placeholder="Rövid leírás a tároló funkciójáról..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[var(--border-color,#56616D)]/60">
+              {/* Modal Footer: Sticky at bottom */}
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--border-color,#56616D)]/60">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-bold transition-colors"
+                  className="px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-bold transition-colors cursor-pointer"
                 >
                   Mégse
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white text-xs font-bold transition-all shadow-md"
+                  className="px-5 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
                 >
                   Létrehozás (Helyi minta)
                 </button>
@@ -754,8 +800,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
       {/* Modal: QR Code Large Preview */}
       {isQrModalOpen && selectedContainer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-sm rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 text-center space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+          <div className="w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-5 sm:p-6 text-center space-y-4 shadow-2xl my-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color,#56616D)]/60">
               <div className="flex items-center gap-2">
                 <QrCode className="w-5 h-5 text-[var(--color-primary-blue,#2563EB)]" />
@@ -763,7 +809,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               </div>
               <button
                 onClick={() => setIsQrModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]"
+                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] cursor-pointer"
+                aria-label="Bezárás"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -772,18 +819,18 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
             <div className="p-4 bg-white rounded-2xl mx-auto inline-block shadow-lg">
               <QRCodeSVG
                 value={`thingor://storage/${selectedContainer.code}`}
-                size={180}
+                size={160}
                 level="H"
               />
               <div className="mt-2 text-slate-800 text-center font-mono font-bold text-xs tracking-wider">
                 {selectedContainer.code}
               </div>
-              <div className="text-slate-600 text-center text-[10px] font-medium">
+              <div className="text-slate-600 text-center text-[10px] font-medium truncate max-w-[200px]">
                 {selectedContainer.name}
               </div>
             </div>
 
-            <p className="text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
               Ez a QR kód közvetlenül a tároló azonosítására szolgál. Fizikai címkeként nyomtatható és ragasztható a dobozra.
             </p>
 
@@ -791,7 +838,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               onClick={() => {
                 window.print();
               }}
-              className="w-full py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md"
+              className="w-full py-2.5 min-h-[42px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
             >
               <Printer className="w-4 h-4" /> Címke nyomtatása (Böngésző)
             </button>
