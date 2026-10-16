@@ -27,7 +27,8 @@ import { PendingInviteModal } from './components/PendingInviteModal';
 import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
-import { Wrench, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { StorageView } from './components/StorageView';
+import { Wrench, ShieldCheck, ShieldAlert, Package, Box } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const {
@@ -53,6 +54,7 @@ const AppContent: React.FC = () => {
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
+  const [isStorageViewOpen, setIsStorageViewOpen] = useState(false);
 
   // Scroll window to top whenever view or selected item changes
   useEffect(() => {
@@ -81,7 +83,14 @@ const AppContent: React.FC = () => {
       const searchParams = new URLSearchParams(window.location.search);
       const pathname = window.location.pathname;
 
-      // 1. Check share token (#share/xyz, ?share=xyz, /share/xyz)
+      // 1. Check storage view (#storage, ?view=storage, /storage)
+      if (hash === '#storage' || hash.startsWith('#storage/') || searchParams.get('view') === 'storage' || pathname === '/storage') {
+        setIsStorageViewOpen(true);
+        return;
+      }
+      setIsStorageViewOpen(false);
+
+      // 2. Check share token (#share/xyz, ?share=xyz, /share/xyz)
       if (hash.startsWith('#share/')) {
         setShareToken(hash.replace('#share/', '').trim());
         return;
@@ -222,10 +231,49 @@ const AppContent: React.FC = () => {
       <Navbar />
 
       {/* Main Container View Routing */}
-      {currentView === 'landing' ? (
+      {isStorageViewOpen ? (
+        <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-10">
+          <StorageView
+            onClose={() => {
+              window.location.hash = '';
+              setIsStorageViewOpen(false);
+            }}
+          />
+        </main>
+      ) : currentView === 'landing' ? (
         <LandingPage />
       ) : (
         <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-10">
+          {/* Storage MVP Quick Access Banner */}
+          <div className="mb-6 flex items-center justify-between gap-3 bg-[var(--card-bg,#3A4551)]/80 border border-[var(--border-color,#56616D)] rounded-2xl p-3 sm:px-4 sm:py-3 shadow-md backdrop-blur-sm">
+            <div className="flex items-center gap-3 min-w-0 pr-2">
+              <div className="p-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)] shrink-0">
+                <Package className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs sm:text-sm font-bold text-white">Tárolókezelő Rendszer</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    MVP Előnézet
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary,var(--text-sub,#B5BDC6))] truncate">
+                  Fizikai tárolók, dobozok, polcok és QR-címkék minta kezelőfelülete
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                window.location.hash = '#storage';
+                setIsStorageViewOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Box className="w-3.5 h-3.5" />
+              <span>Megnyitás</span>
+            </button>
+          </div>
+
           {selectedItemId ? (
             <ItemDetailModal />
           ) : (
