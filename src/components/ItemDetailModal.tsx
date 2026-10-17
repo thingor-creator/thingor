@@ -59,7 +59,8 @@ export const ItemDetailModal: React.FC = () => {
     deleteItemRelation,
     getItemRelations,
     user,
-    language
+    language,
+    currentView
   } = useApp();
 
   const isHu = language === 'hu';
@@ -237,7 +238,17 @@ export const ItemDetailModal: React.FC = () => {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] hover:border-[var(--border-color,#56616D)] font-bold text-xs transition-all shadow-sm group"
         >
           <ArrowLeft className="h-4 w-4 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
-          <span>{isHu ? '← Vissza a tárgyaimhoz' : '← Back to My Items'}</span>
+          <span>
+            {currentView === 'collections'
+              ? (isHu ? '← Vissza a gyűjteményhez' : '← Back to Collection')
+              : currentView === 'locations'
+              ? (isHu ? '← Vissza a helyszínekhez' : '← Back to Locations')
+              : currentView === 'categories'
+              ? (isHu ? '← Vissza a kategóriákhoz' : '← Back to Categories')
+              : currentView === 'household'
+              ? (isHu ? '← Vissza a megosztáshoz' : '← Back to Household')
+              : (isHu ? '← Vissza a tárgyaimhoz' : '← Back to My Items')}
+          </span>
         </button>
       </div>
 

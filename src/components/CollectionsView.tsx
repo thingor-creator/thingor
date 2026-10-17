@@ -126,6 +126,22 @@ export const CollectionsView: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [galleryModal]);
 
+  // Listen for FAB central "+" action
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ view?: string }>;
+      if (!customEvent.detail || customEvent.detail.view === 'collections') {
+        if (selectedCollectionId) {
+          handleOpenAddItem();
+        } else {
+          handleOpenAddCollection();
+        }
+      }
+    };
+    window.addEventListener('thingor-open-add', handleTrigger);
+    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+  }, [selectedCollectionId]);
+
   const processImageFiles = async (files: FileList | File[], target: 'item' | 'collection') => {
     const fileList = Array.from(files);
     if (fileList.length === 0) return;

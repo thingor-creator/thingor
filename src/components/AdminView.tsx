@@ -588,11 +588,18 @@ export const AdminView: React.FC = () => {
             {/* BOTTOM EXIT BUTTON */}
             <div className="pt-4 border-t border-[var(--border-color,#56616D)]">
               <button
-                onClick={() => { setIsMobileMenuOpen(false); setCurrentView('dashboard'); }}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  if (window.history.length > 1) {
+                    window.history.back();
+                  } else {
+                    setCurrentView('dashboard');
+                  }
+                }}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-white transition-all"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Vissza a főoldalra</span>
+                <span>Vissza az előző oldalra</span>
               </button>
             </div>
           </div>
@@ -737,11 +744,17 @@ export const AdminView: React.FC = () => {
           {/* BOTTOM EXIT BUTTON */}
           <div className="pt-4 border-t border-[var(--border-color,#56616D)]">
             <button
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  setCurrentView('dashboard');
+                }
+              }}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-white transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Vissza a főoldalra</span>
+              <span>Vissza az előző oldalra</span>
             </button>
           </div>
         </aside>

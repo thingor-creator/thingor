@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Handshake,
@@ -50,6 +50,22 @@ export const LendingView: React.FC = () => {
 
   // Loan Modal State
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
+
+  // Listen for FAB central "+" action
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ view?: string }>;
+      if (!customEvent.detail || customEvent.detail.view === 'lending') {
+        if (mainTab === 'contacts') {
+          handleOpenAddContact();
+        } else {
+          handleOpenAddLoanModal();
+        }
+      }
+    };
+    window.addEventListener('thingor-open-add', handleTrigger);
+    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+  }, [mainTab]);
   const [editingLoan, setEditingLoan] = useState<ItemLoan | null>(null);
   const [formItemId, setFormItemId] = useState('');
   const [formBorrowerName, setFormBorrowerName] = useState('');

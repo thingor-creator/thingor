@@ -49,6 +49,20 @@ export const VaultView: React.FC = () => {
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState<string>('');
 
+  // Listen for FAB central "+" action
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ view?: string }>;
+      if (!customEvent.detail || customEvent.detail.view === 'vault') {
+        if (isVaultUnlocked) {
+          setIsAddItemModalOpen(true);
+        }
+      }
+    };
+    window.addEventListener('thingor-open-add', handleTrigger);
+    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+  }, [isVaultUnlocked]);
+
   // Keypad number press helper
   const handleNumClick = (num: string) => {
     if (pin.length < 6) {

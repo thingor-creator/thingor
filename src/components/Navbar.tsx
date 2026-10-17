@@ -40,6 +40,8 @@ export const Navbar: React.FC = () => {
     setIsAuthModalOpen,
     setAuthModalMode,
     setIsAddEditItemModalOpen,
+    setIsLocationModalOpen,
+    setIsCategoryModalOpen,
     setEditingItem,
     language,
     setLanguage,
@@ -91,10 +93,51 @@ export const Navbar: React.FC = () => {
   };
 
   const handleOpenAddModal = () => {
-    setEditingItem(null);
-    setIsAddEditItemModalOpen(true);
     setIsMobileMenuOpen(false);
     setOpenDropdown(null);
+
+    // Context-aware action dispatch based on current view
+    if (currentView === 'locations') {
+      setIsLocationModalOpen(true);
+      return;
+    }
+
+    if (currentView === 'categories') {
+      setIsCategoryModalOpen(true);
+      return;
+    }
+
+    if (
+      currentView === 'pantry' ||
+      currentView === 'notes' ||
+      currentView === 'repairs' ||
+      currentView === 'financing' ||
+      currentView === 'lending' ||
+      currentView === 'collections' ||
+      currentView === 'vault'
+    ) {
+      window.dispatchEvent(new CustomEvent('thingor-open-add', { detail: { view: currentView } }));
+      return;
+    }
+
+    // Default for items, dashboard and other views: Open Add Thing modal
+    setEditingItem(null);
+    setIsAddEditItemModalOpen(true);
+  };
+
+  const getAddButtonTitle = () => {
+    switch (currentView) {
+      case 'locations': return isHu ? 'Új helyszín' : 'Add Location';
+      case 'categories': return isHu ? 'Új kategória' : 'Add Category';
+      case 'pantry': return isHu ? 'Új készletcikk' : 'Add Pantry Item';
+      case 'notes': return isHu ? 'Új gyorsjegyzet' : 'Add Quick Note';
+      case 'repairs': return isHu ? 'Új javítási napló' : 'Add Repair Record';
+      case 'financing': return isHu ? 'Új részletfizetés' : 'Add Financing';
+      case 'lending': return isHu ? 'Új kölcsönadás' : 'Add Loan';
+      case 'collections': return isHu ? 'Új gyűjtemény / tétel' : 'Add Collection / Item';
+      case 'vault': return isHu ? 'Tárgy a széfbe' : 'Add to Vault';
+      default: return t('add_thing');
+    }
   };
 
   // Active state helpers for grouped menus
@@ -520,7 +563,7 @@ export const Navbar: React.FC = () => {
           <button
             onClick={handleOpenAddModal}
             className="flex items-center justify-center -mt-4 h-12 w-12 rounded-full bg-[var(--color-primary-blue,#2563EB)] text-white shadow-lg shadow-blue-500/40 hover:bg-blue-600 active:scale-95 transition-all shrink-0 border-2 border-[var(--bg-main,#303943)]"
-            title={t('add_thing')}
+            title={getAddButtonTitle()}
           >
             <Plus className="h-6 w-6 stroke-[2.5]" />
           </button>

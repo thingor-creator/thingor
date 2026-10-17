@@ -33,7 +33,6 @@ export const SettingsView: React.FC = () => {
     updateUserPreferences,
     language,
     setLanguage,
-    t,
     userNotificationSettings,
     updateNotificationSettings,
     vaultSettings,
@@ -234,9 +233,15 @@ export const SettingsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-5 shadow-md">
         <div className="flex items-center gap-3.5">
           <button
-            onClick={() => setCurrentView('dashboard')}
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                setCurrentView('dashboard');
+              }
+            }}
             className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors"
-            title={isHu ? 'Vissza a Dashboardra' : 'Back to Dashboard'}
+            title={isHu ? 'Vissza' : 'Back'}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>

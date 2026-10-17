@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CreditCard, Calendar, CheckCircle2, Plus, Trash2, DollarSign, Package } from 'lucide-react';
 
 export const FinancingView: React.FC = () => {
   const { items, financings, saveFinancing, recordInstallmentPayment, deleteFinancing, t, setSelectedItemId, language } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Listen for FAB central "+" action
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ view?: string }>;
+      if (!customEvent.detail || customEvent.detail.view === 'financing') {
+        setIsModalOpen(true);
+      }
+    };
+    window.addEventListener('thingor-open-add', handleTrigger);
+    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+  }, []);
 
   // New financing form state
   const [selectedItemIdForm, setSelectedItemIdForm] = useState<string>('');

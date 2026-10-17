@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { StickyNote, Plus, Search, MapPin, ArrowRight, Trash2, Edit3, CheckCircle2, Package, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { QuickNote } from '../types';
@@ -33,6 +33,18 @@ export const NotesView: React.FC = () => {
   const [tagsInput, setTagsInput] = useState('');
 
   const isHu = language === 'hu';
+
+  // Listen for FAB central "+" action
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ view?: string }>;
+      if (!customEvent.detail || customEvent.detail.view === 'notes') {
+        handleOpenAddModal();
+      }
+    };
+    window.addEventListener('thingor-open-add', handleTrigger);
+    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, Trash2, ShieldCheck, DollarSign, Package } from 'lucide-react';
 import type { RepairStatus, RepairUrgency } from '../types';
@@ -7,6 +7,18 @@ export const RepairsView: React.FC = () => {
   const { items, repairs, addRepair, updateRepairStatus, deleteRepair, t, setSelectedItemId, language } = useApp();
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Listen for FAB central "+" action
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ view?: string }>;
+      if (!customEvent.detail || customEvent.detail.view === 'repairs') {
+        setIsModalOpen(true);
+      }
+    };
+    window.addEventListener('thingor-open-add', handleTrigger);
+    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+  }, []);
 
   // New repair form state
   const [selectedItemIdForm, setSelectedItemIdForm] = useState<string>('');

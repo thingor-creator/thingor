@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   ShoppingBag,
@@ -48,9 +48,9 @@ export const PantryView: React.FC = () => {
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
   const [formName, setFormName] = useState('');
   const [formCategory, setFormCategory] = useState(isHu ? 'Élelmiszer' : 'Groceries');
-  const [formQuantity, setFormQuantity] = useState<number>(1);
+  const [formQuantity, setFormQuantity] = useState<number | ''>(1);
   const [formUnit, setFormUnit] = useState('db');
-  const [formMinThreshold, setFormMinThreshold] = useState<number>(1);
+  const [formMinThreshold, setFormMinThreshold] = useState<number | ''>(0);
   const [formExpirationDate, setFormExpirationDate] = useState('');
   const [formLocationId, setFormLocationId] = useState('');
   const [formNotes, setFormNotes] = useState('');
@@ -59,6 +59,18 @@ export const PantryView: React.FC = () => {
   // Shopping list modal
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [copiedSuccess, setCopiedSuccess] = useState(false);
+
+  // Listen for FAB central "+" action
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ view?: string }>;
+      if (!customEvent.detail || customEvent.detail.view === 'pantry') {
+        handleOpenAddModal();
+      }
+    };
+    window.addEventListener('thingor-open-add', handleTrigger);
+    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+  }, []);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const inSevenDaysStr = useMemo(() => {
@@ -154,7 +166,7 @@ export const PantryView: React.FC = () => {
     setFormCategory(categoriesList[0] || (isHu ? 'Élelmiszer' : 'Groceries'));
     setFormQuantity(1);
     setFormUnit('db');
-    setFormMinThreshold(1);
+    setFormMinThreshold(0);
     setFormExpirationDate('');
     setFormLocationId('');
     setFormNotes('');
@@ -168,9 +180,9 @@ export const PantryView: React.FC = () => {
     setEditingItem(item);
     setFormName(item.name);
     setFormCategory(item.category || (isHu ? 'Élelmiszer' : 'Groceries'));
-    setFormQuantity(Number(item.current_quantity));
+    setFormQuantity(item.current_quantity !== undefined && item.current_quantity !== null ? Number(item.current_quantity) : 0);
     setFormUnit(item.unit || 'db');
-    setFormMinThreshold(Number(item.min_threshold));
+    setFormMinThreshold(item.min_threshold !== undefined && item.min_threshold !== null ? Number(item.min_threshold) : 0);
     setFormExpirationDate(item.expiration_date || '');
     setFormLocationId(item.location_id || '');
     setFormNotes(item.notes || '');
@@ -192,13 +204,16 @@ export const PantryView: React.FC = () => {
       }
     }
 
+    const finalQuantity = formQuantity === '' ? 0 : Number(formQuantity);
+    const finalMinThreshold = formMinThreshold === '' ? 0 : Number(formMinThreshold);
+
     if (editingItem) {
       await updatePantryItem(editingItem.id, {
         name: formName.trim(),
         category: finalCategory,
-        current_quantity: formQuantity,
+        current_quantity: finalQuantity,
         unit: formUnit,
-        min_threshold: formMinThreshold,
+        min_threshold: finalMinThreshold,
         expiration_date: formExpirationDate || undefined,
         location_id: formLocationId || undefined,
         notes: formNotes.trim() || undefined,
@@ -209,9 +224,9 @@ export const PantryView: React.FC = () => {
         user_id: '',
         name: formName.trim(),
         category: finalCategory,
-        current_quantity: formQuantity,
+        current_quantity: finalQuantity,
         unit: formUnit,
-        min_threshold: formMinThreshold,
+        min_threshold: finalMinThreshold,
         expiration_date: formExpirationDate || undefined,
         location_id: formLocationId || undefined,
         notes: formNotes.trim() || undefined,
@@ -223,9 +238,14 @@ export const PantryView: React.FC = () => {
   };
 
   const handleCopyShoppingList = () => {
-    const lines = shoppingListItems.map(
-      i => `- ${i.name} (jelenleg: ${i.current_quantity} ${i.unit}, min: ${i.min_threshold} ${i.unit})`
-    );
+    const lines = shoppingListItems.map(i => {
+      const isOut = Number(i.current_quantity) <= 0;
+      const statusLabel = isOut
+        ? (isHu ? '[ELFOGYOTT]' : '[OUT OF STOCK]')
+        : (isHu ? '[FOGYÓBAN]' : '[LOW STOCK]');
+      const noteStr = i.notes ? ` (Megjegyzés: ${i.notes})` : '';
+      return `- ${statusLabel} ${i.name} (készlet: ${i.current_quantity} ${i.unit}, min: ${i.min_threshold} ${i.unit})${noteStr}`;
+    });
     const header = isHu ? '🛒 Thingor Bevásárlólista:\n' : '🛒 Thingor Shopping List:\n';
     const text = header + lines.join('\n');
     navigator.clipboard.writeText(text);
@@ -274,84 +294,133 @@ export const PantryView: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">
+      {/* KPI Cards (Interactive Filters) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* 1. Összes készletféle */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('all');
+            document.getElementById('pantry-items-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className={`p-4 sm:p-5 rounded-[16px] border text-left transition-all duration-200 cursor-pointer group shadow-sm flex flex-col justify-between ${
+            activeTab === 'all'
+              ? 'border-[var(--color-primary-blue,#2563EB)] bg-[var(--color-primary-blue,#2563EB)]/10 ring-2 ring-[var(--color-primary-blue,#2563EB)]/40 scale-[1.01]'
+              : 'border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--color-primary-blue,#2563EB)]/60 hover:bg-[var(--surface-bg,#465362)]/60'
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] sm:text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider truncate">
               {isHu ? 'Összes készletféle' : 'Total Items'}
             </span>
-            <div className="p-2 rounded-lg bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
+            <div className="p-2 rounded-lg bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)] group-hover:scale-110 transition-transform shrink-0">
               <Package className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-3xl font-black text-[var(--text-main,#E0E3E6)]">{stats.total}</span>
-            <span className="text-xs text-[var(--text-sub,#B5BDC6)] ml-2">{isHu ? 'nyilvántartott termék' : 'tracked products'}</span>
+            <span className="text-2xl sm:text-3xl font-black text-[var(--text-main,#E0E3E6)]">{stats.total}</span>
+            <span className="text-[10px] sm:text-xs text-[var(--text-sub,#B5BDC6)] block sm:inline sm:ml-2">{isHu ? 'termék' : 'items'}</span>
           </div>
-        </div>
+        </button>
 
-        <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">
-              {isHu ? 'Fogyóban / Elfogyott' : 'Low / Out of Stock'}
+        {/* 2. Fogyóban / Elfogyott */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('low_stock');
+            document.getElementById('pantry-items-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className={`p-4 sm:p-5 rounded-[16px] border text-left transition-all duration-200 cursor-pointer group shadow-sm flex flex-col justify-between ${
+            activeTab === 'low_stock'
+              ? 'border-[var(--status-danger,#EF4444)] bg-[var(--status-danger,#EF4444)]/10 ring-2 ring-[var(--status-danger,#EF4444)]/40 scale-[1.01]'
+              : 'border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--status-danger,#EF4444)]/60 hover:bg-[var(--surface-bg,#465362)]/60'
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] sm:text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider truncate">
+              {isHu ? 'Fogyóban / Elfogyott' : 'Low / Out'}
             </span>
-            <div className="p-2 rounded-lg bg-[var(--status-danger,#EF4444)]/15 text-[var(--status-danger,#EF4444)]">
+            <div className="p-2 rounded-lg bg-[var(--status-danger,#EF4444)]/15 text-[var(--status-danger,#EF4444)] group-hover:scale-110 transition-transform shrink-0">
               <AlertTriangle className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className={`text-3xl font-black ${stats.lowStock > 0 ? 'text-[var(--status-danger,#EF4444)]' : 'text-[var(--text-main,#E0E3E6)]'}`}>
+            <span className={`text-2xl sm:text-3xl font-black ${stats.lowStock > 0 ? 'text-[var(--status-danger,#EF4444)]' : 'text-[var(--text-main,#E0E3E6)]'}`}>
               {stats.lowStock}
             </span>
-            <span className="text-xs text-[var(--text-sub,#B5BDC6)] ml-2">{isHu ? 'utánpótlásra vár' : 'need restock'}</span>
+            <span className="text-[10px] sm:text-xs text-[var(--text-sub,#B5BDC6)] block sm:inline sm:ml-2">{isHu ? 'utánpótlásra vár' : 'low'}</span>
           </div>
-        </div>
+        </button>
 
-        <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">
+        {/* 3. Közelgő lejárati idő */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('expiring');
+            document.getElementById('pantry-items-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className={`p-4 sm:p-5 rounded-[16px] border text-left transition-all duration-200 cursor-pointer group shadow-sm flex flex-col justify-between ${
+            activeTab === 'expiring'
+              ? 'border-[var(--status-warning,#F59E0B)] bg-[var(--status-warning,#F59E0B)]/10 ring-2 ring-[var(--status-warning,#F59E0B)]/40 scale-[1.01]'
+              : 'border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--status-warning,#F59E0B)]/60 hover:bg-[var(--surface-bg,#465362)]/60'
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] sm:text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider truncate">
               {isHu ? 'Közelgő lejárati idő' : 'Expiring Soon'}
             </span>
-            <div className="p-2 rounded-lg bg-[var(--status-warning,#F59E0B)]/15 text-[var(--status-warning,#F59E0B)]">
+            <div className="p-2 rounded-lg bg-[var(--status-warning,#F59E0B)]/15 text-[var(--status-warning,#F59E0B)] group-hover:scale-110 transition-transform shrink-0">
               <Clock className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className={`text-3xl font-black ${stats.expiring > 0 ? 'text-[var(--status-warning,#F59E0B)]' : 'text-[var(--text-main,#E0E3E6)]'}`}>
+            <span className={`text-2xl sm:text-3xl font-black ${stats.expiring > 0 ? 'text-[var(--status-warning,#F59E0B)]' : 'text-[var(--text-main,#E0E3E6)]'}`}>
               {stats.expiring}
             </span>
-            <span className="text-xs text-[var(--text-sub,#B5BDC6)] ml-2">{isHu ? '7 napon belül' : 'within 7 days'}</span>
+            <span className="text-[10px] sm:text-xs text-[var(--text-sub,#B5BDC6)] block sm:inline sm:ml-2">{isHu ? '7 napon belül' : 'expiring'}</span>
           </div>
-        </div>
+        </button>
 
-        <div className="p-5 rounded-[14px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">
+        {/* 4. Bevásárlólista */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('shopping_list');
+            setIsShoppingListOpen(true);
+          }}
+          className={`p-4 sm:p-5 rounded-[16px] border text-left transition-all duration-200 cursor-pointer group shadow-sm flex flex-col justify-between ${
+            activeTab === 'shopping_list'
+              ? 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/40 scale-[1.01]'
+              : 'border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-emerald-500/60 hover:bg-[var(--surface-bg,#465362)]/60'
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] sm:text-xs font-semibold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider truncate">
               {isHu ? 'Bevásárlólista' : 'Shopping List'}
             </span>
-            <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400">
+            <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
               <ShoppingCart className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-3xl font-black text-emerald-400">{stats.shoppingList}</span>
-            <span className="text-xs text-[var(--text-sub,#B5BDC6)] ml-2">{isHu ? 'megvásárolandó tétel' : 'items to buy'}</span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-400">{stats.shoppingList}</span>
+            <span className="text-[10px] sm:text-xs text-[var(--text-sub,#B5BDC6)] block sm:inline sm:ml-2">{isHu ? 'megvásárolandó' : 'to buy'}</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center p-1 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] overflow-x-auto">
+      <div id="pantry-items-section" className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+        {/* Responsive Segmented Tabs: 2x2 grid on small screens, flex row on sm+ */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center p-1.5 rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] gap-1">
           {(['all', 'low_stock', 'expiring', 'shopping_list'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-3 py-2 sm:py-1.5 rounded-xl text-xs font-bold transition-all text-center sm:text-left ${
                 activeTab === tab
-                  ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
-                  : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                  ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-md'
+                  : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]/50'
               }`}
             >
               {tab === 'all' && (isHu ? 'Összes tétel' : 'All Items')}
@@ -425,7 +494,7 @@ export const PantryView: React.FC = () => {
                   {/* Top Bar: Name & Badges */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {item.category && (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
                             {item.category}
@@ -436,6 +505,15 @@ export const PantryView: React.FC = () => {
                             {isHu ? 'Alapcikk' : 'Staple'}
                           </span>
                         )}
+                        {isOut ? (
+                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-red-500/15 text-red-400 border border-red-500/30">
+                            🚫 {isHu ? 'Elfogyott' : 'Out of stock'}
+                          </span>
+                        ) : isLow ? (
+                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            ⚠️ {isHu ? 'Fogyóban' : 'Low stock'}
+                          </span>
+                        ) : null}
                       </div>
                       <h4 className="text-base font-bold text-[var(--text-main,#E0E3E6)] mt-1.5 truncate">
                         {item.name}
@@ -572,28 +650,69 @@ export const PantryView: React.FC = () => {
                 </div>
               ) : (
                 <ul className="space-y-2.5">
-                  {shoppingListItems.map(item => (
-                    <li
-                      key={item.id}
-                      className="p-3 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50 flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div>
-                        <span className="font-bold text-[var(--text-main,#E0E3E6)] block">{item.name}</span>
-                        <span className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
-                          {isHu
-                            ? `Jelenleg: ${item.current_quantity} ${item.unit} (Szükséges: ${item.min_threshold} ${item.unit})`
-                            : `Current: ${item.current_quantity} ${item.unit} (Target: ${item.min_threshold} ${item.unit})`}
-                        </span>
-                      </div>
+                  {shoppingListItems.map(item => {
+                    const isOut = Number(item.current_quantity) <= 0;
+                    const isLow = Number(item.current_quantity) > 0 && Number(item.current_quantity) <= Number(item.min_threshold);
 
-                      <button
-                        onClick={() => adjustPantryQuantity(item.id, Number(item.min_threshold) - Number(item.current_quantity) + 1)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white font-bold text-[11px] transition-colors shrink-0"
+                    return (
+                      <li
+                        key={item.id}
+                        className={`p-3 rounded-xl border flex items-start justify-between gap-3 text-xs transition-all ${
+                          isOut
+                            ? 'bg-red-500/5 border-red-500/30'
+                            : 'bg-amber-500/5 border-amber-500/30'
+                        }`}
                       >
-                        {isHu ? 'Megvéve (+feltöltés)' : 'Restock'}
-                      </button>
-                    </li>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-[var(--text-main,#E0E3E6)]">{item.name}</span>
+                            {isOut ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
+                                🚫 {isHu ? 'Elfogyott' : 'Out of stock'}
+                              </span>
+                            ) : isLow ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+                                ⚠️ {isHu ? 'Fogyóban' : 'Low stock'}
+                              </span>
+                            ) : null}
+                            {item.category && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                                {item.category}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-[11px] text-[var(--text-sub,#B5BDC6)] mt-1 flex items-center gap-2 flex-wrap">
+                            <span>
+                              {isHu
+                                ? `Jelenleg: ${item.current_quantity} ${item.unit} (Szükséges: ${item.min_threshold} ${item.unit})`
+                                : `Current: ${item.current_quantity} ${item.unit} (Target: ${item.min_threshold} ${item.unit})`}
+                            </span>
+                            {item.location_id && (
+                              <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]/80">
+                                📍 {getLocationPath(item.location_id)}
+                              </span>
+                            )}
+                          </div>
+
+                          {item.notes && (
+                            <div className="mt-1.5 p-1.5 rounded-lg bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)]/40 text-[11px] text-[var(--text-main,#E0E3E6)] flex items-start gap-1.5">
+                              <span className="shrink-0 text-xs">📝</span>
+                              <span className="italic break-words">„{item.notes}”</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => adjustPantryQuantity(item.id, Math.max(1, Number(item.min_threshold) - Number(item.current_quantity) + 1))}
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white font-bold text-[11px] transition-colors shrink-0 flex items-center gap-1 self-start mt-0.5"
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>{isHu ? 'Megvéve' : 'Restock'}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -665,42 +784,44 @@ export const PantryView: React.FC = () => {
                 </div>
 
                 {isAddingCategory ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/40 border border-[var(--border-color,#56616D)]">
                     <input
                       type="text"
                       value={newCategoryInput}
                       onChange={e => setNewCategoryInput(e.target.value)}
                       placeholder={isHu ? 'Új kategória neve...' : 'New category name...'}
                       autoFocus
-                      className="flex-1 px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--color-primary-blue,#2563EB)] text-[var(--text-main,#E0E3E6)] focus:outline-none"
+                      className="w-full sm:flex-1 px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--color-primary-blue,#2563EB)] text-[var(--text-main,#E0E3E6)] focus:outline-none"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const trimmed = newCategoryInput.trim();
-                        if (trimmed) {
-                          if (!customCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
-                            setCustomCategories(prev => [...prev, trimmed]);
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const trimmed = newCategoryInput.trim();
+                          if (trimmed) {
+                            if (!customCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+                              setCustomCategories(prev => [...prev, trimmed]);
+                            }
+                            setFormCategory(trimmed);
+                            setNewCategoryInput('');
+                            setIsAddingCategory(false);
                           }
-                          setFormCategory(trimmed);
-                          setNewCategoryInput('');
+                        }}
+                        className="flex-1 sm:flex-initial px-3 py-2 text-xs font-bold bg-[var(--color-primary-blue,#2563EB)] text-white rounded-xl hover:bg-[var(--color-primary-blue,#2563EB)]/90 whitespace-nowrap text-center shadow-sm"
+                      >
+                        {isHu ? 'Hozzáadás' : 'Add'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
                           setIsAddingCategory(false);
-                        }
-                      }}
-                      className="px-3 py-2 text-xs font-bold bg-[var(--color-primary-blue,#2563EB)] text-white rounded-xl hover:bg-[var(--color-primary-blue,#2563EB)]/90"
-                    >
-                      {isHu ? 'Hozzáadás' : 'Add'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAddingCategory(false);
-                        setNewCategoryInput('');
-                      }}
-                      className="px-2.5 py-2 text-xs font-bold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] rounded-xl"
-                    >
-                      {isHu ? 'Mégse' : 'Cancel'}
-                    </button>
+                          setNewCategoryInput('');
+                        }}
+                        className="flex-1 sm:flex-initial px-3 py-2 text-xs font-bold text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] rounded-xl border border-[var(--border-color,#56616D)] whitespace-nowrap text-center transition-colors"
+                      >
+                        {isHu ? 'Mégse' : 'Cancel'}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <select
@@ -733,8 +854,24 @@ export const PantryView: React.FC = () => {
                     type="number"
                     step="any"
                     min="0"
+                    placeholder="0"
                     value={formQuantity}
-                    onChange={e => setFormQuantity(Number(e.target.value))}
+                    onFocus={e => {
+                      if (formQuantity === 0 || e.target.value === '0') {
+                        setFormQuantity('');
+                      } else {
+                        e.target.select();
+                      }
+                    }}
+                    onClick={e => {
+                      if (formQuantity === 0 || e.currentTarget.value === '0') {
+                        setFormQuantity('');
+                      }
+                    }}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setFormQuantity(val === '' ? '' : Number(val));
+                    }}
                     required
                     className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                   />
@@ -767,8 +904,24 @@ export const PantryView: React.FC = () => {
                     type="number"
                     step="any"
                     min="0"
+                    placeholder="0"
                     value={formMinThreshold}
-                    onChange={e => setFormMinThreshold(Number(e.target.value))}
+                    onFocus={e => {
+                      if (formMinThreshold === 0 || e.target.value === '0') {
+                        setFormMinThreshold('');
+                      } else {
+                        e.target.select();
+                      }
+                    }}
+                    onClick={e => {
+                      if (formMinThreshold === 0 || e.currentTarget.value === '0') {
+                        setFormMinThreshold('');
+                      }
+                    }}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setFormMinThreshold(val === '' ? '' : Number(val));
+                    }}
                     className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                   />
                 </div>
