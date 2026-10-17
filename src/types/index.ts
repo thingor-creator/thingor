@@ -417,6 +417,7 @@ export interface CollectionItem {
   name?: string;
   description?: string;
   photo_url?: string;
+  additional_photos?: string[];
   quantity?: number;
   collector_grade?: string;
   rarity?: string;

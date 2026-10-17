@@ -2700,6 +2700,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       name: details?.name,
       description: details?.description,
       photo_url: details?.photo_url,
+      additional_photos: details?.additional_photos || [],
       quantity: details?.quantity ?? 1,
       collector_grade: details?.collector_grade,
       rarity: details?.rarity,
@@ -2729,6 +2730,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (details?.name) insertPayload.name = details.name;
         if (details?.description) insertPayload.description = details.description;
         if (details?.photo_url) insertPayload.photo_url = details.photo_url;
+        if (details?.additional_photos) insertPayload.additional_photos = details.additional_photos;
         if (details?.quantity !== undefined) insertPayload.quantity = details.quantity;
 
         const { data, error } = await supabase

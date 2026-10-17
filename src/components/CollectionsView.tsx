@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Library,
@@ -16,11 +16,15 @@ import {
   ArrowLeft,
   Sparkles,
   ChevronRight,
+  ChevronLeft,
   Shield,
   Upload,
   Link as LinkIcon,
   Loader2,
-  Check
+  Check,
+  Maximize2,
+  Star,
+  Images
 } from 'lucide-react';
 import type { Collection, CollectionItem } from '../types';
 import { uploadFileToStorage, optimizeImageFile } from '../lib/storage';
@@ -73,6 +77,7 @@ export const CollectionsView: React.FC = () => {
   const [standaloneDesc, setStandaloneDesc] = useState('');
   const [standaloneQuantity, setStandaloneQuantity] = useState<number>(1);
   const [standalonePhotoUrl, setStandalonePhotoUrl] = useState('');
+  const [standaloneAdditionalPhotos, setStandaloneAdditionalPhotos] = useState<string[]>([]);
 
   // Item photo upload state
   const [isUploadingItemPhoto, setIsUploadingItemPhoto] = useState(false);
@@ -87,10 +92,47 @@ export const CollectionsView: React.FC = () => {
   const [catalogNumber, setCatalogNumber] = useState('');
   const [estimatedCollectorValue, setEstimatedCollectorValue] = useState<number | ''>('');
 
-  const processImageFile = async (file: File, target: 'item' | 'collection') => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      const msg = isHu ? 'Csak képfájl választható ki (JPG, PNG, WebP)!' : 'Only image files are supported (JPG, PNG, WebP)!';
+  // Fullscreen interactive gallery modal state
+  const [galleryModal, setGalleryModal] = useState<{
+    title: string;
+    photos: string[];
+    activeIndex: number;
+    subtitle?: string;
+  } | null>(null);
+
+  // Keyboard navigation for fullscreen gallery
+  useEffect(() => {
+    if (!galleryModal) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setGalleryModal(null);
+      } else if (e.key === 'ArrowLeft') {
+        setGalleryModal(prev => {
+          if (!prev || prev.photos.length <= 1) return prev;
+          const nextIdx = (prev.activeIndex - 1 + prev.photos.length) % prev.photos.length;
+          return { ...prev, activeIndex: nextIdx };
+        });
+      } else if (e.key === 'ArrowRight') {
+        setGalleryModal(prev => {
+          if (!prev || prev.photos.length <= 1) return prev;
+          const nextIdx = (prev.activeIndex + 1) % prev.photos.length;
+          return { ...prev, activeIndex: nextIdx };
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [galleryModal]);
+
+  const processImageFiles = async (files: FileList | File[], target: 'item' | 'collection') => {
+    const fileList = Array.from(files);
+    if (fileList.length === 0) return;
+
+    const invalid = fileList.some(f => !f.type.startsWith('image/'));
+    if (invalid) {
+      const msg = isHu ? 'Csak képfájlok választhatók ki (JPG, PNG, WebP)!' : 'Only image files are supported (JPG, PNG, WebP)!';
       if (target === 'item') setItemPhotoUploadError(msg);
       else setColCoverUploadError(msg);
       return;
@@ -104,56 +146,56 @@ export const CollectionsView: React.FC = () => {
       setColCoverUploadError(null);
     }
 
-    try {
-      const res = await uploadFileToStorage(file, 'photos', user?.id || 'demo');
-      if (res.signedUrl || res.path) {
-        const finalUrl = res.signedUrl || res.path || '';
-        if (target === 'item') setStandalonePhotoUrl(finalUrl);
-        else setColCover(finalUrl);
-      } else {
-        // Fallback: convert optimized WebP or raw file to Data URL
-        try {
-          const optimized = await optimizeImageFile(file);
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const result = e.target?.result as string;
-            if (result) {
-              if (target === 'item') setStandalonePhotoUrl(result);
-              else setColCover(result);
-            }
-          };
-          reader.readAsDataURL(optimized);
-        } catch {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const result = e.target?.result as string;
-            if (result) {
-              if (target === 'item') setStandalonePhotoUrl(result);
-              else setColCover(result);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      }
-    } catch (err: any) {
+    const uploadedUrls: string[] = [];
+
+    for (const file of fileList) {
       try {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          if (result) {
-            if (target === 'item') setStandalonePhotoUrl(result);
-            else setColCover(result);
-          }
-        };
-        reader.readAsDataURL(file);
-      } catch {
-        const msg = err?.message || (isHu ? 'Nem sikerült feldolgozni a képet.' : 'Failed to process image.');
-        if (target === 'item') setItemPhotoUploadError(msg);
-        else setColCoverUploadError(msg);
+        const res = await uploadFileToStorage(file, 'photos', user?.id || 'demo');
+        if (res.signedUrl || res.path) {
+          uploadedUrls.push(res.signedUrl || res.path || '');
+        } else {
+          // Fallback to data URL
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            optimizeImageFile(file).then(optimized => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target?.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(optimized);
+            }).catch(() => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target?.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+          });
+          if (dataUrl) uploadedUrls.push(dataUrl);
+        }
+      } catch (err: any) {
+        console.warn('Error processing image:', err);
       }
-    } finally {
-      if (target === 'item') setIsUploadingItemPhoto(false);
-      else setIsUploadingColCover(false);
+    }
+
+    if (target === 'item') {
+      setIsUploadingItemPhoto(false);
+      if (uploadedUrls.length > 0) {
+        if (!standalonePhotoUrl) {
+          setStandalonePhotoUrl(uploadedUrls[0]);
+          if (uploadedUrls.length > 1) {
+            setStandaloneAdditionalPhotos(prev => [...prev, ...uploadedUrls.slice(1)]);
+          }
+        } else {
+          setStandaloneAdditionalPhotos(prev => [...prev, ...uploadedUrls]);
+        }
+      } else {
+        setItemPhotoUploadError(isHu ? 'Nem sikerült feltölteni a képeket.' : 'Failed to upload photos.');
+      }
+    } else {
+      setIsUploadingColCover(false);
+      if (uploadedUrls.length > 0) {
+        setColCover(uploadedUrls[0]);
+      } else {
+        setColCoverUploadError(isHu ? 'Nem sikerült feltölteni a borítóképet.' : 'Failed to upload cover photo.');
+      }
     }
   };
 
@@ -311,6 +353,7 @@ export const CollectionsView: React.FC = () => {
     setStandaloneDesc('');
     setStandaloneQuantity(1);
     setStandalonePhotoUrl('');
+    setStandaloneAdditionalPhotos([]);
     setIsUploadingItemPhoto(false);
     setItemPhotoUploadError(null);
     setItemPhotoTab('upload');
@@ -331,6 +374,7 @@ export const CollectionsView: React.FC = () => {
     setStandaloneDesc(ci.description || '');
     setStandaloneQuantity(ci.quantity ?? 1);
     setStandalonePhotoUrl(ci.photo_url || '');
+    setStandaloneAdditionalPhotos(ci.additional_photos || []);
     setIsUploadingItemPhoto(false);
     setItemPhotoUploadError(null);
     setItemPhotoTab(ci.photo_url && ci.photo_url.startsWith('http') && !ci.photo_url.includes('data:') ? 'url' : 'upload');
@@ -354,7 +398,8 @@ export const CollectionsView: React.FC = () => {
       name: itemEntryMode === 'standalone' ? standaloneName.trim() : undefined,
       description: itemEntryMode === 'standalone' ? (standaloneDesc.trim() || undefined) : undefined,
       quantity: itemEntryMode === 'standalone' ? (Number(standaloneQuantity) || 1) : 1,
-      photo_url: itemEntryMode === 'standalone' ? (standalonePhotoUrl.trim() || undefined) : undefined,
+      photo_url: itemEntryMode === 'standalone' ? (standalonePhotoUrl.trim() || undefined) : (standalonePhotoUrl.trim() || undefined),
+      additional_photos: standaloneAdditionalPhotos.length > 0 ? standaloneAdditionalPhotos : [],
       collector_grade: collectorGrade.trim() || undefined,
       rarity: rarity.trim() || undefined,
       acquired_year: acquiredYear ? Number(acquiredYear) : undefined,
@@ -398,8 +443,27 @@ export const CollectionsView: React.FC = () => {
               </button>
             )}
             {currentCollection?.cover_image_url ? (
-              <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-[var(--border-color,#56616D)] shadow-sm bg-[var(--surface-bg,#465362)]">
-                <img src={currentCollection.cover_image_url} alt={currentCollection.name} className="w-full h-full object-cover" />
+              <div
+                onClick={() => setGalleryModal({
+                  title: currentCollection.name,
+                  photos: [currentCollection.cover_image_url!],
+                  activeIndex: 0,
+                  subtitle: isHu ? 'Gyűjtemény borítóképe' : 'Collection cover image'
+                })}
+                className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-[var(--border-color,#56616D)] shadow-sm bg-[var(--surface-bg,#465362)] relative cursor-pointer group"
+                title={isHu ? 'Kattints a borítókép megtekintéséhez' : 'Click to view cover image'}
+              >
+                <img
+                  src={currentCollection.cover_image_url}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-sm opacity-40 scale-125"
+                />
+                <img
+                  src={currentCollection.cover_image_url}
+                  alt={currentCollection.name}
+                  className="relative z-10 w-full h-full object-contain p-0.5 group-hover:scale-105 transition-transform"
+                />
               </div>
             ) : (
               <div className="p-2.5 rounded-xl bg-[var(--cat-books,#818CF8)]/15 text-[var(--cat-books,#818CF8)]">
@@ -567,16 +631,42 @@ export const CollectionsView: React.FC = () => {
                   >
                     <div>
                       {col.cover_image_url && (
-                        <div className="h-28 -mx-5 -mt-5 mb-3.5 rounded-t-[18px] overflow-hidden bg-black/20 relative">
+                        <div className="h-44 -mx-5 -mt-5 mb-4 rounded-t-[18px] overflow-hidden bg-black/40 relative flex items-center justify-center isolate">
+                          {/* Ambient blurred backdrop to prevent dark empty edges while maintaining modern aesthetic */}
+                          <img
+                            src={col.cover_image_url}
+                            alt=""
+                            aria-hidden="true"
+                            className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-125"
+                          />
+                          {/* Foreground full image: object-contain ensures 100% of the image is shown without cropping */}
                           <img
                             src={col.cover_image_url}
                             alt={col.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="relative z-10 max-h-full max-w-full object-contain p-2 group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
                             onError={(e) => {
                               (e.target as HTMLElement).style.display = 'none';
                             }}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--card-bg,#3A4551)] via-transparent to-transparent opacity-80" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--card-bg,#3A4551)] via-transparent to-transparent opacity-70 pointer-events-none" />
+                          
+                          {/* Quick full-size preview button on card */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGalleryModal({
+                                title: col.name,
+                                photos: [col.cover_image_url!],
+                                activeIndex: 0,
+                                subtitle: isHu ? `${getCollectionTypeLabel(col.collection_type)} • Borítókép` : `${getCollectionTypeLabel(col.collection_type)} • Cover Image`
+                              });
+                            }}
+                            className="absolute top-2.5 right-2.5 z-20 p-2 rounded-xl bg-black/60 hover:bg-black/85 text-white/90 hover:text-white backdrop-blur border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                            title={isHu ? 'Borítókép nagyítása' : 'View full-size cover image'}
+                          >
+                            <Maximize2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       )}
                       {/* Top Bar: Icon & Type Badge */}
@@ -673,65 +763,119 @@ export const CollectionsView: React.FC = () => {
                     className="p-5 rounded-[16px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] flex flex-col justify-between shadow-sm"
                   >
                     <div>
-                      {/* Item header */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div
-                          onClick={() => {
-                            if (ci.item_id && item) {
-                              setSelectedItemId(item.id);
-                            }
-                          }}
-                          className={`flex items-center gap-3 flex-1 min-w-0 ${ci.item_id && item ? 'cursor-pointer group' : ''}`}
-                        >
-                          <div className="w-12 h-12 rounded-xl bg-[var(--surface-bg,#465362)] overflow-hidden shrink-0 flex items-center justify-center border border-[var(--border-color,#56616D)]">
-                            {ci.photo_url || item?.photo_url ? (
-                              <img src={ci.photo_url || item?.photo_url} alt={ci.name || item?.name || ''} className="w-full h-full object-cover" />
+                      {/* Item Media Showcase (Large Photo + Gallery trigger) */}
+                      {(() => {
+                        const primaryPhoto = ci.photo_url || item?.photo_url;
+                        const extraPhotos = [
+                          ...(ci.additional_photos || []),
+                          ...((item?.additional_photos || []).filter(p => p !== ci.photo_url && !(ci.additional_photos || []).includes(p)))
+                        ];
+                        const allItemPhotos = [
+                          ...(primaryPhoto ? [primaryPhoto] : []),
+                          ...extraPhotos.filter(p => p !== primaryPhoto)
+                        ];
+
+                        return (
+                          <div className="space-y-3">
+                            {allItemPhotos.length > 0 ? (
+                              <div
+                                onClick={() => setGalleryModal({
+                                  title: item?.name || ci.name || (isHu ? 'Gyűjteményi tétel' : 'Collection Item'),
+                                  photos: allItemPhotos,
+                                  activeIndex: 0,
+                                  subtitle: ci.item_id ? (isHu ? 'Leltári tárgy' : 'Inventory Item') : (isHu ? 'Önálló gyűjteményi tétel' : 'Standalone Item')
+                                })}
+                                className="h-44 -mx-5 -mt-5 mb-3 rounded-t-[16px] overflow-hidden bg-black/40 relative flex items-center justify-center cursor-pointer group/photo isolate"
+                                title={isHu ? 'Kattints a képek nagy méretű galériájához' : 'Click to view full-size gallery'}
+                              >
+                                <img
+                                  src={allItemPhotos[0]}
+                                  alt=""
+                                  aria-hidden="true"
+                                  className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-125"
+                                />
+                                <img
+                                  src={allItemPhotos[0]}
+                                  alt={item?.name || ci.name || ''}
+                                  className="relative z-10 max-h-full max-w-full object-contain p-2 group-hover/photo:scale-105 transition-transform duration-300 drop-shadow-md"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[var(--card-bg,#3A4551)] via-transparent to-transparent opacity-60 pointer-events-none" />
+
+                                {/* Multi-photo count pill */}
+                                {allItemPhotos.length > 1 && (
+                                  <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white text-[11px] font-bold shadow-md">
+                                    <Images className="h-3.5 w-3.5 text-[var(--color-primary-blue,#2563EB)]" />
+                                    <span>{allItemPhotos.length} {isHu ? 'kép' : 'photos'}</span>
+                                  </div>
+                                )}
+
+                                {/* Zoom / View Fullscreen trigger button */}
+                                <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+                                  <span className="p-2 rounded-xl bg-black/60 hover:bg-black/85 text-white/90 hover:text-white backdrop-blur border border-white/10 opacity-80 group-hover/photo:opacity-100 transition-opacity shadow-lg">
+                                    <Maximize2 className="h-3.5 w-3.5" />
+                                  </span>
+                                </div>
+                              </div>
                             ) : (
-                              <Package className="h-5 w-5 text-[var(--text-sub,#B5BDC6)]" />
+                              <div className="h-28 -mx-5 -mt-5 mb-3 rounded-t-[16px] bg-[var(--surface-bg,#465362)]/30 flex flex-col items-center justify-center text-[var(--text-sub,#B5BDC6)] border-b border-[var(--border-color,#56616D)]/40">
+                                <Package className="h-8 w-8 opacity-40 mb-1" />
+                                <span className="text-[11px] opacity-70">{isHu ? 'Nincs fénykép feltöltve' : 'No photos uploaded'}</span>
+                              </div>
                             )}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className={`text-sm font-bold text-[var(--text-main,#E0E3E6)] truncate ${ci.item_id && item ? 'group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors' : ''}`}>
-                              {item?.name || ci.name || (isHu ? 'Névtelen gyűjteményi tétel' : 'Unnamed item')}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {ci.item_id ? (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
-                                  {isHu ? 'Leltári tárgy' : 'Inventory Item'}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
-                                  {isHu ? 'Önálló tétel' : 'Standalone'} {ci.quantity && ci.quantity > 1 ? `(${ci.quantity} db)` : ''}
-                                </span>
-                              )}
-                              <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-semibold">
-                                {item?.current_value ? formatCurrency(item.current_value) : item?.purchase_price ? formatCurrency(item.purchase_price) : ''}
-                              </span>
+
+                            {/* Item Title and Actions Header */}
+                            <div className="flex items-start justify-between gap-3">
+                              <div
+                                onClick={() => {
+                                  if (ci.item_id && item) {
+                                    setSelectedItemId(item.id);
+                                  }
+                                }}
+                                className={`flex-1 min-w-0 ${ci.item_id && item ? 'cursor-pointer group' : ''}`}
+                              >
+                                <h4 className={`text-sm font-bold text-[var(--text-main,#E0E3E6)] truncate ${ci.item_id && item ? 'group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors' : ''}`}>
+                                  {item?.name || ci.name || (isHu ? 'Névtelen gyűjteményi tétel' : 'Unnamed item')}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {ci.item_id ? (
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
+                                      {isHu ? 'Leltári tárgy' : 'Inventory Item'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
+                                      {isHu ? 'Önálló tétel' : 'Standalone'} {ci.quantity && ci.quantity > 1 ? `(${ci.quantity} db)` : ''}
+                                    </span>
+                                  )}
+                                  <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-semibold">
+                                    {item?.current_value ? formatCurrency(item.current_value) : item?.purchase_price ? formatCurrency(item.purchase_price) : ''}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleOpenEditItem(ci)}
+                                  className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]"
+                                  title={isHu ? 'Szerkesztés' : 'Edit'}
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm(isHu ? 'Biztosan eltávolítod ezt a tételt a gyűjteményből?' : 'Are you sure you want to remove this item from the collection?')) {
+                                      deleteCollectionItem(ci.id);
+                                    }
+                                  }}
+                                  className="p-1.5 rounded-lg text-[var(--status-danger,#EF4444)]/80 hover:text-[var(--status-danger,#EF4444)] hover:bg-[var(--status-danger,#EF4444)]/10"
+                                  title={isHu ? 'Eltávolítás a gyűjteményből' : 'Remove from collection'}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleOpenEditItem(ci)}
-                            className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]"
-                            title={isHu ? 'Szerkesztés' : 'Edit'}
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (window.confirm(isHu ? 'Biztosan eltávolítod ezt a tételt a gyűjteményből?' : 'Are you sure you want to remove this item from the collection?')) {
-                                deleteCollectionItem(ci.id);
-                              }
-                            }}
-                            className="p-1.5 rounded-lg text-[var(--status-danger,#EF4444)]/80 hover:text-[var(--status-danger,#EF4444)] hover:bg-[var(--status-danger,#EF4444)]/10"
-                            title={isHu ? 'Eltávolítás a gyűjteményből' : 'Remove from collection'}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       {/* Standalone description if any */}
                       {ci.description && (
@@ -908,11 +1052,17 @@ export const CollectionsView: React.FC = () => {
 
                 {colCover ? (
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)]">
-                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black/20 shrink-0 border border-[var(--border-color,#56616D)]">
+                    <div className="relative w-20 h-16 rounded-xl overflow-hidden bg-black/40 shrink-0 border border-[var(--border-color,#56616D)] flex items-center justify-center isolate">
+                      <img
+                        src={colCover}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-sm opacity-40 scale-125"
+                      />
                       <img
                         src={colCover}
                         alt="Cover preview"
-                        className="w-full h-full object-cover"
+                        className="relative z-10 max-h-full max-w-full object-contain p-1"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = 'none';
                         }}
@@ -934,8 +1084,7 @@ export const CollectionsView: React.FC = () => {
                             accept="image/*"
                             className="hidden"
                             onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) processImageFile(file, 'collection');
+                              if (e.target.files) processImageFiles(e.target.files, 'collection');
                               e.target.value = '';
                             }}
                           />
@@ -968,8 +1117,7 @@ export const CollectionsView: React.FC = () => {
                       e.preventDefault();
                       e.stopPropagation();
                       setIsColDragging(false);
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) processImageFile(file, 'collection');
+                      if (e.dataTransfer.files) processImageFiles(e.dataTransfer.files, 'collection');
                     }}
                     className={`flex flex-col items-center justify-center p-3.5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                       isColDragging
@@ -1001,8 +1149,7 @@ export const CollectionsView: React.FC = () => {
                       className="hidden"
                       disabled={isUploadingColCover}
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) processImageFile(file, 'collection');
+                        if (e.target.files) processImageFiles(e.target.files, 'collection');
                         e.target.value = '';
                       }}
                     />
@@ -1126,87 +1273,46 @@ export const CollectionsView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Photo Upload & URL Section */}
-                  <div className="space-y-2">
+                  {/* Multi-Photo Upload & URL Section */}
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
-                        {isHu ? 'Tétel fényképe (opcionális)' : 'Item Photo (optional)'}
+                        {isHu ? 'Tétel fényképei (Fő kép & További fotók)' : 'Item Photos (Primary & Additional)'}
                       </label>
-                      <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
-                        <button
-                          type="button"
-                          onClick={() => setItemPhotoTab('upload')}
-                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
-                            itemPhotoTab === 'upload'
-                              ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
-                              : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
-                          }`}
-                        >
-                          <Upload className="h-3 w-3" />
-                          <span>{isHu ? 'Feltöltés' : 'Upload'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setItemPhotoTab('url')}
-                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
-                            itemPhotoTab === 'url'
-                              ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
-                              : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
-                          }`}
-                        >
-                          <LinkIcon className="h-3 w-3" />
-                          <span>{isHu ? 'URL' : 'URL'}</span>
-                        </button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] font-semibold">
+                          {(standalonePhotoUrl ? 1 : 0) + standaloneAdditionalPhotos.length} {isHu ? 'kép' : 'photos'}
+                        </span>
+                        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                          <button
+                            type="button"
+                            onClick={() => setItemPhotoTab('upload')}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
+                              itemPhotoTab === 'upload'
+                                ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                                : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                            }`}
+                          >
+                            <Upload className="h-3 w-3" />
+                            <span>{isHu ? 'Feltöltés' : 'Upload'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setItemPhotoTab('url')}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
+                              itemPhotoTab === 'url'
+                                ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                                : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                            }`}
+                          >
+                            <LinkIcon className="h-3 w-3" />
+                            <span>{isHu ? 'URL' : 'URL'}</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    {standalonePhotoUrl ? (
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)]">
-                        <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black/20 shrink-0 border border-[var(--border-color,#56616D)]">
-                          <img
-                            src={standalonePhotoUrl}
-                            alt="Item preview"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-main,#E0E3E6)]">
-                            <Check className="h-3.5 w-3.5 text-emerald-400" />
-                            <span>{isHu ? 'Kép csatolva' : 'Photo attached'}</span>
-                          </div>
-                          <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] truncate mt-0.5">
-                            {standalonePhotoUrl.startsWith('data:') ? (isHu ? 'Beágyazott képfájl' : 'Embedded image file') : standalonePhotoUrl}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <label className="text-[11px] font-bold text-[var(--color-primary-blue,#2563EB)] hover:underline cursor-pointer">
-                              {isHu ? 'Csere' : 'Replace'}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) processImageFile(file, 'item');
-                                  e.target.value = '';
-                                }}
-                              />
-                            </label>
-                            <span className="text-[var(--border-color,#56616D)]">•</span>
-                            <button
-                              type="button"
-                              onClick={() => setStandalonePhotoUrl('')}
-                              className="text-[11px] font-bold text-[var(--status-danger,#EF4444)] hover:underline flex items-center gap-1"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              <span>{isHu ? 'Törlés' : 'Remove'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : itemPhotoTab === 'upload' ? (
+                    {itemPhotoTab === 'upload' ? (
                       <label
                         onDragOver={(e) => {
                           e.preventDefault();
@@ -1222,8 +1328,7 @@ export const CollectionsView: React.FC = () => {
                           e.preventDefault();
                           e.stopPropagation();
                           setIsItemDragging(false);
-                          const file = e.dataTransfer.files?.[0];
-                          if (file) processImageFile(file, 'item');
+                          if (e.dataTransfer.files) processImageFiles(e.dataTransfer.files, 'item');
                         }}
                         className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                           isItemDragging
@@ -1234,7 +1339,7 @@ export const CollectionsView: React.FC = () => {
                         {isUploadingItemPhoto ? (
                           <div className="flex items-center gap-2 py-2 text-xs font-bold text-[var(--text-main,#E0E3E6)]">
                             <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
-                            <span>{isHu ? 'Kép feltöltése és optimalizálása...' : 'Uploading and optimizing photo...'}</span>
+                            <span>{isHu ? 'Képek feltöltése és optimalizálása...' : 'Uploading and optimizing photos...'}</span>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-1 text-center py-1">
@@ -1242,35 +1347,61 @@ export const CollectionsView: React.FC = () => {
                               <Upload className="h-4 w-4" />
                             </div>
                             <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">
-                              {isHu ? 'Kattints a fénykép tallózásához vagy húzd ide' : 'Click to browse photo or drag & drop'}
+                              {isHu ? 'Kattints több fénykép tallózásához vagy húzd ide' : 'Click to browse multiple photos or drag & drop'}
                             </span>
                             <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]">
-                              JPG, PNG, WebP (max. 15MB, automatikus optimalizálás)
+                              JPG, PNG, WebP (több kép is kiválasztható egyszerre)
                             </span>
                           </div>
                         )}
                         <input
                           type="file"
                           accept="image/*"
+                          multiple
                           className="hidden"
                           disabled={isUploadingItemPhoto}
                           onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) processImageFile(file, 'item');
+                            if (e.target.files) processImageFiles(e.target.files, 'item');
                             e.target.value = '';
                           }}
                         />
                       </label>
                     ) : (
-                      <div className="relative">
-                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-sub,#B5BDC6)]" />
-                        <input
-                          type="url"
-                          value={standalonePhotoUrl}
-                          onChange={(e) => setStandalonePhotoUrl(e.target.value)}
-                          placeholder="https://images.unsplash.com/..."
-                          className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                        />
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-sub,#B5BDC6)]" />
+                          <input
+                            type="url"
+                            placeholder="https://images.unsplash.com/..."
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const val = (e.target as HTMLInputElement).value.trim();
+                                if (val) {
+                                  if (!standalonePhotoUrl) setStandalonePhotoUrl(val);
+                                  else setStandaloneAdditionalPhotos(prev => [...prev, val]);
+                                  (e.target as HTMLInputElement).value = '';
+                                }
+                              }
+                            }}
+                            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            const input = (e.currentTarget.previousElementSibling?.querySelector('input') as HTMLInputElement);
+                            if (input && input.value.trim()) {
+                              const val = input.value.trim();
+                              if (!standalonePhotoUrl) setStandalonePhotoUrl(val);
+                              else setStandaloneAdditionalPhotos(prev => [...prev, val]);
+                              input.value = '';
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] text-white text-xs font-bold"
+                        >
+                          {isHu ? 'Hozzáadás' : 'Add'}
+                        </button>
                       </div>
                     )}
 
@@ -1278,6 +1409,79 @@ export const CollectionsView: React.FC = () => {
                       <p className="text-[11px] text-[var(--status-danger,#EF4444)] font-medium">
                         {itemPhotoUploadError}
                       </p>
+                    )}
+
+                    {/* Uploaded Photos Gallery Preview & Reorder / Set-Primary */}
+                    {(standalonePhotoUrl || standaloneAdditionalPhotos.length > 0) && (
+                      <div className="space-y-1.5 pt-2 border-t border-[var(--border-color,#56616D)]/50">
+                        <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)] block">
+                          {isHu ? 'Csatolt képek galériája:' : 'Attached photos gallery:'}
+                        </span>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {standalonePhotoUrl && (
+                            <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-[var(--color-primary-blue,#2563EB)] bg-black/40 group p-1 flex items-center justify-center isolate">
+                              <img
+                                src={standalonePhotoUrl}
+                                alt="Primary"
+                                className="relative z-10 max-h-full max-w-full object-contain"
+                              />
+                              <span className="absolute top-1 left-1 z-20 px-1.5 py-0.5 rounded bg-[var(--card-bg,#3A4551)]/90 text-[9px] font-extrabold text-[var(--color-primary-blue,#2563EB)] border border-[var(--border-color,#56616D)]">
+                                {isHu ? 'Fő Kép' : 'Primary'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (standaloneAdditionalPhotos.length > 0) {
+                                    setStandalonePhotoUrl(standaloneAdditionalPhotos[0]);
+                                    setStandaloneAdditionalPhotos(prev => prev.slice(1));
+                                  } else {
+                                    setStandalonePhotoUrl('');
+                                  }
+                                }}
+                                className="absolute top-1 right-1 z-20 p-1 rounded-lg bg-[var(--card-bg,#3A4551)]/90 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                                title={isHu ? 'Kép törlése' : 'Remove photo'}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+
+                          {standaloneAdditionalPhotos.map((url, idx) => (
+                            <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-[var(--border-color,#56616D)] bg-black/40 group p-1 flex items-center justify-center isolate">
+                              <img
+                                src={url}
+                                alt={`Additional ${idx + 1}`}
+                                className="relative z-10 max-h-full max-w-full object-contain"
+                              />
+                              <div className="absolute top-1 right-1 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const oldPrimary = standalonePhotoUrl;
+                                    setStandalonePhotoUrl(url);
+                                    setStandaloneAdditionalPhotos(prev => {
+                                      const filtered = prev.filter((_, i) => i !== idx);
+                                      return oldPrimary ? [...filtered, oldPrimary] : filtered;
+                                    });
+                                  }}
+                                  className="p-1 rounded-lg bg-[var(--card-bg,#3A4551)]/90 text-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)] hover:text-white transition-colors"
+                                  title={isHu ? 'Beállítás fő képként' : 'Set as primary photo'}
+                                >
+                                  <Star className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setStandaloneAdditionalPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                  className="p-1 rounded-lg bg-[var(--card-bg,#3A4551)]/90 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors"
+                                  title={isHu ? 'Törlés' : 'Remove'}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -1358,11 +1562,11 @@ export const CollectionsView: React.FC = () => {
                                 <input
                                   type="file"
                                   accept="image/*"
+                                  multiple
                                   className="hidden"
                                   disabled={isUploadingItemPhoto}
                                   onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) processImageFile(file, 'item');
+                                    if (e.target.files) processImageFiles(e.target.files, 'item');
                                     e.target.value = '';
                                   }}
                                 />
@@ -1490,6 +1694,139 @@ export const CollectionsView: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN INTERACTIVE PHOTO GALLERY MODAL (Lightbox) */}
+      {galleryModal && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md animate-fade-in select-none"
+          onClick={() => setGalleryModal(null)}
+        >
+          {/* Top Bar: Title, Counter & Close Button */}
+          <div
+            className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0 bg-black/40 z-20"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-white/10 text-white">
+                <Images className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                  {galleryModal.title}
+                </h3>
+                {galleryModal.subtitle && (
+                  <p className="text-xs text-white/60 truncate">
+                    {galleryModal.subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 shrink-0">
+              {galleryModal.photos.length > 1 && (
+                <div className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-semibold tracking-wide">
+                  {galleryModal.activeIndex + 1} / {galleryModal.photos.length}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setGalleryModal(null)}
+                className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+                title={isHu ? 'Bezárás (ESC)' : 'Close (ESC)'}
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* Main Stage: Large Image + Next/Prev Navigation */}
+          <div
+            className="flex-1 relative flex items-center justify-center p-4 sm:p-8 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Previous Button */}
+            {galleryModal.photos.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setGalleryModal(prev => {
+                    if (!prev) return prev;
+                    const nextIdx = (prev.activeIndex - 1 + prev.photos.length) % prev.photos.length;
+                    return { ...prev, activeIndex: nextIdx };
+                  });
+                }}
+                className="absolute left-4 z-20 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur border border-white/15 transition-all hover:scale-105 shadow-xl"
+                title={isHu ? 'Előző kép (Bal nyíl)' : 'Previous photo (Left arrow)'}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
+
+            {/* Current Active Image with ambient blur backing */}
+            <div className="relative max-w-full max-h-full flex items-center justify-center">
+              <img
+                src={galleryModal.photos[galleryModal.activeIndex]}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-contain blur-2xl opacity-20 scale-110 pointer-events-none"
+              />
+              <img
+                key={galleryModal.activeIndex}
+                src={galleryModal.photos[galleryModal.activeIndex]}
+                alt={`${galleryModal.title} (${galleryModal.activeIndex + 1})`}
+                className="relative z-10 max-w-[92vw] max-h-[72vh] sm:max-h-[78vh] object-contain rounded-xl shadow-2xl transition-all duration-300"
+              />
+            </div>
+
+            {/* Next Button */}
+            {galleryModal.photos.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setGalleryModal(prev => {
+                    if (!prev) return prev;
+                    const nextIdx = (prev.activeIndex + 1) % prev.photos.length;
+                    return { ...prev, activeIndex: nextIdx };
+                  });
+                }}
+                className="absolute right-4 z-20 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur border border-white/15 transition-all hover:scale-105 shadow-xl"
+                title={isHu ? 'Következő kép (Jobb nyíl)' : 'Next photo (Right arrow)'}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Thumbnail Strip */}
+          {galleryModal.photos.length > 1 && (
+            <div
+              className="px-6 py-3 border-t border-white/10 bg-black/50 shrink-0 z-20 flex items-center justify-center gap-2 overflow-x-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              {galleryModal.photos.map((photo, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setGalleryModal(prev => prev ? { ...prev, activeIndex: idx } : null)}
+                  className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${
+                    idx === galleryModal.activeIndex
+                      ? 'border-[var(--color-primary-blue,#2563EB)] scale-105 shadow-lg'
+                      : 'border-white/20 opacity-50 hover:opacity-90'
+                  }`}
+                >
+                  <img
+                    src={photo}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
