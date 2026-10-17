@@ -657,10 +657,9 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           <div className="flex items-center gap-2 pt-1 sm:pt-0">
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer active:scale-95"
+              className="w-full sm:w-auto px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center shadow-lg shadow-blue-500/20 transition-all cursor-pointer active:scale-95"
             >
-              <Plus className="w-4 h-4 shrink-0" />
-              <span>+ Új tároló létrehozása</span>
+              <span>Új tároló létrehozása</span>
             </button>
           </div>
         </div>
