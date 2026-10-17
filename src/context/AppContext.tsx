@@ -1379,6 +1379,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       });
 
+    // Load physical storage containers
+    supabase
+      .from('storage_containers')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setStorageContainers(data as StorageContainer[]);
+        }
+      });
+
+    // Load container bulk items
+    supabase
+      .from('container_items')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setContainerItems(data as ContainerItem[]);
+        }
+      });
+
     return () => {
       isMounted = false;
     };
@@ -1671,6 +1693,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('thingor_household_invites');
     localStorage.removeItem('thingor_notifications');
     localStorage.removeItem('thingor_notification_settings');
+    localStorage.removeItem('thingor_storage_containers');
+    localStorage.removeItem('thingor_container_items');
+    setStorageContainers([]);
+    setContainerItems([]);
     localStorage.removeItem('thingor_current_view');
     setIsAuthModalOpen(false);
     setCurrentView('landing');
@@ -2709,7 +2735,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Physical Storage Containers & Bulk Items Module CRUD
-  const fetchStorageContainers = async (): Promise<void> => {
+  const fetchStorageContainers = useCallback(async (): Promise<void> => {
     if (!isSupabaseConfigured || !supabase || !user?.id) return;
     try {
       const { data, error } = await supabase
@@ -2718,16 +2744,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .order('created_at', { ascending: true });
       if (!error && data) {
         setStorageContainers(data as StorageContainer[]);
+      } else if (error) {
+        throw error;
       }
     } catch (e) {
       console.warn('Failed to fetch storage containers:', e);
+      throw e;
     }
-  };
+  }, [user?.id]);
 
-  const fetchContainerItems = async (containerId?: string): Promise<void> => {
+  const fetchContainerItems = useCallback(async (containerId?: string): Promise<void> => {
     if (!isSupabaseConfigured || !supabase || !user?.id) return;
     try {
-      let query = supabase.from('container_items').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('container_items').select('*').order('created_at', { ascending: true });
       if (containerId) query = query.eq('container_id', containerId);
       const { data, error } = await query;
       if (!error && data) {
@@ -2739,11 +2768,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         } else {
           setContainerItems(data as ContainerItem[]);
         }
+      } else if (error) {
+        throw error;
       }
     } catch (e) {
       console.warn('Failed to fetch container items:', e);
+      throw e;
     }
-  };
+  }, [user?.id]);
 
   const createStorageContainer = async (
     containerData: Omit<StorageContainer, 'id' | 'created_at' | 'updated_at'>
@@ -2785,7 +2817,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return data as StorageContainer;
         }
       } catch (e) {
-        console.warn('Falling back to local storage container creation:', e);
+        console.error('Error creating storage container in Supabase:', e);
         throw e;
       }
     }
@@ -2795,16 +2827,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateStorageContainer = async (id: string, updates: Partial<StorageContainer>): Promise<void> => {
+    const previousContainers = storageContainers;
     setStorageContainers(prev => prev.map(c => c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
 
     if (isSupabaseConfigured && supabase && isUUID(id)) {
       try {
-        const { error } = await supabase
+        const allowedUpdates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (updates.name !== undefined) allowedUpdates.name = updates.name.trim();
+        if (updates.container_type !== undefined) allowedUpdates.container_type = updates.container_type;
+        if (updates.location_id !== undefined) allowedUpdates.location_id = updates.location_id || null;
+        if (updates.parent_container_id !== undefined) allowedUpdates.parent_container_id = updates.parent_container_id || null;
+        if (updates.notes !== undefined) allowedUpdates.notes = updates.notes ? updates.notes.trim() : null;
+        if (updates.color !== undefined) allowedUpdates.color = updates.color || null;
+        if (updates.photo_url !== undefined) allowedUpdates.photo_url = updates.photo_url || null;
+        if (updates.qr_code !== undefined) allowedUpdates.qr_code = updates.qr_code || null;
+
+        const { data, error } = await supabase
           .from('storage_containers')
-          .update({ ...updates, updated_at: new Date().toISOString() })
-          .eq('id', id);
-        if (error) throw error;
+          .update(allowedUpdates)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          setStorageContainers(previousContainers);
+          throw error;
+        }
+
+        if (data) {
+          setStorageContainers(prev => prev.map(c => c.id === id ? (data as StorageContainer) : c));
+        }
       } catch (e) {
+        setStorageContainers(previousContainers);
         console.error('Failed to update storage container in Supabase:', e);
         throw e;
       }

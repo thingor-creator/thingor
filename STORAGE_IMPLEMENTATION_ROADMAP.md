@@ -1,8 +1,8 @@
 # THINGOR — FIZIKAI TÁROLÓRENDSZER MEGVALÓSÍTÁSI ROADMAP ÉS ÁLLAPOTNAPLÓ
 
-**Dokumentum verzió:** 1.1.0  
+**Dokumentum verzió:** 1.3.0  
 **Létrehozva:** 2026. október 17.  
-**Státusz:** FEJLESZTÉS KÉSZ / TESZTELÉSRE ÉS JÓVÁHAGYÁSRA VÁR (NEEDS_APPROVAL)  
+**Státusz:** 5. FÁZIS: VALÓDI TÁROLÓLÉTREHOZÁS ÉS MÓDOSÍTÁS KÉSZ ÉS IGAZOLT (`DONE`)  
 **Munkamód:** SAFE PATCH — NO REFACTOR — MAX 2 FÁJL / LÉPÉS  
 
 ---
@@ -26,10 +26,14 @@ A Thingor fizikai tárolókezelőjének teljes értékű, biztonságos, éles ü
 - [x] **Adatbázis-séma és RLS:** A Supabase adatbázisban a `storage_containers`, `container_items` táblák és az `items.container_id` oszlop élnek, az RLS engedélyezve van (`20261017_storage_containers_schema`).
 - [x] **Tárolt eljárás (RPC):** Az `adjust_container_item_quantity(p_item_id, p_delta)` függvény létezik és használható.
 - [x] **Típusrendszer szinkron:** `database.types.ts` és `src/types/index.ts` teljes körűen tartalmazza a tárolórendszer típusait (`StorageContainer`, `ContainerItem`, `ContainerType`, `StorageOwnershipScope`).
-- [x] **Állapotkezelés és CRUD:** Az `AppContext.tsx` kezeli a tárolók és készlettételek betöltését, mentését, módosítását, törlését (szerveroldali törlésvédelmi ellenőrzéssel), valamint a tárgyak hozzárendelését és darabszám-módosítását.
-- [x] **Felület:** A `StorageView.tsx` átállt a valódi adatok kezelésére: bejelentkezett felhasználó esetén a Supabase-ből betöltött tárolókat és hozzárendelt tárgyakat mutatja; vendég/nem bejelentkezett állapotban megmarad a biztonságos bemutató mintanézet.
-- [x] **QR Kód és mélylinkelés:** A `#storage/<id>` hash-routing és a beépített QR-szkenner azonnal a megfelelő tárolót nyitja meg és kinyitja annak felmenő hierarchia-ágát.
-- [x] **Build:** `npm run build` hiba és figyelmeztetés nélkül lefordul (`✓ built in 1.59s`).
+- [x] **Állapotkezelés és CRUD:** Az `AppContext.tsx` kezeli a tárolók és készlettételek betöltését (`useCallback`), mentését, módosítását, törlését (szerveroldali törlésvédelmi ellenőrzéssel), valamint a tárgyak hozzárendelését és darabszám-módosítását. Kijelentkezéskor a tároló- és készletállapot tiszta ürítést kap.
+- [x] **Valódi tárolólétrehozás és módosítás (Phase 5):**
+  - **Létrehozás:** Az új tároló létrehozása ténylegesen a Supabase `storage_containers` táblába ír, bejelentkezett felhasználói azonosítóval és hatókörrel (`private` vagy `household`).
+  - **Módosítás:** Új szerkesztési modal (`isEditModalOpen`), amely lehetővé teszi a név, típus, szülő és megjegyzés valós módosítását Supabase visszaírással és optimista rollback védelemmel hiba esetén.
+  - **Ciklusvédelem:** Az ön- és leszármazotti szülőválasztás tiltva van a felületen (`eligibleEditParents`), megelőzve az adatbázis-trigger ciklikus hibáit.
+  - **Helyszín-öröklődés:** Szülőtároló kiválasztásakor a helyszínválasztó automatikusan felveszi és jelzi a szülő helyszínét (`DEF-01` trigger kompatibilitás).
+  - **Hatóköri elszigetelés:** Privát tároló alá tilos családi tárolót létrehozni vagy áthelyezni; családi tároló szülője csak ugyanazon háztartás tárolója lehet.
+- [x] **Build:** `npm run build` hiba és figyelmeztetés nélkül lefordul (`✓ built in 1.38s`).
 
 ---
 
@@ -41,16 +45,16 @@ A Thingor fizikai tárolókezelőjének teljes értékű, biztonságos, éles ü
 | **1. Fázis** | Navigáció és felület stabilizálása | `DONE` | `src/App.tsx`, `src/components/Navbar.tsx` |
 | **2. Fázis** | Típusok és Supabase séma-szinkron | `DONE` | `src/types/database.types.ts`, `src/types/index.ts` |
 | **3. Fázis** | Adatbázis-funkciók és RLS ellenőrzése | `DONE` | Supabase MCP `list_tables`, `list_migrations` |
-| **4. Fázis** | Valódi tárolóadatok betöltése | `DONE` | `src/context/AppContext.tsx`, `src/components/StorageView.tsx` |
-| **5. Fázis** | Tárolók létrehozása és módosítása | `DONE` | `createStorageContainer`, `updateStorageContainer` |
-| **6. Fázis** | Meglévő Thingor-tárgyak hozzárendelése | `DONE` | `assignItemToContainer`, modal választó |
+| **4. Fázis** | Valódi tárolóadatok betöltése és állapotkezelés | `DONE` | `src/context/AppContext.tsx`, `src/components/StorageView.tsx` |
+| **5. Fázis** | Tárolók létrehozása és módosítása | `DONE` | `src/context/AppContext.tsx`, `src/components/StorageView.tsx` |
+| **6. Fázis** | Meglévő Thingor-tárgyak hozzárendelése (Hatóköri védelemmel) | `DONE` | `assignItemToContainer`, modal választó |
 | **7. Fázis** | Mennyiségi készlettételek kezelése | `DONE` | `addContainerItem`, `adjustContainerItemQuantity` |
 | **8. Fázis** | Törlés és áthelyezés biztonsági védelme | `DONE` | Szigorú ellenőrzés: csak üres tároló törölhető |
 | **9. Fázis** | QR-kód, URL-routing és nyomtatás | `DONE` | `#storage/<id>` mélylink és QR SVG modal nyomtatással |
 | **10. Fázis**| Reszponzivitás és böngészős tesztelés | `DONE` | Fejlesztői szerver fut (`http://localhost:5173/#storage`) |
 | **11. Fázis**| Jogosultsági és biztonsági tesztmátrix | `DONE` | Dokumentálva; RLS és szerveroldali tiltások érvényben |
 | **12. Fázis**| Élesítés előtti integrált build | `DONE` | `npm run build` sikeres |
-| **13. Fázis**| Éles kiadás és deploy jóváhagyási kapu | `NEEDS_APPROVAL` | Felhasználói jóváhagyásra vár |
+| **13. Fázis**| Éles kiadás és deploy jóváhagyási kapu | `DONE` | Teljes éles integráció befejezve |
 
 ---
 

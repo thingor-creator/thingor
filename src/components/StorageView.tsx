@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Boxes,
@@ -21,7 +21,11 @@ import {
   Minus,
   Trash2,
   ExternalLink,
-  Database
+  Database,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  Pencil
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../context/AppContext';
@@ -57,6 +61,8 @@ export interface StorageContainerDisplay {
   locationName: string;
   locationId?: string | null;
   description?: string;
+  ownership_scope?: 'private' | 'household';
+  household_id?: string | null;
   items: StorageItemDisplay[];
   bulkItems: ContainerBulkItemDisplay[];
   isReal: boolean;
@@ -169,6 +175,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     categories,
     household,
     isAuthenticated,
+    fetchStorageContainers,
+    fetchContainerItems,
     createStorageContainer,
     deleteStorageContainer,
     addContainerItem,
@@ -188,6 +196,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
@@ -197,6 +207,15 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [newContainerParentId, setNewContainerParentId] = useState<string>('');
   const [newContainerLocationId, setNewContainerLocationId] = useState<string>('');
   const [newContainerDesc, setNewContainerDesc] = useState('');
+  const [newContainerScope, setNewContainerScope] = useState<'private' | 'household'>('private');
+
+  // Form states for editing existing container
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editContainerName, setEditContainerName] = useState('');
+  const [editContainerType, setEditContainerType] = useState<ContainerType>('box');
+  const [editContainerParentId, setEditContainerParentId] = useState<string>('');
+  const [editContainerLocationId, setEditContainerLocationId] = useState<string>('');
+  const [editContainerDesc, setEditContainerDesc] = useState('');
 
   // Form states for adding bulk item
   const [newBulkName, setNewBulkName] = useState('');
@@ -205,7 +224,34 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [newBulkMinQty, setNewBulkMinQty] = useState<string>('');
   const [newBulkNotes, setNewBulkNotes] = useState('');
 
-  const isRealDataActive = isAuthenticated && storageContainers.length > 0;
+  // Real data is active whenever user is authenticated
+  const isRealDataActive = isAuthenticated;
+
+  // On-demand fetch of Supabase storage containers & items
+  const loadStorageData = useCallback(async () => {
+    if (!isAuthenticated) {
+      setIsLoading(false);
+      setLoadError(null);
+      return;
+    }
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      await Promise.all([
+        fetchStorageContainers(),
+        fetchContainerItems()
+      ]);
+    } catch (err: any) {
+      console.error('Hiba a tárolók betöltésekor:', err);
+      setLoadError(err?.message || 'Nem sikerült betölteni a tárolókat a felhőből.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, fetchStorageContainers, fetchContainerItems]);
+
+  useEffect(() => {
+    loadStorageData();
+  }, [loadStorageData]);
 
   // Build unified display containers list
   const containers: StorageContainerDisplay[] = useMemo(() => {
@@ -245,6 +291,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           locationName: loc?.name || (sc.ownership_scope === 'household' ? 'Közös háztartás' : 'Személyes tároló'),
           locationId: sc.location_id,
           description: sc.notes || undefined,
+          ownership_scope: sc.ownership_scope,
+          household_id: sc.household_id,
           items: assignedItems,
           bulkItems,
           isReal: true,
@@ -372,13 +420,22 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     setIsSubmitting(true);
     try {
       if (isAuthenticated) {
+        // Enforce parent-child scope compatibility
+        if (newContainerParentId) {
+          const parentCont = containers.find(c => c.id === newContainerParentId);
+          if (parentCont?.ownership_scope === 'private' && newContainerScope === 'household') {
+            throw new Error('Privát tároló alá nem helyezhető el családi megosztású tároló!');
+          }
+        }
+
         const created = await createStorageContainer({
           name: newContainerName.trim(),
           container_type: newContainerType,
           parent_container_id: newContainerParentId ? newContainerParentId : null,
-          location_id: newContainerLocationId ? newContainerLocationId : null,
+          location_id: newContainerParentId ? null : (newContainerLocationId ? newContainerLocationId : null),
           notes: newContainerDesc.trim() || null,
-          ownership_scope: household ? 'household' : 'private',
+          ownership_scope: newContainerScope,
+          household_id: newContainerScope === 'household' ? (household?.id || null) : null,
           user_id: '',
         });
 
@@ -389,7 +446,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           setSelectedContainerId(created.id);
           window.location.hash = `#storage/${created.id}`;
         }
-        showToast(`"${newContainerName.trim()}" tároló sikeresen elmentve az adatbázisban!`);
+        showToast(`"${newContainerName.trim()}" tároló sikeresen létrehozva a Supabase-ben!`);
       } else {
         showToast(`"${newContainerName.trim()}" hozzáadva a helyi előnézethez.`);
       }
@@ -400,8 +457,56 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
       setNewContainerParentId('');
       setNewContainerLocationId('');
       setNewContainerDesc('');
+      setNewContainerScope('private');
     } catch (err: any) {
+      console.error('Tároló létrehozási hiba:', err);
       showToast(err?.message || 'Hiba a tároló mentésekor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Open edit modal for selected container
+  const handleOpenEditModal = () => {
+    if (!selectedContainer) return;
+    setEditContainerName(selectedContainer.name);
+    setEditContainerType(selectedContainer.containerType);
+    setEditContainerParentId(selectedContainer.parentId || '');
+    setEditContainerLocationId(selectedContainer.locationId || '');
+    setEditContainerDesc(selectedContainer.description || '');
+    setIsEditModalOpen(true);
+  };
+
+  // Update existing container
+  const handleUpdateContainer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedContainer || !editContainerName.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      if (editContainerParentId) {
+        if (editContainerParentId === selectedContainer.id) {
+          throw new Error('Egy tároló nem lehet önmaga szülője!');
+        }
+        const parentCont = containers.find(c => c.id === editContainerParentId);
+        if (parentCont?.ownership_scope === 'private' && selectedContainer.ownership_scope === 'household') {
+          throw new Error('Privát tároló alá nem helyezhető el családi tároló!');
+        }
+      }
+
+      await updateStorageContainer(selectedContainer.id, {
+        name: editContainerName.trim(),
+        container_type: editContainerType,
+        parent_container_id: editContainerParentId ? editContainerParentId : null,
+        location_id: editContainerParentId ? undefined : (editContainerLocationId ? editContainerLocationId : null),
+        notes: editContainerDesc.trim() || null,
+      });
+
+      showToast(`"${editContainerName.trim()}" tároló sikeresen frissítve!`);
+      setIsEditModalOpen(false);
+    } catch (err: any) {
+      console.error('Tároló módosítási hiba:', err);
+      showToast(err?.message || 'Hiba a tároló módosításakor');
     } finally {
       setIsSubmitting(false);
     }
@@ -499,6 +604,43 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     }
   };
 
+  // Eligible parent containers for creation
+  const eligibleCreateParents = useMemo(() => {
+    return containers.filter(c => {
+      if (newContainerScope === 'household') {
+        return c.ownership_scope === 'household';
+      }
+      return true;
+    });
+  }, [containers, newContainerScope]);
+
+  // Descendants helper for cycle prevention
+  const getDescendantIds = useCallback((containerId: string): Set<string> => {
+    const descendants = new Set<string>();
+    const findChildren = (pid: string) => {
+      containers.filter(c => c.parentId === pid).forEach(c => {
+        descendants.add(c.id);
+        findChildren(c.id);
+      });
+    };
+    findChildren(containerId);
+    return descendants;
+  }, [containers]);
+
+  // Eligible parent containers for editing (strictly excludes self and descendants, and enforces household scope)
+  const eligibleEditParents = useMemo(() => {
+    if (!selectedContainer) return [];
+    const disallowed = getDescendantIds(selectedContainer.id);
+    disallowed.add(selectedContainer.id);
+    return containers.filter(c => {
+      if (disallowed.has(c.id)) return false;
+      if (selectedContainer.ownership_scope === 'household') {
+        return c.ownership_scope === 'household';
+      }
+      return true;
+    });
+  }, [containers, selectedContainer, getDescendantIds]);
+
   // Filter root containers for search
   const filteredContainers = containers.filter(c => {
     if (!searchQuery.trim()) return true;
@@ -508,11 +650,22 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
   const rootContainers = filteredContainers.filter(c => !c.parentId);
 
-  // Available unassigned items for assignment modal
+  // Available unassigned items for assignment modal (strictly respecting ownership scope)
   const assignableItems = useMemo(() => {
     if (!selectedContainer) return [];
     return items.filter(it => {
       if (it.container_id === selectedContainer.id) return false;
+
+      // Ownership scope constraint: private container only accepts private items; household accepts household items
+      if (selectedContainer.ownership_scope) {
+        if (selectedContainer.ownership_scope === 'household' && it.ownership_scope !== 'household') {
+          return false;
+        }
+        if (selectedContainer.ownership_scope === 'private' && it.ownership_scope === 'household') {
+          return false;
+        }
+      }
+
       if (!itemSearchQuery.trim()) return true;
       const q = itemSearchQuery.toLowerCase();
       return it.name.toLowerCase().includes(q);
@@ -664,19 +817,36 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           </div>
         </div>
 
+        {/* Error Alert Box with Retry */}
+        {loadError && (
+          <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-xs text-rose-200">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{loadError}</span>
+            </div>
+            <button
+              onClick={loadStorageData}
+              className="px-3 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Újrapróbálás</span>
+            </button>
+          </div>
+        )}
+
         {/* Status Callout Badge */}
         {isRealDataActive ? (
           <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-start gap-2.5 sm:gap-3">
             <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <div className="text-[11px] sm:text-xs text-emerald-200/90 leading-relaxed">
-              <strong className="text-white font-semibold">Aktív felhő szinkronizáció:</strong> Tárolóid és a hozzárendelt tételek a Supabase adatbázisban tárolódnak, RLS jogosultságvédelemmel és ciklusvédelemmel.
+              <strong className="text-white font-semibold">Aktív felhő szinkronizáció:</strong> Tárolóid és a hozzárendelt tételek a Supabase adatbázisból töltődnek be, biztonságos RLS jogosultságvédelemmel és ciklusvédelemmel.
             </div>
           </div>
         ) : (
           <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-2.5 sm:gap-3">
             <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
             <div className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
-              <strong className="text-white font-semibold">Helyi demonstrációs minta:</strong> Az alábbi minta tárolók a felület kipróbálására szolgálnak. Az új tároló gombbal bármikor létrehozhatod saját éles tárolóidat.
+              <strong className="text-white font-semibold">Bemutató mintaadatok (Demo mód):</strong> Nem vagy bejelentkezve, ezért a felület minta tárolókat jelenít meg. Jelentkezz be saját felhő tárolóid és készleteid kezeléséhez.
             </div>
           </div>
         )}
@@ -712,8 +882,31 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
           {/* Tree Listing */}
           <div className="space-y-2">
-            {rootContainers.length > 0 ? (
+            {isLoading && containers.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center space-y-2.5 rounded-xl sm:rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)]">
+                <Loader2 className="w-6 h-6 text-[var(--color-primary-blue,#2563EB)] animate-spin" />
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)]">Tárolók betöltése a felhőből...</p>
+              </div>
+            ) : rootContainers.length > 0 ? (
               rootContainers.map(container => renderContainerNode(container, 0))
+            ) : containers.length === 0 ? (
+              <div className="text-center py-10 px-4 rounded-xl sm:rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-sub,#B5BDC6)] space-y-3">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-[var(--surface-bg,#465362)] flex items-center justify-center text-[var(--text-sub,#B5BDC6)]">
+                  <Box className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-bold text-white text-xs sm:text-sm">Még nincs rögzített tárolód</p>
+                  <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] max-w-xs mx-auto">
+                    Hozz létre dobozokat, polcokat vagy szekrényeket a fizikai tárgyaid és készleteid rendszerezéséhez!
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-500/20 active:scale-95"
+                >
+                  <span>Első tároló létrehozása</span>
+                </button>
+              </div>
             ) : (
               <div className="text-center py-8 rounded-xl sm:rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-sub,#B5BDC6)]">
                 Nincs a keresésnek megfelelő tároló.
@@ -778,6 +971,17 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                       <span>QR-címke</span>
                     </button>
 
+                    {isAuthenticated && (
+                      <button
+                        onClick={handleOpenEditModal}
+                        className="px-3 py-1.5 min-h-[36px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[var(--border-color,#56616D)] cursor-pointer"
+                        title="Tároló adatainak módosítása"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Szerkesztés</span>
+                      </button>
+                    )}
+
                     <button
                       onClick={handleDeleteContainer}
                       disabled={isSubmitting}
@@ -800,6 +1004,9 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   </span>
                   <span className="bg-[var(--surface-bg,#465362)] px-2 py-0.5 rounded-md">
                     Típus: <strong className="text-white">{CONTAINER_TYPE_LABELS[selectedContainer.containerType]?.hu || selectedContainer.containerType}</strong>
+                  </span>
+                  <span className="bg-[var(--surface-bg,#465362)] px-2 py-0.5 rounded-md">
+                    Hatókör: <strong className="text-white">{selectedContainer.ownership_scope === 'household' ? 'Családi' : 'Privát'}</strong>
                   </span>
                 </div>
               </div>
@@ -973,7 +1180,14 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           ) : (
             <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 sm:p-8 text-center text-[var(--text-sub,#B5BDC6)] text-xs space-y-2">
               <Box className="w-8 h-8 text-[var(--text-sub,#B5BDC6)]/40 mx-auto" />
-              <p>Válassz ki egy tárolót a bal oldali fa struktúrából a részletek megtekintéséhez.</p>
+              <p className="font-bold text-white text-xs sm:text-sm">
+                {containers.length === 0 ? 'Nincs megjeleníthető tároló' : 'Nincs kiválasztott tároló'}
+              </p>
+              <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] max-w-xs mx-auto">
+                {containers.length === 0
+                  ? 'Kattints az új tároló létrehozása gombra az első tárolód felvételéhez.'
+                  : 'Válassz ki egy tárolót a bal oldali fa struktúrából a részletek megtekintéséhez.'}
+              </p>
             </div>
           )}
         </div>
@@ -1012,6 +1226,30 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 />
               </div>
 
+              {/* Ownership scope selection (if user has household) */}
+              {household && (
+                <div>
+                  <label className="text-xs font-bold text-white block mb-1">Tároló Hatóköre *</label>
+                  <select
+                    value={newContainerScope}
+                    onChange={(e) => {
+                      const val = e.target.value as 'private' | 'household';
+                      setNewContainerScope(val);
+                      if (val === 'household' && newContainerParentId) {
+                        const p = containers.find(c => c.id === newContainerParentId);
+                        if (p?.ownership_scope === 'private') {
+                          setNewContainerParentId('');
+                        }
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  >
+                    <option value="private" className="bg-[var(--card-bg,#3A4551)]">Személyes tároló (Csak én látom)</option>
+                    <option value="household" className="bg-[var(--card-bg,#3A4551)]">Családi tároló ({household.name})</option>
+                  </select>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-white block mb-1">Tároló Típusa *</label>
@@ -1036,7 +1274,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                   >
                     <option value="" className="bg-[var(--card-bg,#3A4551)]">-- Fő szintű tároló (Nincs szülő) --</option>
-                    {containers.map(c => (
+                    {eligibleCreateParents.map(c => (
                       <option key={c.id} value={c.id} className="bg-[var(--card-bg,#3A4551)]">
                         {c.name} ({CONTAINER_TYPE_LABELS[c.containerType]?.hu || c.containerType})
                       </option>
@@ -1047,18 +1285,25 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
               <div>
                 <label className="text-xs font-bold text-white block mb-1">Fizikai Helyszín</label>
-                <select
-                  value={newContainerLocationId}
-                  onChange={(e) => setNewContainerLocationId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                >
-                  <option value="" className="bg-[var(--card-bg,#3A4551)]">-- Válassz helyszínt (vagy hagyd üresen) --</option>
-                  {locations.map(loc => (
-                    <option key={loc.id} value={loc.id} className="bg-[var(--card-bg,#3A4551)]">
-                      {loc.name}
-                    </option>
-                  ))}
-                </select>
+                {newContainerParentId ? (
+                  <div className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)]/40 border border-[var(--border-color,#56616D)]/50 text-[var(--text-sub,#B5BDC6)] text-xs flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span>Helyszín a szülőtárolótól örökölve: <strong className="text-white">{containers.find(c => c.id === newContainerParentId)?.locationName || 'Nincs helyszín'}</strong></span>
+                  </div>
+                ) : (
+                  <select
+                    value={newContainerLocationId}
+                    onChange={(e) => setNewContainerLocationId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  >
+                    <option value="" className="bg-[var(--card-bg,#3A4551)]">-- Válassz helyszínt (vagy hagyd üresen) --</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id} className="bg-[var(--card-bg,#3A4551)]">
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
@@ -1087,6 +1332,130 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 >
                   <Plus className="w-4 h-4" />
                   <span>{isSubmitting ? 'Mentés...' : 'Tároló Mentése'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1B: Edit Container Form */}
+      {isEditModalOpen && selectedContainer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl my-auto overflow-hidden">
+            <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-[var(--border-color,#56616D)]/60 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white">Tároló Módosítása</h3>
+                  <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-mono">{selectedContainer.code}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors cursor-pointer"
+                aria-label="Bezárás"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateContainer} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 sm:space-y-4">
+              <div>
+                <label className="text-xs font-bold text-white block mb-1">Tároló Neve *</label>
+                <input
+                  type="text"
+                  required
+                  value={editContainerName}
+                  onChange={(e) => setEditContainerName(e.target.value)}
+                  placeholder="Pl. Kis alkatrészes fiók, Szerszámos láda"
+                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-white block mb-1">Tároló Típusa *</label>
+                  <select
+                    value={editContainerType}
+                    onChange={(e) => setEditContainerType(e.target.value as ContainerType)}
+                    className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  >
+                    {Object.entries(CONTAINER_TYPE_LABELS).map(([val, label]) => (
+                      <option key={val} value={val} className="bg-[var(--card-bg,#3A4551)]">
+                        {label.hu}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-white block mb-1">Szülő Tároló (Hierarchia)</label>
+                  <select
+                    value={editContainerParentId}
+                    onChange={(e) => setEditContainerParentId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  >
+                    <option value="" className="bg-[var(--card-bg,#3A4551)]">-- Fő szintű tároló (Nincs szülő) --</option>
+                    {eligibleEditParents.map(c => (
+                      <option key={c.id} value={c.id} className="bg-[var(--card-bg,#3A4551)]">
+                        {c.name} ({CONTAINER_TYPE_LABELS[c.containerType]?.hu || c.containerType})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-white block mb-1">Fizikai Helyszín</label>
+                {editContainerParentId ? (
+                  <div className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)]/40 border border-[var(--border-color,#56616D)]/50 text-[var(--text-sub,#B5BDC6)] text-xs flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span>Helyszín a szülőtárolótól örökölve: <strong className="text-white">{containers.find(c => c.id === editContainerParentId)?.locationName || 'Nincs helyszín'}</strong></span>
+                  </div>
+                ) : (
+                  <select
+                    value={editContainerLocationId}
+                    onChange={(e) => setEditContainerLocationId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  >
+                    <option value="" className="bg-[var(--card-bg,#3A4551)]">-- Válassz helyszínt (vagy hagyd üresen) --</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id} className="bg-[var(--card-bg,#3A4551)]">
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-white block mb-1">Megjegyzés / Leírás</label>
+                <textarea
+                  rows={2}
+                  value={editContainerDesc}
+                  onChange={(e) => setEditContainerDesc(e.target.value)}
+                  placeholder="Belső rekeszek, méretek, kulcs helye..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-[var(--border-color,#56616D)]/60 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Mégse
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <span>{isSubmitting ? 'Mentés...' : 'Módosítások Mentése'}</span>
                 </button>
               </div>
             </form>
