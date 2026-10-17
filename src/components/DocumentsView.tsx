@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { openR2DocumentSecurely } from '../lib/r2';
-import { FileText, Search, ExternalLink, Trash2, Boxes } from 'lucide-react';
+import { openR2DocumentSecurely, downloadR2DocumentSecurely } from '../lib/r2';
+import { FileText, Search, ExternalLink, Download, Trash2, Boxes, Loader2 } from 'lucide-react';
 
 export const DocumentsView: React.FC = () => {
   const { documents, items, deleteDocument, setSelectedItemId, language, isVaultUnlocked } = useApp();
@@ -9,6 +9,25 @@ export const DocumentsView: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [activeDocAction, setActiveDocAction] = useState<{ id: string; type: 'view' | 'download' } | null>(null);
+
+  const handleView = async (docId: string, fileUrl: string) => {
+    setActiveDocAction({ id: docId, type: 'view' });
+    try {
+      await openR2DocumentSecurely(fileUrl);
+    } finally {
+      setActiveDocAction(null);
+    }
+  };
+
+  const handleDownload = async (docId: string, fileUrl: string, fileName: string) => {
+    setActiveDocAction({ id: docId, type: 'download' });
+    try {
+      await downloadR2DocumentSecurely(fileUrl, fileName);
+    } finally {
+      setActiveDocAction(null);
+    }
+  };
 
   const filteredDocs = documents.filter(doc => {
     // Hide vault-protected documents and documents belonging to vault-protected items when vault is locked
@@ -164,17 +183,41 @@ export const DocumentsView: React.FC = () => {
                     {new Date(doc.created_at).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')}
                   </span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => openR2DocumentSecurely(doc.file_url)}
-                      className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] flex items-center gap-1 text-[11px] transition-colors cursor-pointer"
+                      disabled={activeDocAction?.id === doc.id}
+                      onClick={() => handleView(doc.id, doc.file_url)}
+                      className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] flex items-center gap-1 text-[11px] transition-colors cursor-pointer disabled:opacity-50"
+                      title={isHu ? 'Dokumentum megnyitása' : 'Open document'}
                     >
-                      <ExternalLink className="h-3.5 w-3.5" /> {isHu ? 'Megtekintés' : 'View'}
+                      {activeDocAction?.id === doc.id && activeDocAction.type === 'view' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                      ) : (
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isHu ? 'Megtekintés' : 'View'}</span>
                     </button>
+
+                    <button
+                      type="button"
+                      disabled={activeDocAction?.id === doc.id}
+                      onClick={() => handleDownload(doc.id, doc.file_url, doc.file_name)}
+                      className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] hover:text-white hover:bg-emerald-600 flex items-center gap-1 text-[11px] transition-colors cursor-pointer disabled:opacity-50"
+                      title={isHu ? 'Dokumentum letöltése' : 'Download document'}
+                    >
+                      {activeDocAction?.id === doc.id && activeDocAction.type === 'download' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isHu ? 'Letöltés' : 'Download'}</span>
+                    </button>
+
                     <button
                       onClick={() => deleteDocument(doc.id)}
                       className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 transition-colors"
+                      title={isHu ? 'Törlés' : 'Delete'}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

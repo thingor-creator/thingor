@@ -18,7 +18,7 @@ import {
   ChevronRight,
   Shield
 } from 'lucide-react';
-import type { Collection } from '../types';
+import type { Collection, CollectionItem } from '../types';
 
 export const CollectionsView: React.FC = () => {
   const {
@@ -29,7 +29,8 @@ export const CollectionsView: React.FC = () => {
     updateCollection,
     deleteCollection,
     addItemToCollection,
-    removeItemFromCollection,
+    deleteCollectionItem,
+    updateCollectionItem,
     setSelectedItemId,
     language
   } = useApp();
@@ -45,13 +46,25 @@ export const CollectionsView: React.FC = () => {
   const [editingCol, setEditingCol] = useState<Collection | null>(null);
   const [colName, setColName] = useState('');
   const [colDesc, setColDesc] = useState('');
-  const [colType, setColType] = useState<Collection['collection_type']>('general');
+  const [colType, setColType] = useState<string>('general');
   const [colCover, setColCover] = useState('');
   const [colIsPublic, setColIsPublic] = useState(false);
 
-  // Add item to collection modal
+  // Add / Edit item in collection modal
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [editingCollectionItem, setEditingCollectionItem] = useState<CollectionItem | null>(null);
+  const [itemEntryMode, setItemEntryMode] = useState<'standalone' | 'linked'>('standalone');
+
+  // Linked item state
   const [selectedItemIdToAdd, setSelectedItemIdToAdd] = useState('');
+
+  // Standalone item state
+  const [standaloneName, setStandaloneName] = useState('');
+  const [standaloneDesc, setStandaloneDesc] = useState('');
+  const [standaloneQuantity, setStandaloneQuantity] = useState<number>(1);
+  const [standalonePhotoUrl, setStandalonePhotoUrl] = useState('');
+
+  // Collector attributes
   const [collectorGrade, setCollectorGrade] = useState('');
   const [rarity, setRarity] = useState('');
   const [acquiredYear, setAcquiredYear] = useState<number | ''>('');
@@ -66,7 +79,7 @@ export const CollectionsView: React.FC = () => {
     }).format(val);
   };
 
-  const getCollectionTypeIcon = (type: Collection['collection_type']) => {
+  const getCollectionTypeIcon = (type: string) => {
     switch (type) {
       case 'books': return <Library className="h-5 w-5 text-[var(--cat-books,#818CF8)]" />;
       case 'coins': return <Coins className="h-5 w-5 text-[var(--cat-jewelry,#F59E0B)]" />;
@@ -77,14 +90,19 @@ export const CollectionsView: React.FC = () => {
     }
   };
 
-  const getCollectionTypeLabel = (type: Collection['collection_type']) => {
+  const getCollectionTypeLabel = (type: string) => {
     switch (type) {
       case 'books': return isHu ? 'Könyvtár' : 'Books';
       case 'coins': return isHu ? 'Érmék / Numizmatika' : 'Coins';
       case 'watches': return isHu ? 'Karórák' : 'Watches';
       case 'wine': return isHu ? 'Borok / Pincészet' : 'Wine';
       case 'records': return isHu ? 'Hanglemezek / Bakelit' : 'Vinyl Records';
-      default: return isHu ? 'Általános gyűjtemény' : 'General Collection';
+      case 'stamps': return isHu ? 'Bélyegek / Filatélia' : 'Stamps';
+      case 'minerals': return isHu ? 'Ásványok / Kőzetek' : 'Minerals & Crystals';
+      case 'napkins': return isHu ? 'Szalvéták' : 'Napkins';
+      case 'cards': return isHu ? 'Kártyák / Képeslapok' : 'Cards & Postcards';
+      case 'general': return isHu ? 'Általános gyűjtemény' : 'General Collection';
+      default: return type;
     }
   };
 
@@ -94,12 +112,18 @@ export const CollectionsView: React.FC = () => {
     return collections.find(c => c.id === selectedCollectionId) || null;
   }, [selectedCollectionId, collections]);
 
+  // Dynamic filter types derived from user's actual collections
+  const availableFilterTypes = useMemo(() => {
+    const typesInUse = new Set(collections.map(c => c.collection_type).filter(Boolean));
+    return ['all', ...Array.from(typesInUse)];
+  }, [collections]);
+
   // Items belonging to selected collection
   const currentCollectionItems = useMemo(() => {
     if (!selectedCollectionId) return [];
     const relations = collectionItems.filter(ci => ci.collection_id === selectedCollectionId);
     return relations.map(rel => {
-      const item = items.find(i => i.id === rel.item_id);
+      const item = rel.item_id ? items.find(i => i.id === rel.item_id) : undefined;
       return {
         ...rel,
         item
@@ -185,25 +209,68 @@ export const CollectionsView: React.FC = () => {
     setIsColModalOpen(false);
   };
 
-  const handleAddItemToCurrentCollection = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCollectionId || !selectedItemIdToAdd) return;
-
-    await addItemToCollection(selectedCollectionId, selectedItemIdToAdd, {
-      collector_grade: collectorGrade.trim() || undefined,
-      rarity: rarity.trim() || undefined,
-      acquired_year: acquiredYear ? Number(acquiredYear) : undefined,
-      catalog_number: catalogNumber.trim() || undefined,
-      estimated_collector_value: estimatedCollectorValue ? Number(estimatedCollectorValue) : undefined,
-    });
-
-    setIsAddItemModalOpen(false);
-    setSelectedItemIdToAdd('');
+  const handleOpenAddItem = () => {
+    setEditingCollectionItem(null);
+    setItemEntryMode('standalone');
+    setSelectedItemIdToAdd(availableItems.length > 0 ? availableItems[0].id : '');
+    setStandaloneName('');
+    setStandaloneDesc('');
+    setStandaloneQuantity(1);
+    setStandalonePhotoUrl('');
     setCollectorGrade('');
     setRarity('');
     setAcquiredYear('');
     setCatalogNumber('');
     setEstimatedCollectorValue('');
+    setIsAddItemModalOpen(true);
+  };
+
+  const handleOpenEditItem = (ci: CollectionItem) => {
+    setEditingCollectionItem(ci);
+    setItemEntryMode(ci.item_id ? 'linked' : 'standalone');
+    setSelectedItemIdToAdd(ci.item_id || (availableItems.length > 0 ? availableItems[0].id : ''));
+    setStandaloneName(ci.name || '');
+    setStandaloneDesc(ci.description || '');
+    setStandaloneQuantity(ci.quantity ?? 1);
+    setStandalonePhotoUrl(ci.photo_url || '');
+    setCollectorGrade(ci.collector_grade || '');
+    setRarity(ci.rarity || '');
+    setAcquiredYear(ci.acquired_year || '');
+    setCatalogNumber(ci.catalog_number || '');
+    setEstimatedCollectorValue(ci.estimated_collector_value || '');
+    setIsAddItemModalOpen(true);
+  };
+
+  const handleSaveItemToCurrentCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCollectionId) return;
+
+    if (itemEntryMode === 'linked' && !selectedItemIdToAdd) return;
+    if (itemEntryMode === 'standalone' && !standaloneName.trim()) return;
+
+    const details: Partial<CollectionItem> = {
+      name: itemEntryMode === 'standalone' ? standaloneName.trim() : undefined,
+      description: itemEntryMode === 'standalone' ? (standaloneDesc.trim() || undefined) : undefined,
+      quantity: itemEntryMode === 'standalone' ? (Number(standaloneQuantity) || 1) : 1,
+      photo_url: itemEntryMode === 'standalone' ? (standalonePhotoUrl.trim() || undefined) : undefined,
+      collector_grade: collectorGrade.trim() || undefined,
+      rarity: rarity.trim() || undefined,
+      acquired_year: acquiredYear ? Number(acquiredYear) : undefined,
+      catalog_number: catalogNumber.trim() || undefined,
+      estimated_collector_value: estimatedCollectorValue ? Number(estimatedCollectorValue) : undefined,
+    };
+
+    if (editingCollectionItem) {
+      await updateCollectionItem(editingCollectionItem.id, details);
+    } else {
+      await addItemToCollection(
+        selectedCollectionId,
+        itemEntryMode === 'linked' ? selectedItemIdToAdd : null,
+        details
+      );
+    }
+
+    setIsAddItemModalOpen(false);
   };
 
   // Available items not yet in this collection
@@ -257,16 +324,11 @@ export const CollectionsView: React.FC = () => {
             </button>
           ) : (
             <button
-              onClick={() => {
-                if (availableItems.length > 0) {
-                  setSelectedItemIdToAdd(availableItems[0].id);
-                }
-                setIsAddItemModalOpen(true);
-              }}
+              onClick={handleOpenAddItem}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-sm shadow-md transition-all"
             >
               <Plus className="h-4 w-4" />
-              <span>{isHu ? 'Tárgy hozzáadása' : 'Add Item'}</span>
+              <span>{isHu ? 'Tétel hozzáadása' : 'Add Item'}</span>
             </button>
           )}
         </div>
@@ -342,7 +404,7 @@ export const CollectionsView: React.FC = () => {
           {/* Category Filter Pills & Search */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="flex items-center p-1 rounded-xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] overflow-x-auto">
-              {(['all', 'books', 'coins', 'watches', 'wine', 'records', 'general'] as const).map(tab => (
+              {availableFilterTypes.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setFilterType(tab)}
@@ -352,13 +414,7 @@ export const CollectionsView: React.FC = () => {
                       : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
                   }`}
                 >
-                  {tab === 'all' && (isHu ? 'Összes' : 'All')}
-                  {tab === 'books' && (isHu ? 'Könyvek' : 'Books')}
-                  {tab === 'coins' && (isHu ? 'Érmék' : 'Coins')}
-                  {tab === 'watches' && (isHu ? 'Órák' : 'Watches')}
-                  {tab === 'wine' && (isHu ? 'Borok' : 'Wine')}
-                  {tab === 'records' && (isHu ? 'Bakelit' : 'Vinyl')}
-                  {tab === 'general' && (isHu ? 'Egyéb' : 'General')}
+                  {tab === 'all' ? (isHu ? 'Összes' : 'All') : getCollectionTypeLabel(tab)}
                 </button>
               ))}
             </div>
@@ -499,34 +555,69 @@ export const CollectionsView: React.FC = () => {
                       {/* Item header */}
                       <div className="flex items-start justify-between gap-3">
                         <div
-                          onClick={() => item && setSelectedItemId(item.id)}
-                          className="flex items-center gap-3 cursor-pointer group flex-1 min-w-0"
+                          onClick={() => {
+                            if (ci.item_id && item) {
+                              setSelectedItemId(item.id);
+                            }
+                          }}
+                          className={`flex items-center gap-3 flex-1 min-w-0 ${ci.item_id && item ? 'cursor-pointer group' : ''}`}
                         >
                           <div className="w-12 h-12 rounded-xl bg-[var(--surface-bg,#465362)] overflow-hidden shrink-0 flex items-center justify-center border border-[var(--border-color,#56616D)]">
-                            {item?.photo_url ? (
-                              <img src={item.photo_url} alt={item.name} className="w-full h-full object-cover" />
+                            {item?.photo_url || ci.photo_url ? (
+                              <img src={item?.photo_url || ci.photo_url} alt={item?.name || ci.name || ''} className="w-full h-full object-cover" />
                             ) : (
                               <Package className="h-5 w-5 text-[var(--text-sub,#B5BDC6)]" />
                             )}
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] truncate group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
-                              {item?.name || (isHu ? 'Ismeretlen tárgy' : 'Unknown')}
+                            <h4 className={`text-sm font-bold text-[var(--text-main,#E0E3E6)] truncate ${ci.item_id && item ? 'group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors' : ''}`}>
+                              {item?.name || ci.name || (isHu ? 'Névtelen gyűjteményi tétel' : 'Unnamed item')}
                             </h4>
-                            <p className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
-                              {item?.current_value ? formatCurrency(item.current_value) : item?.purchase_price ? formatCurrency(item.purchase_price) : ''}
-                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {ci.item_id ? (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
+                                  {isHu ? 'Leltári tárgy' : 'Inventory Item'}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
+                                  {isHu ? 'Önálló tétel' : 'Standalone'} {ci.quantity && ci.quantity > 1 ? `(${ci.quantity} db)` : ''}
+                                </span>
+                              )}
+                              <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-semibold">
+                                {item?.current_value ? formatCurrency(item.current_value) : item?.purchase_price ? formatCurrency(item.purchase_price) : ''}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => removeItemFromCollection(selectedCollectionId, ci.item_id)}
-                          className="p-1.5 rounded-lg text-[var(--status-danger,#EF4444)]/80 hover:text-[var(--status-danger,#EF4444)] hover:bg-[var(--status-danger,#EF4444)]/10"
-                          title={isHu ? 'Eltávolítás a gyűjteményből' : 'Remove from collection'}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleOpenEditItem(ci)}
+                            className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]"
+                            title={isHu ? 'Szerkesztés' : 'Edit'}
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(isHu ? 'Biztosan eltávolítod ezt a tételt a gyűjteményből?' : 'Are you sure you want to remove this item from the collection?')) {
+                                deleteCollectionItem(ci.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-[var(--status-danger,#EF4444)]/80 hover:text-[var(--status-danger,#EF4444)] hover:bg-[var(--status-danger,#EF4444)]/10"
+                            title={isHu ? 'Eltávolítás a gyűjteményből' : 'Remove from collection'}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
+
+                      {/* Standalone description if any */}
+                      {ci.description && (
+                        <p className="mt-2 text-xs text-[var(--text-sub,#B5BDC6)] line-clamp-2">
+                          {ci.description}
+                        </p>
+                      )}
 
                       {/* Collector specific attributes */}
                       <div className="mt-3.5 grid grid-cols-2 gap-2 text-[11px]">
@@ -637,6 +728,10 @@ export const CollectionsView: React.FC = () => {
                   <option value="general">{isHu ? 'Általános gyűjtemény' : 'General'}</option>
                   <option value="books">{isHu ? 'Könyvek / Könyvtár' : 'Books'}</option>
                   <option value="coins">{isHu ? 'Érmék / Numizmatika' : 'Coins'}</option>
+                  <option value="stamps">{isHu ? 'Bélyegek / Filatélia' : 'Stamps'}</option>
+                  <option value="minerals">{isHu ? 'Ásványok / Kőzetek' : 'Minerals & Crystals'}</option>
+                  <option value="napkins">{isHu ? 'Szalvéták' : 'Napkins'}</option>
+                  <option value="cards">{isHu ? 'Kártyák / Képeslapok' : 'Cards & Postcards'}</option>
                   <option value="watches">{isHu ? 'Karórák' : 'Watches'}</option>
                   <option value="wine">{isHu ? 'Borok / Pincészet' : 'Wine'}</option>
                   <option value="records">{isHu ? 'Bakelit / Hanglemezek' : 'Vinyl Records'}</option>
@@ -676,13 +771,15 @@ export const CollectionsView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: ADD ITEM TO COLLECTION */}
+      {/* MODAL: ADD / EDIT ITEM IN COLLECTION */}
       {isAddItemModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden animate-scale-up">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border-color,#56616D)]">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-[var(--border-color,#56616D)] shrink-0">
               <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
-                {isHu ? 'Tárgy hozzáadása a gyűjteményhez' : 'Add Item to Collection'}
+                {editingCollectionItem
+                  ? (isHu ? 'Gyűjteményi tétel szerkesztése' : 'Edit Collection Item')
+                  : (isHu ? 'Tétel felvétele a gyűjteménybe' : 'Add Item to Collection')}
               </h3>
               <button
                 onClick={() => setIsAddItemModalOpen(false)}
@@ -692,101 +789,200 @@ export const CollectionsView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddItemToCurrentCollection} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                  {isHu ? 'Válassz tárgyat *' : 'Select Item *'}
-                </label>
-                {availableItems.length === 0 ? (
-                  <p className="text-xs text-[var(--status-warning,#F59E0B)]">
-                    {isHu ? 'Minden tárgyad már ebben a gyűjteményben van!' : 'All items are already in this collection!'}
-                  </p>
-                ) : (
-                  <select
-                    value={selectedItemIdToAdd}
-                    onChange={e => setSelectedItemIdToAdd(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+            <form onSubmit={handleSaveItemToCurrentCollection} className="p-5 space-y-4 overflow-y-auto flex-1">
+              {/* If creating new item, toggle between Standalone and Linked */}
+              {!editingCollectionItem && (
+                <div className="grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]">
+                  <button
+                    type="button"
+                    onClick={() => setItemEntryMode('standalone')}
+                    className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                      itemEntryMode === 'standalone'
+                        ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
                   >
-                    {availableItems.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+                    {isHu ? 'Önálló tétel (pl. bélyeg, ásvány)' : 'Standalone Item'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setItemEntryMode('linked')}
+                    className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                      itemEntryMode === 'linked'
+                        ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    {isHu ? 'Leltári tárgy csatolása' : 'Link from Inventory'}
+                  </button>
+                </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
+              {/* Mode-specific Fields */}
+              {itemEntryMode === 'standalone' ? (
+                <div className="space-y-3 p-3.5 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)]/50">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                      {isHu ? 'Tétel megnevezése *' : 'Item Name *'}
+                    </label>
+                    <input
+                      type="text"
+                      value={standaloneName}
+                      onChange={e => setStandaloneName(e.target.value)}
+                      placeholder={isHu ? 'Pl. 1968-as Űrkutatás emlékbélyeg, Ametiszt geóda...' : 'e.g. 1968 Space Stamp, Amethyst crystal...'}
+                      required
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="col-span-1">
+                      <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                        {isHu ? 'Mennyiség (db)' : 'Quantity'}
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={standaloneQuantity}
+                        onChange={e => setStandaloneQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                        {isHu ? 'Fotó URL (opcionális)' : 'Photo URL'}
+                      </label>
+                      <input
+                        type="url"
+                        value={standalonePhotoUrl}
+                        onChange={e => setStandalonePhotoUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                      {isHu ? 'Leírás / Jegyzet' : 'Description / Notes'}
+                    </label>
+                    <textarea
+                      value={standaloneDesc}
+                      onChange={e => setStandaloneDesc(e.target.value)}
+                      rows={2}
+                      placeholder={isHu ? 'Részletes leírás, származási hely, különlegességek...' : 'Details, origin...'}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 p-3.5 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)]/50">
                   <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                    {isHu ? 'Fokozat / Állapot' : 'Grade'}
+                    {isHu ? 'Válassz meglévő tárgyat a leltárból *' : 'Select Inventory Item *'}
                   </label>
-                  <input
-                    type="text"
-                    value={collectorGrade}
-                    onChange={e => setCollectorGrade(e.target.value)}
-                    placeholder={isHu ? 'Pl. Mint, MS-65' : 'e.g. Mint, Uncirculated'}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                  />
+                  {availableItems.length === 0 && !selectedItemIdToAdd ? (
+                    <p className="text-xs text-[var(--status-warning,#F59E0B)]">
+                      {isHu ? 'Minden leltári tárgyad már csatolva van, vagy nincs elérhető tárgy!' : 'All inventory items are already linked!'}
+                    </p>
+                  ) : (
+                    <select
+                      value={selectedItemIdToAdd}
+                      onChange={e => setSelectedItemIdToAdd(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    >
+                      {editingCollectionItem?.item_id && (
+                        <option value={editingCollectionItem.item_id}>
+                          {items.find(i => i.id === editingCollectionItem.item_id)?.name || editingCollectionItem.item_id}
+                        </option>
+                      )}
+                      {availableItems.map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {/* Collector Attributes */}
+              <div className="space-y-3 pt-1">
+                <h4 className="text-xs font-bold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider">
+                  {isHu ? 'Gyűjtői attribútumok' : 'Collector Attributes'}
+                </h4>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                      {isHu ? 'Fokozat / Állapot' : 'Grade'}
+                    </label>
+                    <input
+                      type="text"
+                      value={collectorGrade}
+                      onChange={e => setCollectorGrade(e.target.value)}
+                      placeholder={isHu ? 'Pl. Mint, MS-65, Hibátlan' : 'e.g. Mint, Uncirculated'}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                      {isHu ? 'Ritkaság' : 'Rarity'}
+                    </label>
+                    <input
+                      type="text"
+                      value={rarity}
+                      onChange={e => setRarity(e.target.value)}
+                      placeholder={isHu ? 'Pl. Ritka, 1 of 500' : 'e.g. Rare, Unique'}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                      {isHu ? 'Katalógusszám' : 'Catalog No.'}
+                    </label>
+                    <input
+                      type="text"
+                      value={catalogNumber}
+                      onChange={e => setCatalogNumber(e.target.value)}
+                      placeholder="Pl. KM# 821, Michel 452"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                      {isHu ? 'Évjárat / Kiadás' : 'Year'}
+                    </label>
+                    <input
+                      type="number"
+                      value={acquiredYear}
+                      onChange={e => setAcquiredYear(e.target.value ? Number(e.target.value) : '')}
+                      placeholder="1984"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                    {isHu ? 'Ritkaság' : 'Rarity'}
-                  </label>
-                  <input
-                    type="text"
-                    value={rarity}
-                    onChange={e => setRarity(e.target.value)}
-                    placeholder={isHu ? 'Pl. Nagyon ritka' : 'e.g. Rare, 1 of 500'}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                    {isHu ? 'Katalógusszám' : 'Catalog No.'}
-                  </label>
-                  <input
-                    type="text"
-                    value={catalogNumber}
-                    onChange={e => setCatalogNumber(e.target.value)}
-                    placeholder="Pl. KM# 821, ISBN"
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                    {isHu ? 'Évjárat' : 'Year'}
+                    {isHu ? 'Becsült gyűjtői érték' : 'Est. Collector Value'}
                   </label>
                   <input
                     type="number"
-                    value={acquiredYear}
-                    onChange={e => setAcquiredYear(e.target.value ? Number(e.target.value) : '')}
-                    placeholder="1984"
+                    value={estimatedCollectorValue}
+                    onChange={e => setEstimatedCollectorValue(e.target.value ? Number(e.target.value) : '')}
+                    placeholder={isHu ? 'HUF érték' : 'Value'}
                     className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                  {isHu ? 'Becsült gyűjtői érték' : 'Est. Collector Value'}
-                </label>
-                <input
-                  type="number"
-                  value={estimatedCollectorValue}
-                  onChange={e => setEstimatedCollectorValue(e.target.value ? Number(e.target.value) : '')}
-                  placeholder={isHu ? 'HUF érték' : 'Value'}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-[var(--border-color,#56616D)] flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsAddItemModalOpen(false)}
@@ -796,10 +992,10 @@ export const CollectionsView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={availableItems.length === 0}
+                  disabled={itemEntryMode === 'linked' && !selectedItemIdToAdd && availableItems.length === 0}
                   className="px-5 py-2 rounded-xl text-xs font-bold bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white shadow-md disabled:opacity-50"
                 >
-                  {isHu ? 'Hozzáadás' : 'Add to Collection'}
+                  {editingCollectionItem ? (isHu ? 'Mentés' : 'Save') : (isHu ? 'Hozzáadás' : 'Add to Collection')}
                 </button>
               </div>
             </form>

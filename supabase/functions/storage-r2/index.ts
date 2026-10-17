@@ -538,9 +538,15 @@ serve(async (req) => {
         }
       }
 
+      const { isDownload, downloadName, fileName } = body;
+      const targetFileName = (downloadName || fileName || "").replace(/["\r\n]/g, "").trim();
+
       const getCommand = new GetObjectCommand({
         Bucket: targetBucket,
         Key: filePath,
+        ResponseContentDisposition: isDownload && targetFileName
+          ? `attachment; filename="${encodeURIComponent(targetFileName)}"; filename*=UTF-8''${encodeURIComponent(targetFileName)}`
+          : undefined,
       });
 
       const signedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });

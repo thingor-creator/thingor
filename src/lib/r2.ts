@@ -212,7 +212,10 @@ async function uploadDirectToEdgeFunction(
  * - Photos: Can be resolved directly via public CDN domain if configured.
  * - Documents: ALWAYS resolved through the authenticated Edge Function using time-limited Pre-Signed URLs.
  */
-export async function getR2FileSignedUrl(pathOrUrl: string): Promise<string> {
+export async function getR2FileSignedUrl(
+  pathOrUrl: string,
+  options?: { isDownload?: boolean; fileName?: string }
+): Promise<string> {
   if (!pathOrUrl) return '';
   if (pathOrUrl.startsWith('data:') || pathOrUrl.startsWith('blob:')) {
     return pathOrUrl;
@@ -234,15 +237,25 @@ export async function getR2FileSignedUrl(pathOrUrl: string): Promise<string> {
   // Documents: ALWAYS invoke the Edge Function to authenticate and generate
   // an authorized, time-limited S3 Pre-Signed GET URL.
   // Never resolve a document directly against r2PublicDomain!
-  if (!supabase) return pathOrUrl;
+  if (!supabase) return '';
 
   try {
-    const { data } = await supabase.functions.invoke('storage-r2', {
-      body: { action: 'get-signed-url', path: pathOrUrl },
+    const { data, error } = await supabase.functions.invoke('storage-r2', {
+      body: {
+        action: 'get-signed-url',
+        path: pathOrUrl,
+        isDownload: options?.isDownload ?? false,
+        fileName: options?.fileName,
+      },
     });
-    return data?.signedUrl || pathOrUrl;
-  } catch {
-    return pathOrUrl;
+    if (error || !data?.signedUrl) {
+      console.warn('Storage-R2 Edge Function signed URL resolution failed:', error || data?.error);
+      return '';
+    }
+    return data.signedUrl;
+  } catch (err) {
+    console.warn('Network error invoking storage-r2 function:', err);
+    return '';
   }
 }
 
@@ -252,8 +265,7 @@ export async function getR2FileSignedUrl(pathOrUrl: string): Promise<string> {
  * Pre-allocates window.open to prevent browser popup blockers on asynchronous calls.
  */
 export async function openR2DocumentSecurely(pathOrUrl: string): Promise<boolean> {
-  if (!pathOrUrl) return false;
-  if (pathOrUrl === '#' || pathOrUrl.trim() === '') return false;
+  if (!pathOrUrl || pathOrUrl === '#' || pathOrUrl.trim() === '') return false;
 
   // Local data/blob URLs can be opened directly
   if (pathOrUrl.startsWith('data:') || pathOrUrl.startsWith('blob:')) {
@@ -264,8 +276,8 @@ export async function openR2DocumentSecurely(pathOrUrl: string): Promise<boolean
   // Avoid popup blocker by creating window handle before await
   const newTab = window.open('about:blank', '_blank', 'noopener,noreferrer');
   try {
-    const signedUrl = await getR2FileSignedUrl(pathOrUrl);
-    if (signedUrl && signedUrl !== '#' && newTab) {
+    const signedUrl = await getR2FileSignedUrl(pathOrUrl, { isDownload: false });
+    if (signedUrl && newTab) {
       newTab.location.href = signedUrl;
       return true;
     }
@@ -277,6 +289,39 @@ export async function openR2DocumentSecurely(pathOrUrl: string): Promise<boolean
     newTab.close();
   }
   return false;
+}
+
+/**
+ * Securely downloads a private document by requesting an authenticated S3 Pre-Signed URL
+ * with Content-Disposition: attachment header and user-specified filename.
+ */
+export async function downloadR2DocumentSecurely(pathOrUrl: string, fileName?: string): Promise<boolean> {
+  if (!pathOrUrl || pathOrUrl === '#' || pathOrUrl.trim() === '') return false;
+
+  const targetName = fileName || pathOrUrl.split('/').pop() || 'document.pdf';
+
+  try {
+    const signedUrl = await getR2FileSignedUrl(pathOrUrl, {
+      isDownload: true,
+      fileName: targetName,
+    });
+
+    if (!signedUrl) {
+      return false;
+    }
+
+    const anchor = document.createElement('a');
+    anchor.href = signedUrl;
+    anchor.download = targetName;
+    anchor.rel = 'noopener noreferrer';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    return true;
+  } catch (err) {
+    console.error('Error downloading secure document:', err);
+    return false;
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { isR2Configured, uploadFileToR2, getR2FileSignedUrl, deleteFileFromR2, r2BucketName, openR2DocumentSecurely } from './r2';
-export { openR2DocumentSecurely };
+import { isR2Configured, uploadFileToR2, getR2FileSignedUrl, deleteFileFromR2, r2BucketName, openR2DocumentSecurely, downloadR2DocumentSecurely } from './r2';
+export { openR2DocumentSecurely, downloadR2DocumentSecurely };
 
 export interface StorageUploadResult {
   path?: string;

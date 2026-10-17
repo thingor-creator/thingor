@@ -161,6 +161,8 @@ export interface Item {
   warranty_end?: string;
   notes?: string;
   is_vault_protected?: boolean;
+  is_lendable?: boolean;
+  lending_terms?: string;
   created_at: string;
   updated_at?: string;
 }
@@ -385,12 +387,23 @@ export interface ItemLoan {
   updated_at?: string;
 }
 
+export interface LendingContact {
+  id: string;
+  user_id: string;
+  name: string;
+  contact_info?: string;
+  relationship?: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Collection {
   id: string;
   user_id: string;
   name: string;
   description?: string;
-  collection_type: 'books' | 'coins' | 'watches' | 'wine' | 'records' | 'general';
+  collection_type: 'books' | 'coins' | 'watches' | 'wine' | 'records' | 'general' | string;
   cover_image_url?: string;
   is_public: boolean;
   created_at: string;
@@ -400,7 +413,11 @@ export interface Collection {
 export interface CollectionItem {
   id: string;
   collection_id: string;
-  item_id: string;
+  item_id?: string | null;
+  name?: string;
+  description?: string;
+  photo_url?: string;
+  quantity?: number;
   collector_grade?: string;
   rarity?: string;
   acquired_year?: number;

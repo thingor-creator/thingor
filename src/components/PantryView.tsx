@@ -38,6 +38,11 @@ export const PantryView: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Custom categories added in this session
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+
   // Item form modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
@@ -63,7 +68,7 @@ export const PantryView: React.FC = () => {
   }, []);
 
   const categoriesList = useMemo(() => {
-    return [
+    const defaults = [
       isHu ? 'Élelmiszer' : 'Groceries',
       isHu ? 'Tisztítószer' : 'Cleaning',
       isHu ? 'Higiénia & Kozmetikum' : 'Hygiene & Cosmetics',
@@ -71,7 +76,24 @@ export const PantryView: React.FC = () => {
       isHu ? 'Barkács & Műhely' : 'Workshop & DIY',
       isHu ? 'Egyéb' : 'Other'
     ];
-  }, [isHu]);
+
+    const fromDb = pantryItems
+      .map(i => i.category?.trim())
+      .filter((c): c is string => Boolean(c && c.length > 0));
+
+    const all = [...defaults, ...fromDb, ...customCategories];
+
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const cat of all) {
+      const normalized = cat.toLowerCase().trim();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        result.push(cat.trim());
+      }
+    }
+    return result;
+  }, [isHu, pantryItems, customCategories]);
 
   // Compute KPI stats
   const stats = useMemo(() => {
@@ -129,7 +151,7 @@ export const PantryView: React.FC = () => {
   const handleOpenAddModal = () => {
     setEditingItem(null);
     setFormName('');
-    setFormCategory(isHu ? 'Élelmiszer' : 'Groceries');
+    setFormCategory(categoriesList[0] || (isHu ? 'Élelmiszer' : 'Groceries'));
     setFormQuantity(1);
     setFormUnit('db');
     setFormMinThreshold(1);
@@ -137,6 +159,8 @@ export const PantryView: React.FC = () => {
     setFormLocationId('');
     setFormNotes('');
     setFormIsStaple(true);
+    setIsAddingCategory(false);
+    setNewCategoryInput('');
     setIsModalOpen(true);
   };
 
@@ -151,6 +175,8 @@ export const PantryView: React.FC = () => {
     setFormLocationId(item.location_id || '');
     setFormNotes(item.notes || '');
     setFormIsStaple(item.is_staple ?? true);
+    setIsAddingCategory(false);
+    setNewCategoryInput('');
     setIsModalOpen(true);
   };
 
@@ -158,10 +184,18 @@ export const PantryView: React.FC = () => {
     e.preventDefault();
     if (!formName.trim()) return;
 
+    let finalCategory = formCategory.trim();
+    if (isAddingCategory && newCategoryInput.trim()) {
+      finalCategory = newCategoryInput.trim();
+      if (!customCategories.some(c => c.toLowerCase() === finalCategory.toLowerCase())) {
+        setCustomCategories(prev => [...prev, finalCategory]);
+      }
+    }
+
     if (editingItem) {
       await updatePantryItem(editingItem.id, {
         name: formName.trim(),
-        category: formCategory,
+        category: finalCategory,
         current_quantity: formQuantity,
         unit: formUnit,
         min_threshold: formMinThreshold,
@@ -174,7 +208,7 @@ export const PantryView: React.FC = () => {
       await addPantryItem({
         user_id: '',
         name: formName.trim(),
-        category: formCategory,
+        category: finalCategory,
         current_quantity: formQuantity,
         unit: formUnit,
         min_threshold: formMinThreshold,
@@ -614,18 +648,80 @@ export const PantryView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                  {isHu ? 'Kategória' : 'Category'}
-                </label>
-                <select
-                  value={formCategory}
-                  onChange={e => setFormCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                >
-                  {categoriesList.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                    {isHu ? 'Kategória' : 'Category'}
+                  </label>
+                  {!isAddingCategory && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCategory(true)}
+                      className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>{isHu ? 'Új kategória' : 'New category'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {isAddingCategory ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newCategoryInput}
+                      onChange={e => setNewCategoryInput(e.target.value)}
+                      placeholder={isHu ? 'Új kategória neve...' : 'New category name...'}
+                      autoFocus
+                      className="flex-1 px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--color-primary-blue,#2563EB)] text-[var(--text-main,#E0E3E6)] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const trimmed = newCategoryInput.trim();
+                        if (trimmed) {
+                          if (!customCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+                            setCustomCategories(prev => [...prev, trimmed]);
+                          }
+                          setFormCategory(trimmed);
+                          setNewCategoryInput('');
+                          setIsAddingCategory(false);
+                        }
+                      }}
+                      className="px-3 py-2 text-xs font-bold bg-[var(--color-primary-blue,#2563EB)] text-white rounded-xl hover:bg-[var(--color-primary-blue,#2563EB)]/90"
+                    >
+                      {isHu ? 'Hozzáadás' : 'Add'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCategory(false);
+                        setNewCategoryInput('');
+                      }}
+                      className="px-2.5 py-2 text-xs font-bold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] rounded-xl"
+                    >
+                      {isHu ? 'Mégse' : 'Cancel'}
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={formCategory}
+                    onChange={e => {
+                      if (e.target.value === '__add_new__') {
+                        setIsAddingCategory(true);
+                      } else {
+                        setFormCategory(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                  >
+                    {categoriesList.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="__add_new__">
+                      + {isHu ? 'Új kategória megadása...' : 'Add new category...'}
+                    </option>
+                  </select>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-2.5">

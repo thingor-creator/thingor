@@ -1,12 +1,27 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { StickyNote, Plus, Search, MapPin, ArrowRight, Trash2, Edit3, CheckCircle2, Package } from 'lucide-react';
+import { StickyNote, Plus, Search, MapPin, ArrowRight, Trash2, Edit3, CheckCircle2, Package, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { QuickNote } from '../types';
 
 export const NotesView: React.FC = () => {
-  const { quickNotes, addQuickNote, updateQuickNote, deleteQuickNote, convertNoteToItem, setSelectedItemId, language, t } = useApp();
+  const {
+    quickNotes,
+    items,
+    addQuickNote,
+    updateQuickNote,
+    deleteQuickNote,
+    convertNoteToItem,
+    setSelectedItemId,
+    setCurrentView,
+    language,
+    t
+  } = useApp();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [convertingNoteId, setConvertingNoteId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [orphanedNote, setOrphanedNote] = useState<QuickNote | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<QuickNote | null>(null);
@@ -18,6 +33,40 @@ export const NotesView: React.FC = () => {
   const [tagsInput, setTagsInput] = useState('');
 
   const isHu = language === 'hu';
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleConvert = async (noteId: string) => {
+    if (convertingNoteId) return;
+    setConvertingNoteId(noteId);
+    try {
+      const createdItem = await convertNoteToItem(noteId);
+      if (createdItem && createdItem.id) {
+        showToast(isHu ? `"${createdItem.name}" sikeresen létrehozva a leltárban!` : `"${createdItem.name}" created in inventory!`);
+        setSelectedItemId(createdItem.id);
+        setCurrentView('items');
+      }
+    } catch (err: any) {
+      console.error('Error converting note to item:', err);
+      showToast(err?.message || (isHu ? 'Hiba történt a tárggyá alakítás során.' : 'Failed to convert note to item.'));
+    } finally {
+      setConvertingNoteId(null);
+    }
+  };
+
+  const handleViewConvertedItem = (note: QuickNote) => {
+    const targetItem = note.converted_item_id ? items.find(i => i.id === note.converted_item_id) : null;
+    if (targetItem) {
+      setSelectedItemId(targetItem.id);
+      setCurrentView('items');
+    } else {
+      // Orphaned or corrupted reference
+      setOrphanedNote(note);
+    }
+  };
 
   const handleOpenAddModal = () => {
     setEditingNote(null);
@@ -219,16 +268,23 @@ export const NotesView: React.FC = () => {
               <div className="pt-3 border-t border-[var(--border-color,#56616D)] flex items-center justify-between gap-2">
                 {!note.is_converted ? (
                   <button
-                    onClick={() => convertNoteToItem(note.id)}
-                    className="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition shadow-xs flex items-center gap-1.5"
+                    type="button"
+                    disabled={convertingNoteId === note.id}
+                    onClick={() => handleConvert(note.id)}
+                    className="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-lg transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Package className="w-3.5 h-3.5" />
+                    {convertingNoteId === note.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Package className="w-3.5 h-3.5" />
+                    )}
                     {isHu ? 'Átalakítás tárggyá' : 'Convert to Item'}
                   </button>
                 ) : (
                   <button
-                    onClick={() => note.converted_item_id && setSelectedItemId(note.converted_item_id)}
-                    className="px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 rounded-lg transition flex items-center gap-1"
+                    type="button"
+                    onClick={() => handleViewConvertedItem(note)}
+                    className="px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 rounded-lg transition flex items-center gap-1 cursor-pointer"
                   >
                     {isHu ? 'Tárgy megtekintése' : 'View Item'} <ArrowRight className="w-3.5 h-3.5" />
                   </button>
@@ -339,6 +395,56 @@ export const NotesView: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Modal: Orphaned/Missing Linked Item Recovery */}
+      {orphanedNote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-[var(--status-warning,#F59E0B)]">
+              <AlertCircle className="w-6 h-6 shrink-0" />
+              <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
+                {isHu ? 'Kapcsolt tárgy nem található' : 'Linked Item Missing'}
+              </h3>
+            </div>
+
+            <p className="text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
+              {isHu
+                ? `A "${orphanedNote.title}" jegyzethez tartozó leltári tárgy rekordja hiányzik vagy korábban nem jött létre az adatbázisban. Szeretnéd most újra létrehozni és hozzárendelni a leltárhoz?`
+                : `The inventory item linked to "${orphanedNote.title}" does not exist in the database. Would you like to recreate it now?`}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-color,#56616D)]">
+              <button
+                type="button"
+                onClick={() => setOrphanedNote(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-white transition"
+              >
+                {isHu ? 'Mégse' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={convertingNoteId === orphanedNote.id}
+                onClick={async () => {
+                  const n = orphanedNote;
+                  setOrphanedNote(null);
+                  await handleConvert(n.id);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 transition shadow-sm"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                {isHu ? 'Tárgy létrehozása most' : 'Create Item Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900/95 text-white border border-[var(--border-color,#56616D)] shadow-xl text-xs font-medium flex items-center gap-2 animate-fade-in">
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>

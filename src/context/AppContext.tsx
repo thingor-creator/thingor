@@ -40,7 +40,8 @@ import type {
   PantryItem,
   VaultSettings,
   StorageContainer,
-  ContainerItem
+  ContainerItem,
+  LendingContact
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { generateSalt, hashPin, verifyPin } from '../lib/vault';
@@ -165,6 +166,10 @@ interface AppContextType {
   updateLoan: (id: string, updates: Partial<ItemLoan>) => Promise<void>;
   returnLoan: (id: string) => Promise<void>;
   deleteLoan: (id: string) => Promise<void>;
+  lendingContacts: LendingContact[];
+  addLendingContact: (contact: Omit<LendingContact, 'id' | 'created_at' | 'updated_at'>) => Promise<LendingContact>;
+  updateLendingContact: (id: string, updates: Partial<LendingContact>) => Promise<void>;
+  deleteLendingContact: (id: string) => Promise<void>;
 
   // Collections & Catalogs Module
   collections: Collection[];
@@ -172,8 +177,10 @@ interface AppContextType {
   addCollection: (col: Omit<Collection, 'id' | 'created_at'>) => Promise<Collection>;
   updateCollection: (id: string, updates: Partial<Collection>) => Promise<void>;
   deleteCollection: (id: string) => Promise<void>;
-  addItemToCollection: (collectionId: string, itemId: string, details?: Partial<CollectionItem>) => Promise<CollectionItem>;
-  removeItemFromCollection: (collectionId: string, itemId: string) => Promise<void>;
+  addItemToCollection: (collectionId: string, itemId?: string | null, details?: Partial<CollectionItem>) => Promise<CollectionItem>;
+  removeItemFromCollection: (collectionId: string, itemIdOrCollectionItemId: string) => Promise<void>;
+  deleteCollectionItem: (collectionItemId: string) => Promise<void>;
+  updateCollectionItem: (collectionItemId: string, updates: Partial<CollectionItem>) => Promise<void>;
   getCollectionItems: (collectionId: string) => CollectionItem[];
 
   // Pantry & Consumables Module
@@ -255,7 +262,7 @@ interface AppContextType {
   // QR Code Scanner Module
   isQRScannerOpen: boolean;
   setIsQRScannerOpen: (open: boolean) => void;
-  convertNoteToItem: (noteId: string) => Promise<void>;
+  convertNoteToItem: (noteId: string) => Promise<Item | null>;
 
   // Helper getters
   getLocationPath: (locationId: string) => string;
@@ -493,6 +500,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     localStorage.setItem('thingor_loans', JSON.stringify(loans));
   }, [loans]);
+
+  const [lendingContacts, setLendingContacts] = useState<LendingContact[]>(() => {
+    const saved = localStorage.getItem('thingor_lending_contacts');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('thingor_lending_contacts', JSON.stringify(lendingContacts));
+  }, [lendingContacts]);
 
   const [collections, setCollections] = useState<Collection[]>(() => {
     const saved = localStorage.getItem('thingor_collections');
@@ -1212,6 +1234,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
           setLoans(data as ItemLoan[]);
+        }
+      });
+
+    // Load lending contacts
+    supabase
+      .from('lending_contacts')
+      .select('*')
+      .order('name', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setLendingContacts(data as LendingContact[]);
         }
       });
 
@@ -2516,6 +2549,69 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Lending Contacts CRUD
+  const addLendingContact = async (contactData: Omit<LendingContact, 'id' | 'created_at' | 'updated_at'>): Promise<LendingContact> => {
+    const newContact: LendingContact = {
+      ...contactData,
+      id: 'lc-' + Date.now(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const { data, error } = await supabase
+          .from('lending_contacts')
+          .insert([{
+            user_id: user.id,
+            name: contactData.name,
+            contact_info: contactData.contact_info,
+            relationship: contactData.relationship,
+            notes: contactData.notes,
+          }])
+          .select()
+          .single();
+
+        if (!error && data) {
+          setLendingContacts(prev => [...prev, data as LendingContact].sort((a, b) => a.name.localeCompare(b.name)));
+          return data as LendingContact;
+        }
+      } catch (e) {
+        console.warn('Failed to insert lending contact in Supabase:', e);
+      }
+    }
+
+    setLendingContacts(prev => [...prev, newContact].sort((a, b) => a.name.localeCompare(b.name)));
+    return newContact;
+  };
+
+  const updateLendingContact = async (id: string, updates: Partial<LendingContact>): Promise<void> => {
+    setLendingContacts(prev => prev.map(c => c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase
+          .from('lending_contacts')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+      } catch (e) {
+        console.warn('Failed to update lending contact in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteLendingContact = async (id: string): Promise<void> => {
+    setLendingContacts(prev => prev.filter(c => c.id !== id));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase.from('lending_contacts').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Failed to delete lending contact from Supabase:', e);
+      }
+    }
+  };
+
   // CRUD Collections & Curated Catalogs Module
   const addCollection = async (colData: Omit<Collection, 'id' | 'created_at'>): Promise<Collection> => {
     const newCol: Collection = {
@@ -2582,23 +2678,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addItemToCollection = async (
     collectionId: string,
-    itemId: string,
+    itemId?: string | null,
     details?: Partial<CollectionItem>
   ): Promise<CollectionItem> => {
-    const existing = collectionItems.find(ci => ci.collection_id === collectionId && ci.item_id === itemId);
-    if (existing) {
-      const updated = { ...existing, ...details };
-      setCollectionItems(prev => prev.map(ci => ci.id === existing.id ? updated : ci));
-      if (isSupabaseConfigured && supabase && isUUID(existing.id)) {
-        await supabase.from('collection_items').update(details || {}).eq('id', existing.id);
+    if (itemId) {
+      const existing = collectionItems.find(ci => ci.collection_id === collectionId && ci.item_id === itemId);
+      if (existing) {
+        const updated = { ...existing, ...details };
+        setCollectionItems(prev => prev.map(ci => ci.id === existing.id ? updated : ci));
+        if (isSupabaseConfigured && supabase && isUUID(existing.id)) {
+          await supabase.from('collection_items').update(details || {}).eq('id', existing.id);
+        }
+        return updated;
       }
-      return updated;
     }
 
     const newItem: CollectionItem = {
       id: 'ci-' + Date.now(),
       collection_id: collectionId,
-      item_id: itemId,
+      item_id: itemId || null,
+      name: details?.name,
+      description: details?.description,
+      photo_url: details?.photo_url,
+      quantity: details?.quantity ?? 1,
       collector_grade: details?.collector_grade,
       rarity: details?.rarity,
       acquired_year: details?.acquired_year,
@@ -2608,20 +2710,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       created_at: new Date().toISOString(),
     };
 
-    if (isSupabaseConfigured && supabase && isUUID(collectionId) && isUUID(itemId)) {
+    if (isSupabaseConfigured && supabase && isUUID(collectionId)) {
       try {
+        const insertPayload: any = {
+          collection_id: collectionId,
+          collector_grade: details?.collector_grade,
+          rarity: details?.rarity,
+          acquired_year: details?.acquired_year,
+          catalog_number: details?.catalog_number,
+          estimated_collector_value: details?.estimated_collector_value,
+          custom_attributes: details?.custom_attributes || {},
+        };
+        if (itemId && isUUID(itemId)) {
+          insertPayload.item_id = itemId;
+        } else {
+          insertPayload.item_id = null;
+        }
+        if (details?.name) insertPayload.name = details.name;
+        if (details?.description) insertPayload.description = details.description;
+        if (details?.photo_url) insertPayload.photo_url = details.photo_url;
+        if (details?.quantity !== undefined) insertPayload.quantity = details.quantity;
+
         const { data, error } = await supabase
           .from('collection_items')
-          .insert([{
-            collection_id: collectionId,
-            item_id: itemId,
-            collector_grade: details?.collector_grade,
-            rarity: details?.rarity,
-            acquired_year: details?.acquired_year,
-            catalog_number: details?.catalog_number,
-            estimated_collector_value: details?.estimated_collector_value,
-            custom_attributes: details?.custom_attributes || {},
-          }])
+          .insert([insertPayload])
           .select()
           .single();
 
@@ -2638,16 +2750,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newItem;
   };
 
-  const removeItemFromCollection = async (collectionId: string, itemId: string): Promise<void> => {
-    setCollectionItems(prev => prev.filter(ci => !(ci.collection_id === collectionId && ci.item_id === itemId)));
+  const updateCollectionItem = async (collectionItemId: string, updates: Partial<CollectionItem>): Promise<void> => {
+    setCollectionItems(prev => prev.map(ci => ci.id === collectionItemId ? { ...ci, ...updates } : ci));
 
-    if (isSupabaseConfigured && supabase && isUUID(collectionId) && isUUID(itemId)) {
+    if (isSupabaseConfigured && supabase && isUUID(collectionItemId)) {
+      try {
+        await supabase
+          .from('collection_items')
+          .update(updates)
+          .eq('id', collectionItemId);
+      } catch (e) {
+        console.warn('Failed to update collection item in Supabase:', e);
+      }
+    }
+  };
+
+  const deleteCollectionItem = async (collectionItemId: string): Promise<void> => {
+    setCollectionItems(prev => prev.filter(ci => ci.id !== collectionItemId));
+
+    if (isSupabaseConfigured && supabase && isUUID(collectionItemId)) {
       try {
         await supabase
           .from('collection_items')
           .delete()
-          .eq('collection_id', collectionId)
-          .eq('item_id', itemId);
+          .eq('id', collectionItemId);
+      } catch (e) {
+        console.warn('Failed to delete collection item in Supabase:', e);
+      }
+    }
+  };
+
+  const removeItemFromCollection = async (collectionId: string, itemIdOrCollectionItemId: string): Promise<void> => {
+    setCollectionItems(prev => prev.filter(ci =>
+      !(ci.collection_id === collectionId && (ci.item_id === itemIdOrCollectionItemId || ci.id === itemIdOrCollectionItemId))
+    ));
+
+    if (isSupabaseConfigured && supabase && isUUID(collectionId)) {
+      try {
+        if (isUUID(itemIdOrCollectionItemId)) {
+          await supabase
+            .from('collection_items')
+            .delete()
+            .or(`id.eq.${itemIdOrCollectionItemId},and(collection_id.eq.${collectionId},item_id.eq.${itemIdOrCollectionItemId})`);
+        }
       } catch (e) {
         console.warn('Failed to remove item from collection in Supabase:', e);
       }
@@ -3766,26 +3911,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const convertNoteToItem = async (noteId: string): Promise<void> => {
+  const convertNoteToItem = async (noteId: string): Promise<Item | null> => {
     const note = quickNotes.find(n => n.id === noteId);
-    if (!note) return;
+    if (!note) return null;
+
+    // Smart location matching based on note.location_hint
+    let matchedLocationId = locations[0]?.id || null;
+    if (note.location_hint && note.location_hint.trim()) {
+      const hint = note.location_hint.trim().toLowerCase();
+      const exactLoc = locations.find(l => l.name.trim().toLowerCase() === hint);
+      if (exactLoc) {
+        matchedLocationId = exactLoc.id;
+      }
+    }
+
+    const defaultCategoryId = categories[0]?.id || null;
 
     // Create full item pre-filled from note
     const createdItem = await addItem({
-      name: note.title,
+      name: note.title.trim(),
       description: `${note.content}\n\n[Átalakítva jegyzetből] ${note.location_hint ? `Hely: ${note.location_hint}` : ''}`.trim(),
-      category_id: categories[0]?.id || 'cat-11',
-      location_id: locations[0]?.id || 'loc-1',
+      category_id: matchedLocationId ? (defaultCategoryId || undefined) : undefined,
+      location_id: matchedLocationId || undefined,
       condition: 'Good',
       status: 'Working',
       ownership_scope: 'private',
     });
 
-    // Mark note as converted
+    // Enforce strict validation: ONLY mark converted if a real database UUID was produced!
+    if (!createdItem || !createdItem.id || !isUUID(createdItem.id)) {
+      console.error('convertNoteToItem: Item creation failed to return a valid UUID:', createdItem);
+      throw new Error(language === 'hu' ? 'Nem sikerült elmenteni a tárgyat az adatbázisban.' : 'Failed to persist item to the database.');
+    }
+
+    // Mark note as converted with verified item UUID
     await updateQuickNote(noteId, {
       is_converted: true,
       converted_item_id: createdItem.id,
     });
+
+    return createdItem;
   };
 
   // Admin Audit Log logger
@@ -4492,6 +4657,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateLoan,
         returnLoan,
         deleteLoan,
+        lendingContacts,
+        addLendingContact,
+        updateLendingContact,
+        deleteLendingContact,
 
         collections,
         collectionItems,
@@ -4500,6 +4669,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteCollection,
         addItemToCollection,
         removeItemFromCollection,
+        deleteCollectionItem,
+        updateCollectionItem,
         getCollectionItems,
 
         pantryItems,

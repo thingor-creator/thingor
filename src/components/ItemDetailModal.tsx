@@ -27,9 +27,10 @@ import {
   ArrowLeft,
   QrCode,
   Handshake,
-  Lock
+  Lock,
+  Download
 } from 'lucide-react';
-import { uploadFileToStorage, openR2DocumentSecurely } from '../lib/storage';
+import { uploadFileToStorage, openR2DocumentSecurely, downloadR2DocumentSecurely } from '../lib/storage';
 import { ShareModal } from './ShareModal';
 import { QRCodeModal } from './QRCodeModal';
 
@@ -1348,13 +1349,22 @@ export const ItemDetailModal: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => openR2DocumentSecurely(doc.file_url)}
-                          className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] hover:bg-[var(--border-color,#56616D)]/50 text-xs flex items-center gap-1 cursor-pointer"
+                          className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                          title={isHu ? 'Megtekintés' : 'View'}
                         >
                           <ExternalLink className="h-3.5 w-3.5" /> {isHu ? 'Megtekintés' : 'View'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadR2DocumentSecurely(doc.file_url, doc.file_name)}
+                          className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-emerald-600 text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                          title={isHu ? 'Letöltés' : 'Download'}
+                        >
+                          <Download className="h-3.5 w-3.5" /> {isHu ? 'Letöltés' : 'Download'}
                         </button>
                         <button
                           onClick={() => deleteDocument(doc.id)}
