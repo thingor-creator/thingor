@@ -21,7 +21,6 @@ import {
   Minus,
   Trash2,
   ExternalLink,
-  Database,
   Loader2,
   AlertCircle,
   RefreshCw,
@@ -178,6 +177,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     fetchStorageContainers,
     fetchContainerItems,
     createStorageContainer,
+    updateStorageContainer,
     deleteStorageContainer,
     addContainerItem,
     deleteContainerItem,
@@ -790,12 +790,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   <Package className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                   <span>Fizikai Tárolók és Raktározás</span>
                 </h1>
-                {isRealDataActive ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
-                    <Database className="w-3 h-3" />
-                    <span>Éles Adatbázis</span>
-                  </span>
-                ) : (
+                {!isRealDataActive && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-[var(--color-primary-blue,#2563EB)] border border-blue-500/20 shrink-0">
                     MVP Előnézet
                   </span>
@@ -834,15 +829,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Status Callout Badge */}
-        {isRealDataActive ? (
-          <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-start gap-2.5 sm:gap-3">
-            <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="text-[11px] sm:text-xs text-emerald-200/90 leading-relaxed">
-              <strong className="text-white font-semibold">Aktív felhő szinkronizáció:</strong> Tárolóid és a hozzárendelt tételek a Supabase adatbázisból töltődnek be, biztonságos RLS jogosultságvédelemmel és ciklusvédelemmel.
-            </div>
-          </div>
-        ) : (
+        {/* Demo Mode Notice */}
+        {!isRealDataActive && (
           <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-2.5 sm:gap-3">
             <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
             <div className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">

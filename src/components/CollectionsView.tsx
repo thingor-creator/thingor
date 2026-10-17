@@ -16,9 +16,14 @@ import {
   ArrowLeft,
   Sparkles,
   ChevronRight,
-  Shield
+  Shield,
+  Upload,
+  Link as LinkIcon,
+  Loader2,
+  Check
 } from 'lucide-react';
 import type { Collection, CollectionItem } from '../types';
+import { uploadFileToStorage, optimizeImageFile } from '../lib/storage';
 
 export const CollectionsView: React.FC = () => {
   const {
@@ -32,7 +37,8 @@ export const CollectionsView: React.FC = () => {
     deleteCollectionItem,
     updateCollectionItem,
     setSelectedItemId,
-    language
+    language,
+    user
   } = useApp();
 
   const isHu = language === 'hu';
@@ -49,6 +55,10 @@ export const CollectionsView: React.FC = () => {
   const [colType, setColType] = useState<string>('general');
   const [colCover, setColCover] = useState('');
   const [colIsPublic, setColIsPublic] = useState(false);
+  const [isUploadingColCover, setIsUploadingColCover] = useState(false);
+  const [colCoverUploadError, setColCoverUploadError] = useState<string | null>(null);
+  const [colCoverTab, setColCoverTab] = useState<'upload' | 'url'>('upload');
+  const [isColDragging, setIsColDragging] = useState(false);
 
   // Add / Edit item in collection modal
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
@@ -64,12 +74,88 @@ export const CollectionsView: React.FC = () => {
   const [standaloneQuantity, setStandaloneQuantity] = useState<number>(1);
   const [standalonePhotoUrl, setStandalonePhotoUrl] = useState('');
 
+  // Item photo upload state
+  const [isUploadingItemPhoto, setIsUploadingItemPhoto] = useState(false);
+  const [itemPhotoUploadError, setItemPhotoUploadError] = useState<string | null>(null);
+  const [itemPhotoTab, setItemPhotoTab] = useState<'upload' | 'url'>('upload');
+  const [isItemDragging, setIsItemDragging] = useState(false);
+
   // Collector attributes
   const [collectorGrade, setCollectorGrade] = useState('');
   const [rarity, setRarity] = useState('');
   const [acquiredYear, setAcquiredYear] = useState<number | ''>('');
   const [catalogNumber, setCatalogNumber] = useState('');
   const [estimatedCollectorValue, setEstimatedCollectorValue] = useState<number | ''>('');
+
+  const processImageFile = async (file: File, target: 'item' | 'collection') => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      const msg = isHu ? 'Csak képfájl választható ki (JPG, PNG, WebP)!' : 'Only image files are supported (JPG, PNG, WebP)!';
+      if (target === 'item') setItemPhotoUploadError(msg);
+      else setColCoverUploadError(msg);
+      return;
+    }
+
+    if (target === 'item') {
+      setIsUploadingItemPhoto(true);
+      setItemPhotoUploadError(null);
+    } else {
+      setIsUploadingColCover(true);
+      setColCoverUploadError(null);
+    }
+
+    try {
+      const res = await uploadFileToStorage(file, 'photos', user?.id || 'demo');
+      if (res.signedUrl || res.path) {
+        const finalUrl = res.signedUrl || res.path || '';
+        if (target === 'item') setStandalonePhotoUrl(finalUrl);
+        else setColCover(finalUrl);
+      } else {
+        // Fallback: convert optimized WebP or raw file to Data URL
+        try {
+          const optimized = await optimizeImageFile(file);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const result = e.target?.result as string;
+            if (result) {
+              if (target === 'item') setStandalonePhotoUrl(result);
+              else setColCover(result);
+            }
+          };
+          reader.readAsDataURL(optimized);
+        } catch {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const result = e.target?.result as string;
+            if (result) {
+              if (target === 'item') setStandalonePhotoUrl(result);
+              else setColCover(result);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    } catch (err: any) {
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          if (result) {
+            if (target === 'item') setStandalonePhotoUrl(result);
+            else setColCover(result);
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch {
+        const msg = err?.message || (isHu ? 'Nem sikerült feldolgozni a képet.' : 'Failed to process image.');
+        if (target === 'item') setItemPhotoUploadError(msg);
+        else setColCoverUploadError(msg);
+      }
+    } finally {
+      if (target === 'item') setIsUploadingItemPhoto(false);
+      else setIsUploadingColCover(false);
+    }
+  };
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat(isHu ? 'hu-HU' : 'en-US', {
@@ -169,6 +255,10 @@ export const CollectionsView: React.FC = () => {
     setColType('general');
     setColCover('');
     setColIsPublic(false);
+    setIsUploadingColCover(false);
+    setColCoverUploadError(null);
+    setColCoverTab('upload');
+    setIsColDragging(false);
     setIsColModalOpen(true);
   };
 
@@ -180,6 +270,10 @@ export const CollectionsView: React.FC = () => {
     setColType(col.collection_type);
     setColCover(col.cover_image_url || '');
     setColIsPublic(col.is_public);
+    setIsUploadingColCover(false);
+    setColCoverUploadError(null);
+    setColCoverTab(col.cover_image_url && col.cover_image_url.startsWith('http') && !col.cover_image_url.includes('data:') ? 'url' : 'upload');
+    setIsColDragging(false);
     setIsColModalOpen(true);
   };
 
@@ -217,6 +311,10 @@ export const CollectionsView: React.FC = () => {
     setStandaloneDesc('');
     setStandaloneQuantity(1);
     setStandalonePhotoUrl('');
+    setIsUploadingItemPhoto(false);
+    setItemPhotoUploadError(null);
+    setItemPhotoTab('upload');
+    setIsItemDragging(false);
     setCollectorGrade('');
     setRarity('');
     setAcquiredYear('');
@@ -233,6 +331,10 @@ export const CollectionsView: React.FC = () => {
     setStandaloneDesc(ci.description || '');
     setStandaloneQuantity(ci.quantity ?? 1);
     setStandalonePhotoUrl(ci.photo_url || '');
+    setIsUploadingItemPhoto(false);
+    setItemPhotoUploadError(null);
+    setItemPhotoTab(ci.photo_url && ci.photo_url.startsWith('http') && !ci.photo_url.includes('data:') ? 'url' : 'upload');
+    setIsItemDragging(false);
     setCollectorGrade(ci.collector_grade || '');
     setRarity(ci.rarity || '');
     setAcquiredYear(ci.acquired_year || '');
@@ -295,9 +397,15 @@ export const CollectionsView: React.FC = () => {
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
-            <div className="p-2.5 rounded-xl bg-[var(--cat-books,#818CF8)]/15 text-[var(--cat-books,#818CF8)]">
-              <Library className="h-6 w-6" />
-            </div>
+            {currentCollection?.cover_image_url ? (
+              <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-[var(--border-color,#56616D)] shadow-sm bg-[var(--surface-bg,#465362)]">
+                <img src={currentCollection.cover_image_url} alt={currentCollection.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl bg-[var(--cat-books,#818CF8)]/15 text-[var(--cat-books,#818CF8)]">
+                <Library className="h-6 w-6" />
+              </div>
+            )}
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-main,#E0E3E6)] tracking-tight">
                 {currentCollection ? currentCollection.name : (isHu ? 'Gyűjtemények & Katalógusok' : 'Curated Collections')}
@@ -458,6 +566,19 @@ export const CollectionsView: React.FC = () => {
                     className="p-5 rounded-[18px] border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--color-primary-blue,#2563EB)]/60 transition-all cursor-pointer group shadow-sm flex flex-col justify-between"
                   >
                     <div>
+                      {col.cover_image_url && (
+                        <div className="h-28 -mx-5 -mt-5 mb-3.5 rounded-t-[18px] overflow-hidden bg-black/20 relative">
+                          <img
+                            src={col.cover_image_url}
+                            alt={col.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--card-bg,#3A4551)] via-transparent to-transparent opacity-80" />
+                        </div>
+                      )}
                       {/* Top Bar: Icon & Type Badge */}
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
@@ -563,8 +684,8 @@ export const CollectionsView: React.FC = () => {
                           className={`flex items-center gap-3 flex-1 min-w-0 ${ci.item_id && item ? 'cursor-pointer group' : ''}`}
                         >
                           <div className="w-12 h-12 rounded-xl bg-[var(--surface-bg,#465362)] overflow-hidden shrink-0 flex items-center justify-center border border-[var(--border-color,#56616D)]">
-                            {item?.photo_url || ci.photo_url ? (
-                              <img src={item?.photo_url || ci.photo_url} alt={item?.name || ci.name || ''} className="w-full h-full object-cover" />
+                            {ci.photo_url || item?.photo_url ? (
+                              <img src={ci.photo_url || item?.photo_url} alt={ci.name || item?.name || ''} className="w-full h-full object-cover" />
                             ) : (
                               <Package className="h-5 w-5 text-[var(--text-sub,#B5BDC6)]" />
                             )}
@@ -751,6 +872,161 @@ export const CollectionsView: React.FC = () => {
                 />
               </div>
 
+              {/* Collection Cover Image */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                    {isHu ? 'Gyűjtemény borítóképe (opcionális)' : 'Collection Cover Image (optional)'}
+                  </label>
+                  <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                    <button
+                      type="button"
+                      onClick={() => setColCoverTab('upload')}
+                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
+                        colCoverTab === 'upload'
+                          ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                          : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                      }`}
+                    >
+                      <Upload className="h-3 w-3" />
+                      <span>{isHu ? 'Feltöltés' : 'Upload'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setColCoverTab('url')}
+                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
+                        colCoverTab === 'url'
+                          ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                          : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                      }`}
+                    >
+                      <LinkIcon className="h-3 w-3" />
+                      <span>{isHu ? 'URL' : 'URL'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {colCover ? (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)]">
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black/20 shrink-0 border border-[var(--border-color,#56616D)]">
+                      <img
+                        src={colCover}
+                        alt="Cover preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                        <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        <span>{isHu ? 'Borítókép beállítva' : 'Cover image set'}</span>
+                      </div>
+                      <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] truncate mt-0.5">
+                        {colCover.startsWith('data:') ? (isHu ? 'Beágyazott képfájl' : 'Embedded image file') : colCover}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <label className="text-[11px] font-bold text-[var(--color-primary-blue,#2563EB)] hover:underline cursor-pointer">
+                          {isHu ? 'Csere' : 'Replace'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) processImageFile(file, 'collection');
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                        <span className="text-[var(--border-color,#56616D)]">•</span>
+                        <button
+                          type="button"
+                          onClick={() => setColCover('')}
+                          className="text-[11px] font-bold text-[var(--status-danger,#EF4444)] hover:underline flex items-center gap-1"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>{isHu ? 'Törlés' : 'Remove'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : colCoverTab === 'upload' ? (
+                  <label
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsColDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsColDragging(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsColDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) processImageFile(file, 'collection');
+                    }}
+                    className={`flex flex-col items-center justify-center p-3.5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                      isColDragging
+                        ? 'border-[var(--color-primary-blue,#2563EB)] bg-[var(--color-primary-blue,#2563EB)]/10 scale-[0.99]'
+                        : 'border-[var(--border-color,#56616D)] hover:border-[var(--color-primary-blue,#2563EB)]/70 bg-[var(--surface-bg,#465362)]/30'
+                    } ${isUploadingColCover ? 'opacity-60 pointer-events-none' : ''}`}
+                  >
+                    {isUploadingColCover ? (
+                      <div className="flex items-center gap-2 py-1 text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                        <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                        <span>{isHu ? 'Feltöltés és optimalizálás...' : 'Uploading and optimizing...'}</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-center">
+                        <div className="p-2 rounded-lg bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
+                          <Upload className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                          {isHu ? 'Kattints a borítókép tallózásához vagy húzd ide' : 'Click to browse cover image or drag & drop'}
+                        </span>
+                        <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]">
+                          JPG, PNG, WebP (max. 15MB)
+                        </span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingColCover}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) processImageFile(file, 'collection');
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-sub,#B5BDC6)]" />
+                    <input
+                      type="url"
+                      value={colCover}
+                      onChange={(e) => setColCover(e.target.value)}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    />
+                  </div>
+                )}
+
+                {colCoverUploadError && (
+                  <p className="text-[11px] text-[var(--status-danger,#EF4444)] font-medium">
+                    {colCoverUploadError}
+                  </p>
+                )}
+              </div>
+
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
@@ -820,23 +1096,23 @@ export const CollectionsView: React.FC = () => {
 
               {/* Mode-specific Fields */}
               {itemEntryMode === 'standalone' ? (
-                <div className="space-y-3 p-3.5 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)]/50">
-                  <div>
-                    <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                      {isHu ? 'Tétel megnevezése *' : 'Item Name *'}
-                    </label>
-                    <input
-                      type="text"
-                      value={standaloneName}
-                      onChange={e => setStandaloneName(e.target.value)}
-                      placeholder={isHu ? 'Pl. 1968-as Űrkutatás emlékbélyeg, Ametiszt geóda...' : 'e.g. 1968 Space Stamp, Amethyst crystal...'}
-                      required
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                    />
-                  </div>
+                <div className="space-y-3.5 p-3.5 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)]/50">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div className="sm:col-span-3">
+                      <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
+                        {isHu ? 'Tétel megnevezése *' : 'Item Name *'}
+                      </label>
+                      <input
+                        type="text"
+                        value={standaloneName}
+                        onChange={e => setStandaloneName(e.target.value)}
+                        placeholder={isHu ? 'Pl. 1968-as Űrkutatás emlékbélyeg, Ametiszt geóda...' : 'e.g. 1968 Space Stamp, Amethyst crystal...'}
+                        required
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <div className="col-span-1">
+                    <div className="sm:col-span-1">
                       <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
                         {isHu ? 'Mennyiség (db)' : 'Quantity'}
                       </label>
@@ -848,18 +1124,161 @@ export const CollectionsView: React.FC = () => {
                         className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                       />
                     </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
-                        {isHu ? 'Fotó URL (opcionális)' : 'Photo URL'}
+                  </div>
+
+                  {/* Photo Upload & URL Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                        {isHu ? 'Tétel fényképe (opcionális)' : 'Item Photo (optional)'}
                       </label>
-                      <input
-                        type="url"
-                        value={standalonePhotoUrl}
-                        onChange={e => setStandalonePhotoUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                      />
+                      <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                        <button
+                          type="button"
+                          onClick={() => setItemPhotoTab('upload')}
+                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
+                            itemPhotoTab === 'upload'
+                              ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                              : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                          }`}
+                        >
+                          <Upload className="h-3 w-3" />
+                          <span>{isHu ? 'Feltöltés' : 'Upload'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setItemPhotoTab('url')}
+                          className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all flex items-center gap-1 ${
+                            itemPhotoTab === 'url'
+                              ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-sm'
+                              : 'text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)]'
+                          }`}
+                        >
+                          <LinkIcon className="h-3 w-3" />
+                          <span>{isHu ? 'URL' : 'URL'}</span>
+                        </button>
+                      </div>
                     </div>
+
+                    {standalonePhotoUrl ? (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)]">
+                        <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black/20 shrink-0 border border-[var(--border-color,#56616D)]">
+                          <img
+                            src={standalonePhotoUrl}
+                            alt="Item preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span>{isHu ? 'Kép csatolva' : 'Photo attached'}</span>
+                          </div>
+                          <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] truncate mt-0.5">
+                            {standalonePhotoUrl.startsWith('data:') ? (isHu ? 'Beágyazott képfájl' : 'Embedded image file') : standalonePhotoUrl}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <label className="text-[11px] font-bold text-[var(--color-primary-blue,#2563EB)] hover:underline cursor-pointer">
+                              {isHu ? 'Csere' : 'Replace'}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) processImageFile(file, 'item');
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                            <span className="text-[var(--border-color,#56616D)]">•</span>
+                            <button
+                              type="button"
+                              onClick={() => setStandalonePhotoUrl('')}
+                              className="text-[11px] font-bold text-[var(--status-danger,#EF4444)] hover:underline flex items-center gap-1"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span>{isHu ? 'Törlés' : 'Remove'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : itemPhotoTab === 'upload' ? (
+                      <label
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsItemDragging(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsItemDragging(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsItemDragging(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) processImageFile(file, 'item');
+                        }}
+                        className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                          isItemDragging
+                            ? 'border-[var(--color-primary-blue,#2563EB)] bg-[var(--color-primary-blue,#2563EB)]/10 scale-[0.99]'
+                            : 'border-[var(--border-color,#56616D)] hover:border-[var(--color-primary-blue,#2563EB)]/70 bg-[var(--surface-bg,#465362)]/30'
+                        } ${isUploadingItemPhoto ? 'opacity-60 pointer-events-none' : ''}`}
+                      >
+                        {isUploadingItemPhoto ? (
+                          <div className="flex items-center gap-2 py-2 text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                            <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                            <span>{isHu ? 'Kép feltöltése és optimalizálása...' : 'Uploading and optimizing photo...'}</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-center py-1">
+                            <div className="p-2.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
+                              <Upload className="h-4 w-4" />
+                            </div>
+                            <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                              {isHu ? 'Kattints a fénykép tallózásához vagy húzd ide' : 'Click to browse photo or drag & drop'}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]">
+                              JPG, PNG, WebP (max. 15MB, automatikus optimalizálás)
+                            </span>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isUploadingItemPhoto}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) processImageFile(file, 'item');
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    ) : (
+                      <div className="relative">
+                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-sub,#B5BDC6)]" />
+                        <input
+                          type="url"
+                          value={standalonePhotoUrl}
+                          onChange={(e) => setStandalonePhotoUrl(e.target.value)}
+                          placeholder="https://images.unsplash.com/..."
+                          className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                        />
+                      </div>
+                    )}
+
+                    {itemPhotoUploadError && (
+                      <p className="text-[11px] text-[var(--status-danger,#EF4444)] font-medium">
+                        {itemPhotoUploadError}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -876,7 +1295,7 @@ export const CollectionsView: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3 p-3.5 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)]/50">
+                <div className="space-y-3.5 p-3.5 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-[var(--border-color,#56616D)]/50">
                   <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
                     {isHu ? 'Válassz meglévő tárgyat a leltárból *' : 'Select Inventory Item *'}
                   </label>
@@ -903,6 +1322,77 @@ export const CollectionsView: React.FC = () => {
                       ))}
                     </select>
                   )}
+
+                  {/* Linked Item Preview Card & Optional Custom Photo */}
+                  {selectedItemIdToAdd && (() => {
+                    const linked = items.find(i => i.id === selectedItemIdToAdd);
+                    if (!linked) return null;
+                    return (
+                      <div className="pt-2 space-y-3 border-t border-[var(--border-color,#56616D)]/40">
+                        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)]/60">
+                          <div className="w-12 h-12 rounded-lg bg-[var(--card-bg,#3A4551)] overflow-hidden shrink-0 flex items-center justify-center border border-[var(--border-color,#56616D)]">
+                            {standalonePhotoUrl || linked.photo_url ? (
+                              <img src={standalonePhotoUrl || linked.photo_url} alt={linked.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="h-5 w-5 text-[var(--text-sub,#B5BDC6)]" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h5 className="text-xs font-bold text-[var(--text-main,#E0E3E6)] truncate">{linked.name}</h5>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5">
+                              {linked.purchase_price ? formatCurrency(linked.purchase_price) : (isHu ? 'Nincs ár megadva' : 'No price set')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Optional photo override */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-[var(--text-sub,#B5BDC6)]">
+                              {isHu ? 'Egyedi gyűjtői fotó (felülírja az eredetit):' : 'Custom collector photo (optional override):'}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <label className="text-[11px] font-bold text-[var(--color-primary-blue,#2563EB)] hover:underline cursor-pointer flex items-center gap-1">
+                                <Upload className="h-3 w-3" />
+                                <span>{isHu ? 'Feltöltés' : 'Upload'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  disabled={isUploadingItemPhoto}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) processImageFile(file, 'item');
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+                              {standalonePhotoUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setStandalonePhotoUrl('')}
+                                  className="text-[11px] font-bold text-[var(--status-danger,#EF4444)] hover:underline ml-2"
+                                >
+                                  {isHu ? 'Visszaállítás' : 'Reset'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {isUploadingItemPhoto && (
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--color-primary-blue,#2563EB)] font-medium">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>{isHu ? 'Kép feltöltése...' : 'Uploading photo...'}</span>
+                            </div>
+                          )}
+                          {itemPhotoUploadError && (
+                            <p className="text-[11px] text-[var(--status-danger,#EF4444)] font-medium">
+                              {itemPhotoUploadError}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
