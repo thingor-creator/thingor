@@ -33,7 +33,12 @@ import {
   LayoutDashboard,
   Plus,
   Menu,
+  Sun,
+  Moon,
+  Sparkles,
+  RotateCcw,
 } from 'lucide-react';
+import { THEMES, ACCENT_COLORS, applyTheme } from '../lib/theme';
 
 type SettingsTab = 'account' | 'appearance' | 'regional' | 'notifications' | 'security' | 'data';
 
@@ -570,29 +575,176 @@ export const SettingsView: React.FC = () => {
               </label>
             </div>
 
-            {/* Színpaletta és téma jelző */}
-            <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] space-y-3">
-              <div className="flex items-center justify-between">
+            {/* SZÍNTÉMA VÁLASZTÓ ÉS TESTRESZABÁS */}
+            <div className="space-y-4 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
                 <div>
-                  <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
-                    {isHu ? 'Alkalmazás témája' : 'Application Theme'}
+                  <div className="text-sm font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    <span>{isHu ? 'Színtéma és felület stílusa' : 'Color Theme & Surface Style'}</span>
+                  </div>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
+                    {isHu
+                      ? 'Válassz a prémium dizájner színtémák közül a teljes alkalmazás megjelenésének megváltoztatásához.'
+                      : 'Choose from curated premium themes to transform the visual atmosphere of Thingor.'}
+                  </p>
+                </div>
+                {userPreferences.theme_id && userPreferences.theme_id !== 'slate' && (
+                  <button
+                    onClick={async () => {
+                      applyTheme('slate', undefined);
+                      await updateUserPreferences({ theme_id: 'slate', accent_color: undefined });
+                    }}
+                    className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:text-white flex items-center gap-1.5 border border-[var(--border-color,#56616D)] transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>{isHu ? 'Alapértelmezett visszaállítása' : 'Reset to Default'}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Téma kártyák rácsa */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {THEMES.map(theme => {
+                  const isSelected = (userPreferences.theme_id || 'slate') === theme.id;
+                  return (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      onClick={async () => {
+                        applyTheme(theme.id, userPreferences.accent_color);
+                        await updateUserPreferences({ theme_id: theme.id });
+                      }}
+                      className={`relative text-left p-3.5 rounded-2xl border transition-all duration-200 flex flex-col justify-between gap-3 group ${
+                        isSelected
+                          ? 'border-[var(--color-primary-blue,#2563EB)] ring-2 ring-[var(--color-primary-blue,#2563EB)]/40 shadow-lg'
+                          : 'border-[var(--border-color,#56616D)]/80 hover:border-[var(--color-primary-blue,#2563EB)]/50 hover:shadow-md'
+                      }`}
+                      style={{ backgroundColor: theme.cardBg }}
+                    >
+                      {/* Fejléc: Téma neve és Ikon */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div
+                            className="text-xs font-bold transition-colors flex items-center gap-1.5"
+                            style={{ color: theme.textMain }}
+                          >
+                            {theme.isLight ? (
+                              <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            ) : (
+                              <Moon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            )}
+                            <span className="truncate">{isHu ? theme.nameHu : theme.nameEn}</span>
+                          </div>
+                          <div
+                            className="text-[11px] line-clamp-2 mt-0.5 leading-tight"
+                            style={{ color: theme.textSub }}
+                          >
+                            {isHu ? theme.descHu : theme.descEn}
+                          </div>
+                        </div>
+
+                        {isSelected && (
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow text-white"
+                            style={{ backgroundColor: userPreferences.accent_color || theme.defaultAccent }}
+                          >
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mini felületi előnézet */}
+                      <div
+                        className="w-full rounded-xl p-2 border flex flex-col gap-1.5 shadow-inner"
+                        style={{ backgroundColor: theme.bgMain, borderColor: theme.borderColor }}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: theme.defaultAccent }} />
+                            <div className="h-1.5 w-10 rounded" style={{ backgroundColor: theme.textSub, opacity: 0.5 }} />
+                          </div>
+                          <div className="h-1.5 w-4 rounded" style={{ backgroundColor: theme.borderColor }} />
+                        </div>
+                        <div
+                          className="rounded-lg p-1.5 flex items-center justify-between"
+                          style={{ backgroundColor: theme.surfaceBg }}
+                        >
+                          <div className="h-2 w-12 rounded" style={{ backgroundColor: theme.textMain, opacity: 0.8 }} />
+                          <div
+                            className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white shadow-sm"
+                            style={{ backgroundColor: userPreferences.accent_color || theme.defaultAccent }}
+                          >
+                            OK
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* KIEMELŐ SZÍN (ACCENT COLOR) VÁLASZTÓ */}
+            <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)] flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    <span>{isHu ? 'Egyéni kiemelő szín (Accent Color)' : 'Custom Accent Color'}</span>
                   </div>
                   <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
-                    {isHu ? 'Thingor Dark Slate (Alapértelmezett sötét téma)' : 'Thingor Dark Slate (Default dark theme)'}
+                    {isHu
+                      ? 'Gombok, aktív fülek, kiemelt ikonok és cselekvési felületek színe.'
+                      : 'Customize the highlight color for primary buttons, active tabs, and links.'}
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-primary-blue,#2563EB)]/20 text-[var(--color-primary-blue,#2563EB)] border border-[var(--color-primary-blue,#2563EB)]/30">
-                  #303943
-                </span>
+
+                {userPreferences.accent_color && (
+                  <button
+                    onClick={async () => {
+                      applyTheme(userPreferences.theme_id, undefined);
+                      await updateUserPreferences({ accent_color: undefined });
+                    }}
+                    className="self-start sm:self-auto text-xs text-[var(--text-sub,#B5BDC6)] hover:text-[var(--text-main,#E0E3E6)] underline transition-colors"
+                  >
+                    {isHu ? 'Téma alapértelmezett' : 'Use theme default'}
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2 pt-1">
-                <div className="w-6 h-6 rounded-lg bg-[#303943] border border-white/20 shadow-inner" title="Bg Main" />
-                <div className="w-6 h-6 rounded-lg bg-[#3A4551] border border-white/20 shadow-inner" title="Card Bg" />
-                <div className="w-6 h-6 rounded-lg bg-[#465362] border border-white/20 shadow-inner" title="Surface Bg" />
-                <div className="w-6 h-6 rounded-lg bg-[#2563EB] border border-white/20 shadow-inner" title="Primary Blue" />
-                <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] ml-2">
-                  {isHu ? 'Konzisztens szemkímélő sötét felület' : 'Eye-friendly low-contrast dark palette'}
-                </span>
+
+              {/* Színes körök sora */}
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                {ACCENT_COLORS.map(color => {
+                  const currentTheme = THEMES.find(t => t.id === (userPreferences.theme_id || 'slate')) || THEMES[0];
+                  const activeAccent = userPreferences.accent_color || currentTheme.defaultAccent;
+                  const isSelected = activeAccent.toLowerCase() === color.hex.toLowerCase();
+
+                  return (
+                    <button
+                      key={color.id}
+                      type="button"
+                      title={isHu ? color.labelHu : color.labelEn}
+                      onClick={async () => {
+                        applyTheme(userPreferences.theme_id, color.hex);
+                        await updateUserPreferences({ accent_color: color.hex });
+                      }}
+                      className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all text-xs font-semibold ${
+                        isSelected
+                          ? 'border-white text-white shadow-md ring-2 ring-white/30 scale-105'
+                          : 'border-transparent text-[var(--text-sub,#B5BDC6)] hover:text-white bg-[var(--card-bg,#3A4551)]'
+                      }`}
+                    >
+                      <span
+                        className="w-3.5 h-3.5 rounded-full shadow-inner flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: color.hex }}
+                      >
+                        {isSelected && <Check className="w-2.5 h-2.5 stroke-[3] text-white" />}
+                      </span>
+                      <span>{isHu ? color.labelHu : color.labelEn}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

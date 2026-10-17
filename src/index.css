@@ -54,6 +54,7 @@
     min-height: 100vh;
     margin: 0;
     overflow-x: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   input::placeholder, select::placeholder, textarea::placeholder {
@@ -61,30 +62,30 @@
   }
 }
 
-/* Ensure browser autofill matches input text contrast on dark inputs */
+/* Ensure browser autofill matches input text contrast on dark/light inputs */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-text-fill-color: #E0E3E6 !important;
-  -webkit-box-shadow: 0 0 0px 1000px #465362 inset !important;
+  -webkit-text-fill-color: var(--text-main, #E0E3E6) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface-bg, #465362) inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar matching active theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #303943;
+  background: var(--bg-main, #303943);
 }
 ::-webkit-scrollbar-thumb {
-  background: #56616D;
+  background: var(--border-color, #56616D);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #465362;
+  background: var(--surface-bg, #465362);
 }
 
 /* Smooth transitions */
