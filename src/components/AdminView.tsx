@@ -66,6 +66,7 @@ export const AdminView: React.FC = () => {
     fetchFAQs,
     saveFAQ,
     deleteFAQ,
+    goBack,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'registration' | 'content' | 'legal' | 'settings' | 'audit' | 'faq'>('overview');
@@ -590,11 +591,7 @@ export const AdminView: React.FC = () => {
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
-                  if (window.history.length > 1) {
-                    window.history.back();
-                  } else {
-                    setCurrentView('dashboard');
-                  }
+                  goBack();
                 }}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-white transition-all"
               >
@@ -744,13 +741,7 @@ export const AdminView: React.FC = () => {
           {/* BOTTOM EXIT BUTTON */}
           <div className="pt-4 border-t border-[var(--border-color,#56616D)]">
             <button
-              onClick={() => {
-                if (window.history.length > 1) {
-                  window.history.back();
-                } else {
-                  setCurrentView('dashboard');
-                }
-              }}
+              onClick={goBack}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-white transition-all"
             >
               <ArrowLeft className="w-4 h-4" />

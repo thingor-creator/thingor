@@ -187,6 +187,8 @@ export interface UserPreferences {
   compact_mode?: boolean;
   language?: 'hu' | 'en';
   currency?: 'HUF' | 'EUR' | 'USD';
+  mobile_bottom_bar_left?: string;
+  mobile_bottom_bar_right?: string;
 }
 
 export interface UserProfile {
@@ -481,6 +483,7 @@ export interface UserNotificationSettings {
   repair_enabled: boolean;
   email_enabled: boolean;
   inapp_enabled: boolean;
+  shopping_cart_enabled?: boolean;
   updated_at?: string;
 }
 

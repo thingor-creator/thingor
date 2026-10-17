@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Mail,
   Smartphone,
+  ShoppingCart,
 } from 'lucide-react';
 import type { AppNotification } from '../types';
 
@@ -241,6 +242,27 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                     type="checkbox"
                     checked={userNotificationSettings?.repair_enabled ?? true}
                     onChange={e => updateNotificationSettings({ repair_enabled: e.target.checked })}
+                    className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] cursor-pointer"
+                  />
+                </div>
+
+                {/* Bevásárló kosár toggle */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <ShoppingCart className="h-5 w-5 text-emerald-400" />
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
+                        {isHu ? 'Bevásárló kosár & Készlet' : 'Shopping Cart & Low Stock'}
+                      </div>
+                      <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
+                        {isHu ? 'Figyelmeztetés fogyóban vagy elfogyott alapcikkeknél' : 'Alerts when staple items run low or out'}
+                      </div>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={userNotificationSettings?.shopping_cart_enabled ?? true}
+                    onChange={e => updateNotificationSettings({ shopping_cart_enabled: e.target.checked })}
                     className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] accent-[var(--color-primary-blue,#2563EB)] focus:ring-[var(--color-primary-blue,#2563EB)] cursor-pointer"
                   />
                 </div>

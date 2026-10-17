@@ -97,6 +97,7 @@ interface AppContextType {
   // Navigation & Modals
   currentView: ViewMode;
   setCurrentView: (view: ViewMode) => void;
+  goBack: () => void;
   selectedItemId: string | null;
   setSelectedItemId: (id: string | null) => void;
 
@@ -649,6 +650,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       repair_enabled: true,
       email_enabled: true,
       inapp_enabled: true,
+      shopping_cart_enabled: true,
     };
   });
 
@@ -731,6 +733,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // PWA History & Back Navigation Handler
   const isPoppingRef = useRef(false);
   const prevModalRef = useRef(false);
+  const viewHistoryRef = useRef<ViewMode[]>([]);
   const notificationTablesAvailableRef = useRef<boolean>(true);
 
   const isOverlayModalOpen = Boolean(
@@ -738,6 +741,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isLocationModalOpen ||
     isCategoryModalOpen ||
     isAuthModalOpen ||
+    isNotificationModalOpen ||
+    isQRScannerOpen ||
     isSupabaseInfoOpen
   );
 
@@ -770,40 +775,67 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // 1. Close overlay modals first
       if (isAddEditItemModalOpen) {
         setIsAddEditItemModalOpen(false);
+        return;
       }
       if (isLocationModalOpen) {
         setIsLocationModalOpen(false);
+        return;
       }
       if (isCategoryModalOpen) {
         setIsCategoryModalOpen(false);
+        return;
       }
       if (isAuthModalOpen) {
         setIsAuthModalOpen(false);
+        return;
+      }
+      if (isNotificationModalOpen) {
+        setIsNotificationModalOpen(false);
+        return;
+      }
+      if (isQRScannerOpen) {
+        setIsQRScannerOpen(false);
+        return;
       }
       if (isSupabaseInfoOpen) {
         setIsSupabaseInfoOpen(false);
+        return;
       }
 
-      // 2. Sync selectedItemId and currentView from history state
-      if (state) {
+      // 2. If storage hash is active, clear it
+      if (typeof window !== 'undefined' && window.location.hash.includes('storage')) {
+        window.location.hash = '';
+        return;
+      }
+
+      // 3. If item detail is open and state has no selectedItemId, close it
+      if (selectedItemId && (!state || !state.selectedItemId)) {
+        setSelectedItemId(null);
+        return;
+      }
+
+      // 4. Sync selectedItemId and currentView from history state
+      if (state && state.view) {
         if (state.selectedItemId !== undefined) {
           setSelectedItemId(state.selectedItemId);
         } else {
           setSelectedItemId(null);
         }
+        setCurrentView(state.view);
+        return;
+      }
 
-        if (state.view) {
-          setCurrentView(state.view);
+      // 5. Retrieve from in-memory history stack if history state is empty
+      if (viewHistoryRef.current.length > 0) {
+        const prev = viewHistoryRef.current.pop();
+        if (prev && prev !== currentView) {
+          setCurrentView(prev);
+          return;
         }
-      } else {
-        if (selectedItemId) {
-          setSelectedItemId(null);
-        } else {
-          const savedUser = localStorage.getItem('thingor_user');
-          if (savedUser && currentView !== 'dashboard' && currentView !== 'landing') {
-            setCurrentView('dashboard');
-          }
-        }
+      }
+
+      if (selectedItemId) {
+        setSelectedItemId(null);
       }
     };
 
@@ -816,23 +848,84 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isLocationModalOpen,
     isCategoryModalOpen,
     isAuthModalOpen,
+    isNotificationModalOpen,
+    isQRScannerOpen,
     isSupabaseInfoOpen
   ]);
 
   // Custom view changer that pushes history entries when navigating views
   const handleSetCurrentView = (view: ViewMode) => {
     if (view !== currentView || selectedItemId !== null) {
+      if (currentView && currentView !== view) {
+        viewHistoryRef.current.push(currentView);
+      }
       setSelectedItemId(null);
       setIsAddEditItemModalOpen(false);
       setIsLocationModalOpen(false);
       setIsCategoryModalOpen(false);
       setIsAuthModalOpen(false);
+      setIsNotificationModalOpen(false);
+      setIsQRScannerOpen(false);
       setIsSupabaseInfoOpen(false);
 
-      window.history.pushState({ view, selectedItemId: null, isModal: false }, '');
+      window.history.pushState({ view, selectedItemId: null, isModal: false }, '', '#' + view);
       setCurrentView(view);
     }
   };
+
+  const goBack = useCallback(() => {
+    // 1. Close any open modals first
+    if (isAddEditItemModalOpen) { setIsAddEditItemModalOpen(false); return; }
+    if (isLocationModalOpen) { setIsLocationModalOpen(false); return; }
+    if (isCategoryModalOpen) { setIsCategoryModalOpen(false); return; }
+    if (isAuthModalOpen) { setIsAuthModalOpen(false); return; }
+    if (isNotificationModalOpen) { setIsNotificationModalOpen(false); return; }
+    if (isQRScannerOpen) { setIsQRScannerOpen(false); return; }
+    if (isSupabaseInfoOpen) { setIsSupabaseInfoOpen(false); return; }
+
+    // 2. Storage view hash
+    if (typeof window !== 'undefined' && window.location.hash.includes('storage')) {
+      window.location.hash = '';
+      return;
+    }
+
+    // 3. Item detail
+    if (selectedItemId) {
+      setSelectedItemId(null);
+      return;
+    }
+
+    // 4. In-memory history stack fallback
+    if (viewHistoryRef.current.length > 0) {
+      const prev = viewHistoryRef.current.pop();
+      if (prev && prev !== currentView) {
+        window.history.replaceState({ view: prev, selectedItemId: null, isModal: false }, '', '#' + prev);
+        setCurrentView(prev);
+        return;
+      }
+    }
+
+    // 5. Browser history back
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    // 6. Default to dashboard
+    if (currentView !== 'dashboard') {
+      setCurrentView('dashboard');
+    }
+  }, [
+    isAddEditItemModalOpen,
+    isLocationModalOpen,
+    isCategoryModalOpen,
+    isAuthModalOpen,
+    isNotificationModalOpen,
+    isQRScannerOpen,
+    isSupabaseInfoOpen,
+    selectedItemId,
+    currentView
+  ]);
 
   const handleSetSelectedItemId = (itemId: string | null) => {
     if (itemId !== selectedItemId) {
@@ -2311,6 +2404,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       }
     }
+
+    // 3. Shopping Cart / Pantry Low Stock Checks
+    if (userNotificationSettings?.shopping_cart_enabled !== false) {
+      for (const pItem of pantryItems) {
+        if (!pItem.is_staple) continue;
+        const currentQty = Number(pItem.current_quantity);
+        const minThreshold = Number(pItem.min_threshold);
+        if (currentQty <= minThreshold) {
+          const isOut = currentQty <= 0;
+          const dedupKey = `shopping_cart:${pItem.id}:${todayStr}`;
+          const title = isOut
+            ? (language === 'hu' ? 'Elfogyott a készlet: Bevásárlólista!' : 'Out of stock: Shopping List!')
+            : (language === 'hu' ? 'Fogyóban lévő készlet: Bevásárlólista!' : 'Low stock: Shopping List!');
+          const description = isOut
+            ? (language === 'hu'
+                ? `A(z) "${pItem.name}" alapvető cikk elfogyott a spájzból (0 ${pItem.unit}). Ideje beszerezni!`
+                : `Staple item "${pItem.name}" is completely out of stock (0 ${pItem.unit}). Time to restock!`)
+            : (language === 'hu'
+                ? `A(z) "${pItem.name}" elérte a minimális szintet (${currentQty} ${pItem.unit} maradt, minimum: ${minThreshold} ${pItem.unit}).`
+                : `"${pItem.name}" is running low (${currentQty} ${pItem.unit} left, min: ${minThreshold} ${pItem.unit}).`);
+
+          createNotification({
+            user_id: user.id,
+            title,
+            description,
+            type: 'pantry',
+            reference_id: pItem.id,
+            dedup_key: dedupKey,
+          });
+        }
+      }
+    }
   };
 
   useEffect(() => {
@@ -2320,10 +2445,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [user?.id]);
 
   useEffect(() => {
-    if (user?.id && (items.length > 0 || financings.length > 0)) {
+    if (user?.id && (items.length > 0 || financings.length > 0 || pantryItems.length > 0)) {
       checkAndGenerateNotifications();
     }
-  }, [items, financings, user?.id]);
+  }, [items, financings, pantryItems, user?.id]);
 
   // CRUD Repairs & Maintenance
   const addRepair = async (repairData: Omit<ItemRepair, 'id' | 'created_at'>): Promise<ItemRepair> => {
@@ -4598,6 +4723,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         currentView,
         setCurrentView: handleSetCurrentView,
+        goBack,
         selectedItemId,
         setSelectedItemId: handleSetSelectedItemId,
 

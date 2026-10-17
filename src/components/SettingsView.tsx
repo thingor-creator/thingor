@@ -22,9 +22,34 @@ import {
   CreditCard,
   Wrench,
   Check,
+  Boxes,
+  Package,
+  Users,
+  Handshake,
+  Layers,
+  ShoppingBag,
+  StickyNote,
+  ShoppingCart,
+  LayoutDashboard,
+  Plus,
+  Menu,
 } from 'lucide-react';
 
 type SettingsTab = 'account' | 'appearance' | 'regional' | 'notifications' | 'security' | 'data';
+
+const BOTTOM_BAR_OPTIONS = [
+  { id: 'items', labelHu: 'Tárgyaim', labelEn: 'Items', icon: Boxes },
+  { id: 'storage', labelHu: 'Tárolók (Fizikai dobozok)', labelEn: 'Storage (Boxes & Shelves)', icon: Package },
+  { id: 'household', labelHu: 'Családi megosztás', labelEn: 'Family Sharing', icon: Users },
+  { id: 'repairs', labelHu: 'Javítások & Karbantartás', labelEn: 'Repairs & Maintenance', icon: Wrench },
+  { id: 'financing', labelHu: 'Finanszírozás & Részletek', labelEn: 'Financing & Installments', icon: CreditCard },
+  { id: 'lending', labelHu: 'Kölcsönadás & Kapcsolatok', labelEn: 'Lending & Borrowing', icon: Handshake },
+  { id: 'collections', labelHu: 'Gyűjtemények & Katalógus', labelEn: 'Collections & Catalogs', icon: Layers },
+  { id: 'pantry', labelHu: 'Spájz & Készletek', labelEn: 'Pantry & Consumables', icon: ShoppingBag },
+  { id: 'vault', labelHu: 'Széf & Védett tárgyak', labelEn: 'Vault & Protected', icon: Lock },
+  { id: 'notes', labelHu: 'Gyorsjegyzetek', labelEn: 'Quick Notes', icon: StickyNote },
+  { id: 'shopping_list', labelHu: 'Bevásárló kosár', labelEn: 'Shopping Cart', icon: ShoppingCart },
+];
 
 export const SettingsView: React.FC = () => {
   const {
@@ -39,6 +64,7 @@ export const SettingsView: React.FC = () => {
     updatePassword,
     deleteAccount,
     setCurrentView,
+    goBack,
   } = useApp();
 
   const isHu = language === 'hu';
@@ -233,13 +259,7 @@ export const SettingsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-5 shadow-md">
         <div className="flex items-center gap-3.5">
           <button
-            onClick={() => {
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                setCurrentView('dashboard');
-              }
-            }}
+            onClick={goBack}
             className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--border-color,#56616D)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors"
             title={isHu ? 'Vissza' : 'Back'}
           >
@@ -576,6 +596,122 @@ export const SettingsView: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Mobil alsó menüsáv testreszabása */}
+          <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-6 shadow-sm space-y-5">
+            <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-color,#56616D)]">
+              <div className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
+                  {isHu ? 'Mobil alsó navigációs sáv testreszabása' : 'Customize Mobile Bottom Navigation Bar'}
+                </h3>
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
+                  {isHu
+                    ? 'Szabd testre a képernyő alján megjelenő központi [+] gomb bal és jobb oldalán lévő gyorsfunkciókat.'
+                    : 'Configure the quick-action buttons placed to the left and right of the central [+] button.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Bal oldali gomb választó */}
+              <div className="space-y-2 p-4 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]">
+                <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                  {isHu ? 'Bal oldali gyorsgomb (a [+] előtt)' : 'Left Quick Button (before [+])'}
+                </label>
+                <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mb-2">
+                  {isHu ? 'Alapértelmezett: Tárgyaim' : 'Default: Items'}
+                </p>
+                <select
+                  value={userPreferences.mobile_bottom_bar_left || 'items'}
+                  onChange={async e => {
+                    await updateUserPreferences({ mobile_bottom_bar_left: e.target.value });
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-xl text-xs sm:text-sm text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
+                >
+                  {BOTTOM_BAR_OPTIONS.map(opt => (
+                    <option key={`left-${opt.id}`} value={opt.id}>
+                      {isHu ? opt.labelHu : opt.labelEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Jobb oldali gomb választó */}
+              <div className="space-y-2 p-4 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]">
+                <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                  {isHu ? 'Jobb oldali gyorsgomb (a [+] után)' : 'Right Quick Button (after [+])'}
+                </label>
+                <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mb-2">
+                  {isHu ? 'Alapértelmezett: Tárolók' : 'Default: Storage'}
+                </p>
+                <select
+                  value={userPreferences.mobile_bottom_bar_right || 'storage'}
+                  onChange={async e => {
+                    await updateUserPreferences({ mobile_bottom_bar_right: e.target.value });
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-xl text-xs sm:text-sm text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
+                >
+                  {BOTTOM_BAR_OPTIONS.map(opt => (
+                    <option key={`right-${opt.id}`} value={opt.id}>
+                      {isHu ? opt.labelHu : opt.labelEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Élő előnézet */}
+            <div className="space-y-2 pt-2 border-t border-[var(--border-color,#56616D)]/60">
+              <span className="text-xs font-bold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider block">
+                {isHu ? 'Mobil alsó sáv élő előnézete' : 'Live Mobile Bar Preview'}
+              </span>
+              <div className="max-w-md mx-auto p-2.5 bg-[var(--bg-main,#303943)] rounded-2xl border border-[var(--border-color,#56616D)] shadow-inner flex items-center justify-around">
+                {/* 1. Vezérlőpult */}
+                <div className="flex flex-col items-center gap-0.5 text-[var(--text-sub,#B5BDC6)] px-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="text-[9px]">{isHu ? 'Vezérlőpult' : 'Dashboard'}</span>
+                </div>
+
+                {/* 2. Választott bal gomb */}
+                {(() => {
+                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_left || 'items')) || BOTTOM_BAR_OPTIONS[0];
+                  const Icon = opt.icon;
+                  return (
+                    <div className="flex flex-col items-center gap-0.5 text-[var(--color-primary-blue,#2563EB)] font-bold px-2">
+                      <Icon className="h-4 w-4" />
+                      <span className="text-[9px] truncate max-w-[65px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* 3. Központi FAB [+] */}
+                <div className="h-8 w-8 rounded-full bg-[var(--color-primary-blue,#2563EB)] text-white flex items-center justify-center shadow">
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                </div>
+
+                {/* 4. Választott jobb gomb */}
+                {(() => {
+                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_right || 'storage')) || BOTTOM_BAR_OPTIONS[1];
+                  const Icon = opt.icon;
+                  return (
+                    <div className="flex flex-col items-center gap-0.5 text-[var(--text-sub,#B5BDC6)] px-2">
+                      <Icon className="h-4 w-4" />
+                      <span className="text-[9px] truncate max-w-[65px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* 5. Menü */}
+                <div className="flex flex-col items-center gap-0.5 text-[var(--text-sub,#B5BDC6)] px-2">
+                  <Menu className="h-4 w-4" />
+                  <span className="text-[9px]">{isHu ? 'Menü' : 'Menu'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -778,6 +914,29 @@ export const SettingsView: React.FC = () => {
                   type="checkbox"
                   checked={userNotificationSettings?.repair_enabled ?? true}
                   onChange={e => updateNotificationSettings({ repair_enabled: e.target.checked })}
+                  className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] accent-[var(--color-primary-blue,#2563EB)] cursor-pointer"
+                />
+              </div>
+
+              {/* Bevásárló kosár & Készlet toggle */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <ShoppingCart className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--text-main,#E0E3E6)]">
+                      {isHu ? 'Bevásárló kosár & Készlet figyelmeztetések' : 'Shopping Cart & Stock Alerts'}
+                    </div>
+                    <div className="text-xs text-[var(--text-sub,#B5BDC6)]">
+                      {isHu ? 'Figyelmeztetés, ha a háztartási alapcikkekből fogyóban van a készlet' : 'Alerts when household staple items run low or out of stock'}
+                    </div>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={userNotificationSettings?.shopping_cart_enabled ?? true}
+                  onChange={e => updateNotificationSettings({ shopping_cart_enabled: e.target.checked })}
                   className="h-5 w-5 rounded border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] accent-[var(--color-primary-blue,#2563EB)] cursor-pointer"
                 />
               </div>

@@ -27,6 +27,7 @@ import {
   Lock,
   Settings,
   Package,
+  ShoppingCart,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -50,6 +51,7 @@ export const Navbar: React.FC = () => {
     unreadNotificationCount,
     setIsNotificationModalOpen,
     setIsQRScannerOpen,
+    userPreferences,
   } = useApp();
 
   const isHu = language === 'hu';
@@ -144,6 +146,192 @@ export const Navbar: React.FC = () => {
   const isStorageActive = currentHash === '#storage' || currentHash.startsWith('#storage/');
   const isThingsActive = isStorageActive || currentView === 'items' || currentView === 'locations' || currentView === 'categories';
   const isModulesActive = !isStorageActive && (currentView === 'repairs' || currentView === 'financing' || currentView === 'household' || currentView === 'lending' || currentView === 'collections' || currentView === 'pantry' || currentView === 'vault');
+
+  const renderBottomNavButton = (slotOptionId: string, slotPosition: 'left' | 'right') => {
+    switch (slotOptionId) {
+      case 'items':
+        return (
+          <button
+            key={`slot-${slotPosition}-items`}
+            onClick={() => handleNav('items')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && (currentView === 'items' || currentView === 'locations' || currentView === 'categories')
+                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <Boxes className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárgyaim' : 'Items'}</span>
+          </button>
+        );
+
+      case 'storage':
+        return (
+          <button
+            key={`slot-${slotPosition}-storage`}
+            onClick={() => {
+              window.location.hash = '#storage';
+              setCurrentHash('#storage');
+              setIsMobileMenuOpen(false);
+            }}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              isStorageActive ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+            title={isHu ? 'Fizikai tárolók és raktározás' : 'Storage'}
+          >
+            <Package className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárolók' : 'Storage'}</span>
+          </button>
+        );
+
+      case 'household':
+        return (
+          <button
+            key={`slot-${slotPosition}-household`}
+            onClick={() => handleNav('household')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'household' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <Users className="h-5 w-5 shrink-0 text-emerald-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Család' : 'Household'}</span>
+          </button>
+        );
+
+      case 'repairs':
+        return (
+          <button
+            key={`slot-${slotPosition}-repairs`}
+            onClick={() => handleNav('repairs')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'repairs' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <Wrench className="h-5 w-5 shrink-0 text-amber-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Javítások' : 'Repairs'}</span>
+          </button>
+        );
+
+      case 'financing':
+        return (
+          <button
+            key={`slot-${slotPosition}-financing`}
+            onClick={() => handleNav('financing')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'financing' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <CreditCard className="h-5 w-5 shrink-0 text-indigo-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Pénzügy' : 'Finance'}</span>
+          </button>
+        );
+
+      case 'lending':
+        return (
+          <button
+            key={`slot-${slotPosition}-lending`}
+            onClick={() => handleNav('lending')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'lending' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <Handshake className="h-5 w-5 shrink-0 text-cyan-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Kölcsön' : 'Lending'}</span>
+          </button>
+        );
+
+      case 'collections':
+        return (
+          <button
+            key={`slot-${slotPosition}-collections`}
+            onClick={() => handleNav('collections')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'collections' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <Layers className="h-5 w-5 shrink-0 text-purple-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Gyűjtemény' : 'Collections'}</span>
+          </button>
+        );
+
+      case 'pantry':
+        return (
+          <button
+            key={`slot-${slotPosition}-pantry`}
+            onClick={() => handleNav('pantry')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'pantry' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <ShoppingBag className="h-5 w-5 shrink-0 text-emerald-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Spájz' : 'Pantry'}</span>
+          </button>
+        );
+
+      case 'vault':
+        return (
+          <button
+            key={`slot-${slotPosition}-vault`}
+            onClick={() => handleNav('vault')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'vault' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <Lock className="h-5 w-5 shrink-0 text-amber-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Széf' : 'Vault'}</span>
+          </button>
+        );
+
+      case 'notes':
+        return (
+          <button
+            key={`slot-${slotPosition}-notes`}
+            onClick={() => handleNav('notes')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'notes' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <StickyNote className="h-5 w-5 shrink-0 text-[var(--status-warning,#F59E0B)]" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Jegyzetek' : 'Notes'}</span>
+          </button>
+        );
+
+      case 'shopping_list':
+        return (
+          <button
+            key={`slot-${slotPosition}-shopping-list`}
+            onClick={() => {
+              handleNav('pantry');
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('thingor-open-shopping-list'));
+              }, 100);
+            }}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'pantry' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <ShoppingCart className="h-5 w-5 shrink-0 text-emerald-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Bevásárlás' : 'Shopping'}</span>
+          </button>
+        );
+
+      default:
+        return (
+          <button
+            key={`slot-${slotPosition}-default`}
+            onClick={() => handleNav('items')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && (currentView === 'items' || currentView === 'locations' || currentView === 'categories')
+                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <Boxes className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárgyaim' : 'Items'}</span>
+          </button>
+        );
+    }
+  };
 
   return (
     <>
@@ -546,18 +734,8 @@ export const Navbar: React.FC = () => {
             <span className="text-[10px] truncate max-w-full">{isHu ? 'Vezérlőpult' : 'Dashboard'}</span>
           </button>
 
-          {/* 2. Tárgyaim */}
-          <button
-            onClick={() => handleNav('items')}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              !isStorageActive && (currentView === 'items' || currentView === 'locations' || currentView === 'categories')
-                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
-                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
-            }`}
-          >
-            <Boxes className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárgyaim' : 'Items'}</span>
-          </button>
+          {/* 2. Bal oldali konfigurálható gomb */}
+          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_left || 'items', 'left')}
 
           {/* 3. Kiemelt Új Tárgy Hozzáadás Gomb (FAB) */}
           <button
@@ -568,21 +746,8 @@ export const Navbar: React.FC = () => {
             <Plus className="h-6 w-6 stroke-[2.5]" />
           </button>
 
-          {/* 4. Fizikai tárolók és raktározás */}
-          <button
-            onClick={() => {
-              window.location.hash = '#storage';
-              setCurrentHash('#storage');
-              setIsMobileMenuOpen(false);
-            }}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              isStorageActive ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
-            }`}
-            title={isHu ? 'Fizikai tárolók és raktározás' : 'Storage'}
-          >
-            <Package className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] truncate max-w-full">{isHu ? 'Tárolók' : 'Storage'}</span>
-          </button>
+          {/* 4. Jobb oldali konfigurálható gomb */}
+          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_right || 'storage', 'right')}
 
           {/* 5. Menü (Drawer toggle) */}
           <button

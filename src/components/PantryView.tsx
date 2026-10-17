@@ -60,7 +60,7 @@ export const PantryView: React.FC = () => {
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [copiedSuccess, setCopiedSuccess] = useState(false);
 
-  // Listen for FAB central "+" action
+  // Listen for FAB central "+" action & Shopping List trigger
   useEffect(() => {
     const handleTrigger = (e: Event) => {
       const customEvent = e as CustomEvent<{ view?: string }>;
@@ -68,8 +68,16 @@ export const PantryView: React.FC = () => {
         handleOpenAddModal();
       }
     };
+    const handleOpenShoppingList = () => {
+      setIsShoppingListOpen(true);
+    };
+
     window.addEventListener('thingor-open-add', handleTrigger);
-    return () => window.removeEventListener('thingor-open-add', handleTrigger);
+    window.addEventListener('thingor-open-shopping-list', handleOpenShoppingList);
+    return () => {
+      window.removeEventListener('thingor-open-add', handleTrigger);
+      window.removeEventListener('thingor-open-shopping-list', handleOpenShoppingList);
+    };
   }, []);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
