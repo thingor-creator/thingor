@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import { StickyNote, Plus, Search, MapPin, ArrowRight, Trash2, Edit3, CheckCircle2, Package, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { QuickNote } from '../types';
 
@@ -25,6 +25,8 @@ export const NotesView: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<QuickNote | null>(null);
+
+  useModalBack(isModalOpen, () => setIsModalOpen(false), 'notes-modal');
 
   // Form states
   const [title, setTitle] = useState('');

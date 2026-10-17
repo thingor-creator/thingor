@@ -13,7 +13,7 @@ import {
   ExternalLink,
   FolderLock
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import { openR2DocumentSecurely } from '../lib/r2';
 
 export const VaultView: React.FC = () => {
@@ -48,6 +48,10 @@ export const VaultView: React.FC = () => {
   // Add Item to Vault modal state
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState<string>('');
+
+  // Mobile back button traps: closing modals on back button without changing route
+  useModalBack(isChangePinOpen, () => setIsChangePinOpen(false), 'vault-change-pin');
+  useModalBack(isAddItemModalOpen, () => setIsAddItemModalOpen(false), 'vault-add-item');
 
   // Listen for FAB central "+" action
   useEffect(() => {

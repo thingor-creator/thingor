@@ -28,7 +28,7 @@ import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { StorageView } from './components/StorageView';
-import { Wrench, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Wrench, ShieldCheck, ShieldAlert, LogOut } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const {
@@ -49,6 +49,7 @@ const AppContent: React.FC = () => {
     language,
     isAuthenticated,
     userPreferences,
+    showExitToast,
   } = useApp();
 
   const [shareToken, setShareToken] = useState<string | null>(null);
@@ -330,6 +331,16 @@ const AppContent: React.FC = () => {
 
       {/* PWA Install Banner */}
       <PWAInstallPrompt />
+
+      {/* Double Back Exit Toast */}
+      {showExitToast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] max-w-sm px-4 py-2.5 rounded-2xl bg-[var(--card-bg,#3A4551)]/95 backdrop-blur-md border border-amber-500/40 shadow-2xl flex items-center gap-3 text-xs sm:text-sm font-semibold text-[var(--text-primary,#E0E3E6)] animate-fadeIn pointer-events-none">
+          <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <LogOut className="w-3.5 h-3.5" />
+          </div>
+          <span>{language === 'hu' ? 'Nyomd meg újra a kilépéshez' : 'Press back again to exit'}</span>
+        </div>
+      )}
     </div>
   );
 };

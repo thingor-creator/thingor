@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, Trash2, ShieldCheck, DollarSign, Package } from 'lucide-react';
 import type { RepairStatus, RepairUrgency } from '../types';
 
@@ -7,6 +7,8 @@ export const RepairsView: React.FC = () => {
   const { items, repairs, addRepair, updateRepairStatus, deleteRepair, t, setSelectedItemId, language } = useApp();
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useModalBack(isModalOpen, () => setIsModalOpen(false), 'repairs-modal');
 
   // Listen for FAB central "+" action
   useEffect(() => {

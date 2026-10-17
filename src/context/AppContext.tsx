@@ -98,6 +98,8 @@ interface AppContextType {
   currentView: ViewMode;
   setCurrentView: (view: ViewMode) => void;
   goBack: () => void;
+  registerModalCloseHandler: (id: string, onClose: () => void) => () => void;
+  showExitToast: boolean;
   selectedItemId: string | null;
   setSelectedItemId: (id: string | null) => void;
 
@@ -736,6 +738,54 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const viewHistoryRef = useRef<ViewMode[]>([]);
   const notificationTablesAvailableRef = useRef<boolean>(true);
 
+  // Registered active modals stack (for local and subview modals like shopping list, lightbox, item form)
+  const activeModalsRef = useRef<Array<{ id: string; onClose: () => void }>>([]);
+  const [showExitToast, setShowExitToast] = useState(false);
+  const exitToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBackPressRef = useRef<number>(0);
+
+  const currentViewRef = useRef<ViewMode>(currentView);
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
+
+  // Universal modal registration: any modal registers its close callback so the device back button closes it without view change
+  const registerModalCloseHandler = useCallback((id: string, onClose: () => void) => {
+    const existingIdx = activeModalsRef.current.findIndex(m => m.id === id);
+    if (existingIdx !== -1) {
+      activeModalsRef.current[existingIdx] = { id, onClose };
+    } else {
+      activeModalsRef.current.push({ id, onClose });
+      window.history.pushState({ isModal: true, modalId: id, view: currentViewRef.current }, '');
+    }
+
+    return () => {
+      const idx = activeModalsRef.current.findIndex(m => m.id === id);
+      if (idx !== -1) {
+        activeModalsRef.current.splice(idx, 1);
+      }
+      // If modal was closed via UI [X] button and current history state is this modal's state, pop it cleanly
+      if (!isPoppingRef.current && typeof window !== 'undefined' && window.history.state && window.history.state.isModal && window.history.state.modalId === id) {
+        isPoppingRef.current = true;
+        window.history.back();
+        setTimeout(() => {
+          isPoppingRef.current = false;
+        }, 120);
+      }
+    };
+  }, []);
+
+  // Initial root history trap so mobile back button doesn't immediately close the PWA on first press
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const currentState = window.history.state;
+      if (!currentState || !currentState.hasRootGuard) {
+        window.history.replaceState({ ...currentState, hasRootGuard: true, view: currentView }, '');
+        window.history.pushState({ view: currentView, isTrap: true }, '');
+      }
+    }
+  }, []);
+
   const isOverlayModalOpen = Boolean(
     isAddEditItemModalOpen ||
     isLocationModalOpen ||
@@ -746,13 +796,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isSupabaseInfoOpen
   );
 
-  // Push history entry when an overlay modal opens so device Back button closes modal first
+  // Push history entry when a global overlay modal opens so device Back button closes modal first
   useEffect(() => {
     if (isOverlayModalOpen && !prevModalRef.current) {
       window.history.pushState({ view: currentView, selectedItemId, isModal: true }, '');
     } else if (!isOverlayModalOpen && prevModalRef.current) {
       if (!isPoppingRef.current && window.history.state && window.history.state.isModal) {
+        isPoppingRef.current = true;
         window.history.back();
+        setTimeout(() => {
+          isPoppingRef.current = false;
+        }, 120);
       }
     }
     prevModalRef.current = isOverlayModalOpen;
@@ -765,14 +819,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     const handlePopState = (e: PopStateEvent) => {
+      if (isPoppingRef.current) {
+        return;
+      }
       isPoppingRef.current = true;
       setTimeout(() => {
         isPoppingRef.current = false;
-      }, 100);
+      }, 120);
 
       const state = e.state;
 
-      // 1. Close overlay modals first
+      // 1. If any registered modal/panel is open, close the topmost registered modal and STAY on current view!
+      if (activeModalsRef.current.length > 0) {
+        const topModal = activeModalsRef.current.pop();
+        if (topModal) {
+          topModal.onClose();
+          return;
+        }
+      }
+
+      // 2. Close overlay modals
       if (isAddEditItemModalOpen) {
         setIsAddEditItemModalOpen(false);
         return;
@@ -802,20 +868,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return;
       }
 
-      // 2. If storage hash is active, clear it
+      // 3. Storage hash
       if (typeof window !== 'undefined' && window.location.hash.includes('storage')) {
         window.location.hash = '';
         return;
       }
 
-      // 3. If item detail is open and state has no selectedItemId, close it
+      // 4. Item detail
       if (selectedItemId && (!state || !state.selectedItemId)) {
         setSelectedItemId(null);
         return;
       }
 
-      // 4. Sync selectedItemId and currentView from history state
-      if (state && state.view) {
+      // 5. In-memory view history stack
+      if (viewHistoryRef.current.length > 0) {
+        const prev = viewHistoryRef.current.pop();
+        if (prev && prev !== currentView) {
+          setCurrentView(prev);
+          return;
+        }
+      }
+
+      // 6. History state view change
+      if (state && state.view && state.view !== currentView) {
         if (state.selectedItemId !== undefined) {
           setSelectedItemId(state.selectedItemId);
         } else {
@@ -825,17 +900,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return;
       }
 
-      // 5. Retrieve from in-memory history stack if history state is empty
-      if (viewHistoryRef.current.length > 0) {
-        const prev = viewHistoryRef.current.pop();
-        if (prev && prev !== currentView) {
-          setCurrentView(prev);
-          return;
-        }
-      }
-
       if (selectedItemId) {
         setSelectedItemId(null);
+        return;
+      }
+
+      // 7. DOUBLE-BACK TO EXIT (When at root view, no modals open, no history stack)
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2000) {
+        // Double press within 2000ms: allow exit!
+        setShowExitToast(false);
+        window.history.back();
+      } else {
+        // First back press: show toast, re-push trap state to stay in app!
+        lastBackPressRef.current = now;
+        window.history.pushState({ view: currentView, isTrap: true }, '', '#' + currentView);
+        setShowExitToast(true);
+        if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
+        exitToastTimerRef.current = setTimeout(() => {
+          setShowExitToast(false);
+        }, 2000);
       }
     };
 
@@ -874,7 +958,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const goBack = useCallback(() => {
-    // 1. Close any open modals first
+    // 1. Registered modals in stack
+    if (activeModalsRef.current.length > 0) {
+      const topModal = activeModalsRef.current.pop();
+      if (topModal) {
+        topModal.onClose();
+        return;
+      }
+    }
+
+    // 2. Overlay modals
     if (isAddEditItemModalOpen) { setIsAddEditItemModalOpen(false); return; }
     if (isLocationModalOpen) { setIsLocationModalOpen(false); return; }
     if (isCategoryModalOpen) { setIsCategoryModalOpen(false); return; }
@@ -883,19 +976,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isQRScannerOpen) { setIsQRScannerOpen(false); return; }
     if (isSupabaseInfoOpen) { setIsSupabaseInfoOpen(false); return; }
 
-    // 2. Storage view hash
+    // 3. Storage view hash
     if (typeof window !== 'undefined' && window.location.hash.includes('storage')) {
       window.location.hash = '';
       return;
     }
 
-    // 3. Item detail
+    // 4. Item detail
     if (selectedItemId) {
       setSelectedItemId(null);
       return;
     }
 
-    // 4. In-memory history stack fallback
+    // 5. In-memory history stack fallback
     if (viewHistoryRef.current.length > 0) {
       const prev = viewHistoryRef.current.pop();
       if (prev && prev !== currentView) {
@@ -905,15 +998,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
 
-    // 5. Browser history back
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
-    // 6. Default to dashboard
-    if (currentView !== 'dashboard') {
-      setCurrentView('dashboard');
+    // 6. At root view: trigger double-back logic
+    const now = Date.now();
+    if (now - lastBackPressRef.current < 2000) {
+      setShowExitToast(false);
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        window.history.back();
+      }
+    } else {
+      lastBackPressRef.current = now;
+      setShowExitToast(true);
+      if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
+      exitToastTimerRef.current = setTimeout(() => {
+        setShowExitToast(false);
+      }, 2000);
     }
   }, [
     isAddEditItemModalOpen,
@@ -4724,6 +4822,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         currentView,
         setCurrentView: handleSetCurrentView,
         goBack,
+        registerModalCloseHandler,
+        showExitToast,
         selectedItemId,
         setSelectedItemId: handleSetSelectedItemId,
 
@@ -4925,3 +5025,13 @@ export const useApp = () => {
   if (!context) throw new Error('useApp must be used within an AppProvider');
   return context;
 };
+
+export const useModalBack = (isOpen: boolean, onClose: () => void, modalId?: string) => {
+  const { registerModalCloseHandler } = useApp();
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = modalId || `modal-${Math.random().toString(36).slice(2, 9)}`;
+    return registerModalCloseHandler(id, onClose);
+  }, [isOpen, onClose, modalId, registerModalCloseHandler]);
+};
+

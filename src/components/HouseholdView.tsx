@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Lock, Tag, FileText, Archive, HandCoins, Ban, Search } from 'lucide-react';
 import type { HouseholdRole, HouseholdMember } from '../types';
 
@@ -62,6 +62,10 @@ export const HouseholdView: React.FC = () => {
   });
   const [excludedItemIds, setExcludedItemIds] = useState<string[]>([]);
   const [itemSearchFilter, setItemSearchFilter] = useState('');
+
+  // Mobile back button traps: closing modals on back button without changing route
+  useModalBack(editingMember !== null, () => setEditingMember(null), 'household-edit-member');
+  useModalBack(sharingMember !== null, () => setSharingMember(null), 'household-share-member');
 
   const handleOpenEditMember = (m: HouseholdMember) => {
     setEditingMember(m);

@@ -27,7 +27,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import type { ContainerType, ContainerItemUnit } from '../types';
 
 export interface StorageViewProps {
@@ -223,6 +223,14 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [newBulkUnit, setNewBulkUnit] = useState<string>('db');
   const [newBulkMinQty, setNewBulkMinQty] = useState<string>('');
   const [newBulkNotes, setNewBulkNotes] = useState('');
+
+  // Mobile back button traps: closing panels / modals / subviews on back button without changing route
+  useModalBack(isCreateModalOpen, () => setIsCreateModalOpen(false), 'storage-create-modal');
+  useModalBack(isQrModalOpen, () => setIsQrModalOpen(false), 'storage-qr-modal');
+  useModalBack(isAssignItemModalOpen, () => setIsAssignItemModalOpen(false), 'storage-assign-modal');
+  useModalBack(isAddBulkModalOpen, () => setIsAddBulkModalOpen(false), 'storage-add-bulk-modal');
+  useModalBack(isEditModalOpen, () => setIsEditModalOpen(false), 'storage-edit-modal');
+  useModalBack(selectedContainerId !== null, () => setSelectedContainerId(null), 'storage-container-detail');
 
   // Real data is active whenever user is authenticated
   const isRealDataActive = isAuthenticated;

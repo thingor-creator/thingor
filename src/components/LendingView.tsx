@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import {
   Handshake,
   Clock,
@@ -87,6 +87,11 @@ export const LendingView: React.FC = () => {
   // Editing lendable terms modal/inline
   const [editingTermsItemId, setEditingTermsItemId] = useState<string | null>(null);
   const [termsInput, setTermsInput] = useState('');
+
+  // Mobile back button traps: closing modals on back button without changing route
+  useModalBack(isLoanModalOpen, () => setIsLoanModalOpen(false), 'lending-loan-modal');
+  useModalBack(isContactModalOpen, () => setIsContactModalOpen(false), 'lending-contact-modal');
+  useModalBack(editingTermsItemId !== null, () => setEditingTermsItemId(null), 'lending-terms-modal');
 
   // Feedback toast for clipboard
   const [copiedNotice, setCopiedNotice] = useState<string | null>(null);

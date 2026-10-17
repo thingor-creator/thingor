@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import {
   Library,
   Coins,
@@ -99,6 +99,12 @@ export const CollectionsView: React.FC = () => {
     activeIndex: number;
     subtitle?: string;
   } | null>(null);
+
+  // Mobile back button traps: closing panels / subviews on back button without changing route
+  useModalBack(galleryModal !== null, () => setGalleryModal(null), 'collections-gallery');
+  useModalBack(isAddItemModalOpen, () => setIsAddItemModalOpen(false), 'collections-add-item');
+  useModalBack(isColModalOpen, () => setIsColModalOpen(false), 'collections-folder-modal');
+  useModalBack(selectedCollectionId !== null, () => setSelectedCollectionId(null), 'collections-detail-view');
 
   // Keyboard navigation for fullscreen gallery
   useEffect(() => {

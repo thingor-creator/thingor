@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import {
   ShoppingBag,
   AlertTriangle,
@@ -59,6 +59,10 @@ export const PantryView: React.FC = () => {
   // Shopping list modal
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [copiedSuccess, setCopiedSuccess] = useState(false);
+
+  // Mobile back button traps: clicking back closes the modal and stays in PantryView!
+  useModalBack(isShoppingListOpen, () => setIsShoppingListOpen(false), 'pantry-shopping-list');
+  useModalBack(isModalOpen, () => setIsModalOpen(false), 'pantry-item-modal');
 
   // Listen for FAB central "+" action & Shopping List trigger
   useEffect(() => {

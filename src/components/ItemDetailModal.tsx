@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import type { ItemDocument } from '../types';
 import {
   X,
@@ -69,6 +69,10 @@ export const ItemDetailModal: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
+
+  // Mobile back button traps: closing modals on back button without changing route
+  useModalBack(isShareModalOpen, () => setIsShareModalOpen(false), 'item-share-modal');
+  useModalBack(isQRCodeModalOpen, () => setIsQRCodeModalOpen(false), 'item-qr-modal');
 
   // Inline Editing State for specific fields
   const [editingField, setEditingField] = useState<string | null>(null);

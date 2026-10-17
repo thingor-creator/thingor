@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import { CreditCard, Calendar, CheckCircle2, Plus, Trash2, DollarSign, Package } from 'lucide-react';
 
 export const FinancingView: React.FC = () => {
   const { items, financings, saveFinancing, recordInstallmentPayment, deleteFinancing, t, setSelectedItemId, language } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useModalBack(isModalOpen, () => setIsModalOpen(false), 'financing-modal');
 
   // Listen for FAB central "+" action
   useEffect(() => {

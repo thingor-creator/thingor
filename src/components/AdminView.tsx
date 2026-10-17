@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useModalBack } from '../context/AppContext';
 import {
   LayoutDashboard,
   ShieldAlert,
@@ -80,6 +80,11 @@ export const AdminView: React.FC = () => {
   const [targetUserToSuspend, setTargetUserToSuspend] = useState<{ id: string; name: string; currentStatus: UserStatus } | null>(null);
   const [showDeleteUserConfirmModal, setShowDeleteUserConfirmModal] = useState(false);
   const [targetUserToDelete, setTargetUserToDelete] = useState<{ id: string; email: string } | null>(null);
+
+  // Mobile back button traps: closing modals on back button without changing route
+  useModalBack(selectedUserStats !== null, () => setSelectedUserStats(null), 'admin-user-stats');
+  useModalBack(showSuspendConfirmModal, () => setShowSuspendConfirmModal(false), 'admin-suspend-confirm');
+  useModalBack(showDeleteUserConfirmModal, () => setShowDeleteUserConfirmModal(false), 'admin-delete-confirm');
 
   // Settings form state
   const [siteName, setSiteName] = useState(siteSettings.site_name);
