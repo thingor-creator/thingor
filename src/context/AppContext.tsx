@@ -38,7 +38,9 @@ import type {
   Collection,
   CollectionItem,
   PantryItem,
-  VaultSettings
+  VaultSettings,
+  StorageContainer,
+  ContainerItem
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { generateSalt, hashPin, verifyPin } from '../lib/vault';
@@ -180,6 +182,20 @@ interface AppContextType {
   updatePantryItem: (id: string, updates: Partial<PantryItem>) => Promise<void>;
   deletePantryItem: (id: string) => Promise<void>;
   adjustPantryQuantity: (id: string, delta: number) => Promise<void>;
+
+  // Physical Storage Containers & Bulk Items Module
+  storageContainers: StorageContainer[];
+  containerItems: ContainerItem[];
+  fetchStorageContainers: () => Promise<void>;
+  fetchContainerItems: (containerId?: string) => Promise<void>;
+  createStorageContainer: (container: Omit<StorageContainer, 'id' | 'created_at' | 'updated_at'>) => Promise<StorageContainer>;
+  updateStorageContainer: (id: string, updates: Partial<StorageContainer>) => Promise<void>;
+  deleteStorageContainer: (id: string) => Promise<{ success: boolean; error?: string }>;
+  addContainerItem: (item: Omit<ContainerItem, 'id' | 'created_at' | 'updated_at'>) => Promise<ContainerItem>;
+  updateContainerItem: (id: string, updates: Partial<ContainerItem>) => Promise<void>;
+  deleteContainerItem: (id: string) => Promise<void>;
+  adjustContainerItemQuantity: (id: string, delta: number) => Promise<number>;
+  assignItemToContainer: (itemId: string, containerId: string | null) => Promise<void>;
 
   // Vault & Secure Storage Module
   vaultSettings: VaultSettings | null;
@@ -649,6 +665,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => { localStorage.setItem('thingor_item_relations', JSON.stringify(itemRelations)); }, [itemRelations]);
   useEffect(() => { localStorage.setItem('thingor_quick_notes', JSON.stringify(quickNotes)); }, [quickNotes]);
 
+  // Physical Storage Containers State
+  const [storageContainers, setStorageContainers] = useState<StorageContainer[]>(() => {
+    const saved = localStorage.getItem('thingor_storage_containers');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  const [containerItems, setContainerItems] = useState<ContainerItem[]>(() => {
+    const saved = localStorage.getItem('thingor_container_items');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => { localStorage.setItem('thingor_storage_containers', JSON.stringify(storageContainers)); }, [storageContainers]);
+  useEffect(() => { localStorage.setItem('thingor_container_items', JSON.stringify(containerItems)); }, [containerItems]);
+
   // UI state
   const [currentView, setCurrentView] = useState<ViewMode>(() => {
     const savedUser = localStorage.getItem('thingor_user');
@@ -1069,6 +1105,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setHouseholdMembers([]);
         setHouseholdInvites([]);
         setReceivedInvites([]);
+        setStorageContainers([]);
+        setContainerItems([]);
         localStorage.removeItem('thingor_user');
         localStorage.removeItem('thingor_items');
         localStorage.removeItem('thingor_documents');
@@ -1076,6 +1114,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         localStorage.removeItem('thingor_household');
         localStorage.removeItem('thingor_household_members');
         localStorage.removeItem('thingor_household_invites');
+        localStorage.removeItem('thingor_storage_containers');
+        localStorage.removeItem('thingor_container_items');
         localStorage.removeItem('thingor_current_view');
         setCurrentView('landing');
       }
@@ -1204,6 +1244,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
           setPantryItems(data as PantryItem[]);
+        }
+      });
+
+    // Load physical storage containers & bulk items
+    supabase
+      .from('storage_containers')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setStorageContainers(data as StorageContainer[]);
+        }
+      });
+
+    supabase
+      .from('container_items')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && isMounted) {
+          setContainerItems(data as ContainerItem[]);
         }
       });
 
@@ -1374,6 +1435,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setHouseholdMembers([]);
     setHouseholdInvites([]);
     setReceivedInvites([]);
+    setStorageContainers([]);
+    setContainerItems([]);
     setDashboardMetrics(null);
     localStorage.removeItem('thingor_items');
     localStorage.removeItem('thingor_items_backup');
@@ -1383,6 +1446,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('thingor_household');
     localStorage.removeItem('thingor_household_members');
     localStorage.removeItem('thingor_household_invites');
+    localStorage.removeItem('thingor_storage_containers');
+    localStorage.removeItem('thingor_container_items');
 
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
@@ -2641,6 +2706,263 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const newQty = Math.max(0, Number(item.current_quantity) + delta);
     await updatePantryItem(id, { current_quantity: newQty });
+  };
+
+  // Physical Storage Containers & Bulk Items Module CRUD
+  const fetchStorageContainers = async (): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase || !user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('storage_containers')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (!error && data) {
+        setStorageContainers(data as StorageContainer[]);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch storage containers:', e);
+    }
+  };
+
+  const fetchContainerItems = async (containerId?: string): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase || !user?.id) return;
+    try {
+      let query = supabase.from('container_items').select('*').order('created_at', { ascending: false });
+      if (containerId) query = query.eq('container_id', containerId);
+      const { data, error } = await query;
+      if (!error && data) {
+        if (containerId) {
+          setContainerItems(prev => {
+            const others = prev.filter(ci => ci.container_id !== containerId);
+            return [...others, ...(data as ContainerItem[])];
+          });
+        } else {
+          setContainerItems(data as ContainerItem[]);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch container items:', e);
+    }
+  };
+
+  const createStorageContainer = async (
+    containerData: Omit<StorageContainer, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<StorageContainer> => {
+    const newContainer: StorageContainer = {
+      ...containerData,
+      id: 'container-' + Date.now(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const payload = {
+          user_id: user.id,
+          name: containerData.name.trim(),
+          container_type: containerData.container_type,
+          ownership_scope: containerData.ownership_scope || 'private',
+          household_id: containerData.ownership_scope === 'household' ? (containerData.household_id || household?.id || null) : null,
+          location_id: containerData.location_id || null,
+          parent_container_id: containerData.parent_container_id || null,
+          color: containerData.color || null,
+          notes: containerData.notes || null,
+          qr_code: containerData.qr_code || null,
+          photo_url: containerData.photo_url || null,
+        };
+        const { data, error } = await supabase
+          .from('storage_containers')
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Failed to create storage_container in Supabase:', error);
+          throw error;
+        }
+        if (data) {
+          setStorageContainers(prev => [...prev, data as StorageContainer]);
+          return data as StorageContainer;
+        }
+      } catch (e) {
+        console.warn('Falling back to local storage container creation:', e);
+        throw e;
+      }
+    }
+
+    setStorageContainers(prev => [...prev, newContainer]);
+    return newContainer;
+  };
+
+  const updateStorageContainer = async (id: string, updates: Partial<StorageContainer>): Promise<void> => {
+    setStorageContainers(prev => prev.map(c => c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        const { error } = await supabase
+          .from('storage_containers')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+        if (error) throw error;
+      } catch (e) {
+        console.error('Failed to update storage container in Supabase:', e);
+        throw e;
+      }
+    }
+  };
+
+  const deleteStorageContainer = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    // Check if container has children or items locally first
+    const hasChildContainers = storageContainers.some(c => c.parent_container_id === id);
+    const hasAssignedItems = items.some(item => item.container_id === id);
+    const hasBulkItems = containerItems.some(ci => ci.container_id === id);
+
+    if (hasChildContainers) {
+      return { success: false, error: language === 'hu' ? 'A tároló nem törölhető, mert belső altárolókat tartalmaz! Előbb ürítsd ki vagy töröld az altárolókat.' : 'Cannot delete container because it contains child containers!' };
+    }
+    if (hasAssignedItems) {
+      return { success: false, error: language === 'hu' ? 'A tároló nem törölhető, mert tárgyak vannak hozzárendelve! Előbb helyezd át vagy vedd ki a tárgyakat.' : 'Cannot delete container because it contains items!' };
+    }
+    if (hasBulkItems) {
+      return { success: false, error: language === 'hu' ? 'A tároló nem törölhető, mert készlettételeket tartalmaz! Előbb töröld vagy helyezd át a tételeket.' : 'Cannot delete container because it contains bulk items!' };
+    }
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        const { error } = await supabase.from('storage_containers').delete().eq('id', id);
+        if (error) {
+          return { success: false, error: error.message };
+        }
+      } catch (e: any) {
+        return { success: false, error: e?.message || 'Törlési hiba' };
+      }
+    }
+
+    setStorageContainers(prev => prev.filter(c => c.id !== id));
+    return { success: true };
+  };
+
+  const addContainerItem = async (
+    itemData: Omit<ContainerItem, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<ContainerItem> => {
+    const newItem: ContainerItem = {
+      ...itemData,
+      id: 'bulk-' + Date.now(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        const payload = {
+          container_id: itemData.container_id,
+          user_id: user.id,
+          ownership_scope: itemData.ownership_scope || 'private',
+          household_id: itemData.ownership_scope === 'household' ? (itemData.household_id || household?.id || null) : null,
+          name: itemData.name.trim(),
+          quantity: itemData.quantity >= 0 ? itemData.quantity : 0,
+          unit: itemData.unit || 'db',
+          min_quantity: itemData.min_quantity ?? null,
+          notes: itemData.notes || null,
+        };
+        const { data, error } = await supabase
+          .from('container_items')
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          setContainerItems(prev => [data as ContainerItem, ...prev]);
+          return data as ContainerItem;
+        }
+      } catch (e) {
+        console.error('Failed to create container_item in Supabase:', e);
+        throw e;
+      }
+    }
+
+    setContainerItems(prev => [newItem, ...prev]);
+    return newItem;
+  };
+
+  const updateContainerItem = async (id: string, updates: Partial<ContainerItem>): Promise<void> => {
+    setContainerItems(prev => prev.map(ci => ci.id === id ? { ...ci, ...updates, updated_at: new Date().toISOString() } : ci));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        const { error } = await supabase
+          .from('container_items')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+        if (error) throw error;
+      } catch (e) {
+        console.error('Failed to update container item in Supabase:', e);
+        throw e;
+      }
+    }
+  };
+
+  const deleteContainerItem = async (id: string): Promise<void> => {
+    setContainerItems(prev => prev.filter(ci => ci.id !== id));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        await supabase.from('container_items').delete().eq('id', id);
+      } catch (e) {
+        console.error('Failed to delete container item in Supabase:', e);
+      }
+    }
+  };
+
+  const adjustContainerItemQuantity = async (id: string, delta: number): Promise<number> => {
+    let finalQty = 0;
+    setContainerItems(prev => prev.map(ci => {
+      if (ci.id === id) {
+        finalQty = Math.max(0, Number(ci.quantity) + delta);
+        return { ...ci, quantity: finalQty, updated_at: new Date().toISOString() };
+      }
+      return ci;
+    }));
+
+    if (isSupabaseConfigured && supabase && isUUID(id)) {
+      try {
+        const { data, error } = await supabase.rpc('adjust_container_item_quantity', {
+          p_item_id: id,
+          p_delta: delta
+        });
+        if (!error && typeof data === 'number') {
+          finalQty = data;
+          setContainerItems(prev => prev.map(ci => ci.id === id ? { ...ci, quantity: data } : ci));
+        } else if (error) {
+          await supabase.from('container_items').update({ quantity: finalQty, updated_at: new Date().toISOString() }).eq('id', id);
+        }
+      } catch (e) {
+        console.warn('Failed RPC adjust_container_item_quantity, fallback applied:', e);
+      }
+    }
+
+    return finalQty;
+  };
+
+  const assignItemToContainer = async (itemId: string, containerId: string | null): Promise<void> => {
+    setItems(prev => prev.map(it => it.id === itemId ? { ...it, container_id: containerId } : it));
+
+    if (isSupabaseConfigured && supabase && isUUID(itemId)) {
+      try {
+        const { error } = await supabase
+          .from('items')
+          .update({ container_id: containerId, updated_at: new Date().toISOString() })
+          .eq('id', itemId);
+        if (error) {
+          console.error('Failed to update item container_id in Supabase:', error);
+          throw error;
+        }
+      } catch (e) {
+        console.error('assignItemToContainer error:', e);
+        throw e;
+      }
+    }
   };
 
   // Vault & Secure Storage Module CRUD & Crypto Logic
@@ -4225,6 +4547,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteUserAccountByAdmin,
         adminAuditLogs,
         logAdminAction,
+
+        storageContainers,
+        containerItems,
+        fetchStorageContainers,
+        fetchContainerItems,
+        createStorageContainer,
+        updateStorageContainer,
+        deleteStorageContainer,
+        addContainerItem,
+        updateContainerItem,
+        deleteContainerItem,
+        adjustContainerItemQuantity,
+        assignItemToContainer,
       }}
     >
       {children}

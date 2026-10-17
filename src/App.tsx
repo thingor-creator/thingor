@@ -159,6 +159,14 @@ const AppContent: React.FC = () => {
       }
     }
 
+    // If it's a storage container link or code
+    if (text.includes('#storage') || text.includes('view=storage')) {
+      const containerId = text.includes('#storage/') ? text.split('#storage/')[1]?.split('?')[0]?.split('&')[0] : null;
+      window.location.hash = containerId ? `#storage/${containerId.trim()}` : '#storage';
+      setIsStorageViewOpen(true);
+      return;
+    }
+
     // If it's an item link or ID
     let scannedItemId = text;
     if (text.includes('#item/')) {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Box,
   Boxes,
@@ -18,66 +18,79 @@ import {
   Info,
   Check,
   Printer,
-  Minus
+  Minus,
+  Trash2,
+  ExternalLink,
+  Database
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useApp } from '../context/AppContext';
+import type { ContainerType, ContainerItemUnit } from '../types';
 
-// Container Types matching migration schema: 'box' | 'shelf' | 'cabinet' | 'drawer' | 'bin' | 'room' | 'shed' | 'other'
-export type ContainerType = 'box' | 'shelf' | 'cabinet' | 'drawer' | 'bin' | 'room' | 'shed' | 'other';
+export interface StorageViewProps {
+  onClose?: () => void;
+}
 
-export interface StorageItemMock {
+export interface StorageItemDisplay {
   id: string;
   name: string;
   category: string;
   code: string;
+  isRealItem: boolean;
 }
 
-export interface ContainerBulkItemMock {
+export interface ContainerBulkItemDisplay {
   id: string;
   name: string;
   quantity: number;
   unit: string;
+  minQuantity?: number | null;
+  notes?: string | null;
 }
 
-export interface StorageContainerMock {
+export interface StorageContainerDisplay {
   id: string;
   parentId: string | null;
   name: string;
   containerType: ContainerType;
   code: string;
   locationName: string;
+  locationId?: string | null;
   description?: string;
-  items: StorageItemMock[];
-  bulkItems: ContainerBulkItemMock[];
+  items: StorageItemDisplay[];
+  bulkItems: ContainerBulkItemDisplay[];
+  isReal: boolean;
 }
 
 const CONTAINER_TYPE_LABELS: Record<ContainerType, { hu: string; en: string }> = {
-  room: { hu: 'Helyiség / Tér', en: 'Room / Space' },
-  cabinet: { hu: 'Szekrény', en: 'Cabinet' },
-  shelf: { hu: 'Polc', en: 'Shelf' },
-  shed: { hu: 'Fészer / Kerti tároló', en: 'Shed' },
   box: { hu: 'Doboz', en: 'Box' },
+  shelf: { hu: 'Polc', en: 'Shelf' },
+  cabinet: { hu: 'Szekrény', en: 'Cabinet' },
   drawer: { hu: 'Fiók', en: 'Drawer' },
-  bin: { hu: 'Tárolóláda / Rekesz', en: 'Bin' },
+  crate: { hu: 'Láda / Rekesz', en: 'Crate' },
+  bag: { hu: 'Zsák / Táska', en: 'Bag' },
+  bin: { hu: 'Konténer / Tároló', en: 'Bin' },
+  case: { hu: 'Bőrönd / Koffer', en: 'Case' },
   other: { hu: 'Egyéb tároló', en: 'Other' },
 };
 
-// Initial Mock Data demonstrating the requested hierarchy:
-// Műhely -> Szerszámos szekrény -> Felső polc
-// Kerti tároló -> Fűnyíró tartozékos doboz
-const INITIAL_MOCK_CONTAINERS: StorageContainerMock[] = [
+const BULK_UNITS: ContainerItemUnit[] = ['db', 'pár', 'készlet', 'csomag', 'm', 'kg', 'l', 'doboz'];
+
+// Initial Mock Data demonstrating the requested hierarchy when no database records exist:
+const INITIAL_MOCK_CONTAINERS: StorageContainerDisplay[] = [
   {
     id: 'cont-1',
     parentId: null,
     name: 'Műhely',
-    containerType: 'room',
+    containerType: 'bin',
     code: 'CONT-WS-001',
     locationName: 'Főépület / Alagsor',
     description: 'Fő barkácsműhely és munkaasztal környéke',
     items: [
-      { id: 'item-101', name: 'Munkaasztal satu', category: 'Nehézgépek', code: 'ITM-9812' }
+      { id: 'mock-101', name: 'Munkaasztal satu', category: 'Nehézgépek', code: 'ITM-9812', isRealItem: false }
     ],
-    bulkItems: []
+    bulkItems: [],
+    isReal: false
   },
   {
     id: 'cont-2',
@@ -88,11 +101,12 @@ const INITIAL_MOCK_CONTAINERS: StorageContainerMock[] = [
     locationName: 'Főépület / Alagsor',
     description: 'Kétajtós fém szerszámtároló szekrény',
     items: [
-      { id: 'item-102', name: 'Makita fúrókalapács HR2470', category: 'Szerszámgép', code: 'ITM-4412' }
+      { id: 'mock-102', name: 'Makita fúrókalapács HR2470', category: 'Szerszámgép', code: 'ITM-4412', isRealItem: false }
     ],
     bulkItems: [
-      { id: 'bulk-201', name: 'Szigetelőszalag 10m fekete', quantity: 6, unit: 'db' }
-    ]
+      { id: 'bulk-mock-201', name: 'Szigetelőszalag 10m fekete', quantity: 6, unit: 'db' }
+    ],
+    isReal: false
   },
   {
     id: 'cont-3',
@@ -103,59 +117,77 @@ const INITIAL_MOCK_CONTAINERS: StorageContainerMock[] = [
     locationName: 'Főépület / Alagsor',
     description: 'A szerszámos szekrény legfelső kivehető polca aprócikkeknek',
     items: [
-      { id: 'item-103', name: 'Bosch GSB 13 RE ütvefúró', category: 'Elektromos kéziszerszám', code: 'ITM-1029' },
-      { id: 'item-104', name: 'Stanley racsnis csavarhúzó készlet', category: 'Kéziszerszám', code: 'ITM-2041' }
+      { id: 'mock-103', name: 'Bosch GSB 13 RE ütvefúró', category: 'Elektromos kéziszerszám', code: 'ITM-1029', isRealItem: false },
+      { id: 'mock-104', name: 'Stanley racsnis csavarhúzó készlet', category: 'Kéziszerszám', code: 'ITM-2041', isRealItem: false }
     ],
     bulkItems: [
-      { id: 'bulk-301', name: 'M6x30 rozsdamentes acélcsavar', quantity: 120, unit: 'db' },
-      { id: 'bulk-302', name: 'P120 szemcsés csiszolóvászon', quantity: 15, unit: 'ív' },
-      { id: 'bulk-303', name: 'Kábelkötegelő 200mm fekete', quantity: 85, unit: 'db' }
-    ]
+      { id: 'bulk-mock-301', name: 'M6x30 rozsdamentes acélcsavar', quantity: 120, unit: 'db' },
+      { id: 'bulk-mock-302', name: 'P120 szemcsés csiszolóvászon', quantity: 15, unit: 'ív' },
+      { id: 'bulk-mock-303', name: 'Kábelkötegelő 200mm fekete', quantity: 85, unit: 'db' }
+    ],
+    isReal: false
   },
   {
     id: 'cont-4',
     parentId: null,
     name: 'Kerti tároló',
-    containerType: 'shed',
+    containerType: 'crate',
     code: 'CONT-GDN-001',
-    locationName: 'Udvar / Hátsó kert',
-    description: 'Zárható faház kerti gépeknek és kinti szerszámoknak',
+    locationName: 'Kert / Fészer',
+    description: 'Kerti gépek és szerszámok külső tárolója',
     items: [
-      { id: 'item-105', name: 'Fiskars PowerGear sövényvágó', category: 'Kerti eszköz', code: 'ITM-5531' },
-      { id: 'item-106', name: 'Gardena tömlőkocsi 50m', category: 'Öntözés', code: 'ITM-5532' }
+      { id: 'mock-105', name: 'Gardena fűszegélynyíró', category: 'Kerti gép', code: 'ITM-3199', isRealItem: false }
     ],
-    bulkItems: []
+    bulkItems: [],
+    isReal: false
   },
   {
     id: 'cont-5',
     parentId: 'cont-4',
     name: 'Fűnyíró tartozékos doboz',
     containerType: 'box',
-    code: 'CONT-BOX-002',
-    locationName: 'Udvar / Hátsó kert',
-    description: 'Műanyag zárható szerszámosláda fűkaszálás kellékeihez',
+    code: 'CONT-BX-042',
+    locationName: 'Kert / Fészer',
+    description: 'Pótkések, olaj, gyújtógyertya és tisztítókefe',
     items: [
-      { id: 'item-107', name: 'Gyújtógyertya kulcs 19mm', category: 'Szerszám', code: 'ITM-7701' }
+      { id: 'mock-106', name: 'Fűnyíró mulcsozó betét', category: 'Tartozék', code: 'ITM-8120', isRealItem: false }
     ],
     bulkItems: [
-      { id: 'bulk-401', name: 'Fűnyíró damil 2.4mm narancs', quantity: 4, unit: 'tekercs' },
-      { id: 'bulk-402', name: 'Kerti védőkesztyű (L méret)', quantity: 3, unit: 'pár' }
-    ]
+      { id: 'bulk-mock-501', name: '4T Motorolaj SAE30', quantity: 2, unit: 'l' },
+      { id: 'bulk-mock-502', name: 'Trimmer damil 2.4mm', quantity: 30, unit: 'm' }
+    ],
+    isReal: false
   }
 ];
 
-interface StorageViewProps {
-  onClose?: () => void;
-}
-
 export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
-  const [containers, setContainers] = useState<StorageContainerMock[]>(INITIAL_MOCK_CONTAINERS);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['cont-1', 'cont-2', 'cont-4']));
-  const [selectedContainerId, setSelectedContainerId] = useState<string | null>('cont-3');
+  const {
+    storageContainers,
+    containerItems,
+    items,
+    locations,
+    categories,
+    household,
+    isAuthenticated,
+    createStorageContainer,
+    deleteStorageContainer,
+    addContainerItem,
+    deleteContainerItem,
+    adjustContainerItemQuantity,
+    assignItemToContainer,
+    setSelectedItemId,
+  } = useApp();
+
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isAssignItemModalOpen, setIsAssignItemModalOpen] = useState(false);
+  const [isAddBulkModalOpen, setIsAddBulkModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
@@ -163,12 +195,109 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [newContainerName, setNewContainerName] = useState('');
   const [newContainerType, setNewContainerType] = useState<ContainerType>('box');
   const [newContainerParentId, setNewContainerParentId] = useState<string>('');
-  const [newContainerLocation, setNewContainerLocation] = useState('Műhely');
+  const [newContainerLocationId, setNewContainerLocationId] = useState<string>('');
   const [newContainerDesc, setNewContainerDesc] = useState('');
+
+  // Form states for adding bulk item
+  const [newBulkName, setNewBulkName] = useState('');
+  const [newBulkQty, setNewBulkQty] = useState(1);
+  const [newBulkUnit, setNewBulkUnit] = useState<string>('db');
+  const [newBulkMinQty, setNewBulkMinQty] = useState<string>('');
+  const [newBulkNotes, setNewBulkNotes] = useState('');
+
+  const isRealDataActive = isAuthenticated && storageContainers.length > 0;
+
+  // Build unified display containers list
+  const containers: StorageContainerDisplay[] = useMemo(() => {
+    if (isRealDataActive) {
+      return storageContainers.map(sc => {
+        const loc = locations.find(l => l.id === sc.location_id);
+        const assignedItems: StorageItemDisplay[] = items
+          .filter(it => it.container_id === sc.id)
+          .map(it => {
+            const cat = categories.find(c => c.id === it.category_id);
+            return {
+              id: it.id,
+              name: it.name,
+              category: cat?.name || 'Egyéb kategória',
+              code: it.id.slice(0, 8).toUpperCase(),
+              isRealItem: true,
+            };
+          });
+
+        const bulkItems: ContainerBulkItemDisplay[] = containerItems
+          .filter(ci => ci.container_id === sc.id)
+          .map(ci => ({
+            id: ci.id,
+            name: ci.name,
+            quantity: ci.quantity,
+            unit: ci.unit,
+            minQuantity: ci.min_quantity,
+            notes: ci.notes,
+          }));
+
+        return {
+          id: sc.id,
+          parentId: sc.parent_container_id,
+          name: sc.name,
+          containerType: sc.container_type as ContainerType,
+          code: sc.qr_code || ('CONT-' + sc.id.slice(0, 8).toUpperCase()),
+          locationName: loc?.name || (sc.ownership_scope === 'household' ? 'Közös háztartás' : 'Személyes tároló'),
+          locationId: sc.location_id,
+          description: sc.notes || undefined,
+          items: assignedItems,
+          bulkItems,
+          isReal: true,
+        };
+      });
+    }
+
+    return INITIAL_MOCK_CONTAINERS;
+  }, [isRealDataActive, storageContainers, containerItems, items, locations, categories]);
+
+  // Deep-link URL hash support (#storage/<container_id>)
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#storage/')) {
+        const targetId = hash.replace('#storage/', '').trim();
+        if (targetId) {
+          const match = containers.find(c => c.id === targetId || c.code === targetId);
+          if (match) {
+            setSelectedContainerId(match.id);
+            // Expand ancestors
+            const expandSet = new Set<string>();
+            let cur = match.parentId ? containers.find(c => c.id === match.parentId) : null;
+            while (cur) {
+              expandSet.add(cur.id);
+              cur = cur.parentId ? containers.find(c => c.id === cur.parentId) : null;
+            }
+            if (expandSet.size > 0) {
+              setExpandedIds(prev => new Set([...prev, ...expandSet]));
+            }
+          }
+        }
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [containers]);
+
+  // Set default selected container if none selected
+  useEffect(() => {
+    if (!selectedContainerId && containers.length > 0) {
+      setSelectedContainerId(containers[0].id);
+      if (containers[0].id) {
+        setExpandedIds(prev => new Set([...prev, containers[0].id]));
+      }
+    }
+  }, [containers, selectedContainerId]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const toggleExpand = (id: string) => {
@@ -185,6 +314,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
   const handleSelectContainer = (containerId: string, shouldScroll = false) => {
     setSelectedContainerId(containerId);
+    window.location.hash = `#storage/${containerId}`;
     if (shouldScroll && typeof window !== 'undefined' && window.innerWidth < 1024) {
       setTimeout(() => {
         detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -192,11 +322,11 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     }
   };
 
-  const selectedContainer = containers.find(c => c.id === selectedContainerId) || null;
+  const selectedContainer = containers.find(c => c.id === selectedContainerId) || containers[0] || null;
 
   // Breadcrumb generator
-  const getBreadcrumbs = (containerId: string | null): StorageContainerMock[] => {
-    const crumbs: StorageContainerMock[] = [];
+  const getBreadcrumbs = (containerId: string | null): StorageContainerDisplay[] => {
+    const crumbs: StorageContainerDisplay[] = [];
     let current = containers.find(c => c.id === containerId);
     while (current) {
       crumbs.unshift(current);
@@ -205,64 +335,171 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     return crumbs;
   };
 
-  // Adjust quantity for bulk items (Interactive local test)
-  const handleAdjustQuantity = (containerId: string, bulkItemId: string, delta: number) => {
-    setContainers(prev =>
-      prev.map(c => {
-        if (c.id !== containerId) return c;
-        return {
-          ...c,
-          bulkItems: c.bulkItems.map(b => {
-            if (b.id !== bulkItemId) return b;
-            const newQty = Math.max(0, b.quantity + delta);
-            return { ...b, quantity: newQty };
-          })
-        };
-      })
-    );
-    showToast(`Mennyiség módosítva (${delta > 0 ? `+${delta}` : delta})`);
+  // Adjust quantity for bulk items
+  const handleAdjustQuantity = async (bulkItemId: string, delta: number) => {
+    if (isRealDataActive) {
+      try {
+        await adjustContainerItemQuantity(bulkItemId, delta);
+        showToast(`Mennyiség módosítva (${delta > 0 ? `+${delta}` : delta})`);
+      } catch (err: any) {
+        showToast(err?.message || 'Hiba a darabszám frissítésekor');
+      }
+    } else {
+      showToast(`Minta adat módosítva (${delta > 0 ? `+${delta}` : delta})`);
+    }
   };
 
-  // Create new container in local state
-  const handleCreateContainer = (e: React.FormEvent) => {
+  // Delete bulk item
+  const handleDeleteBulkItem = async (bulkItemId: string) => {
+    if (!window.confirm('Biztosan törölni szeretnéd ezt a készlettételt?')) return;
+    try {
+      if (isRealDataActive) {
+        await deleteContainerItem(bulkItemId);
+        showToast('Készlettétel törölve.');
+      } else {
+        showToast('Minta tétel törölve.');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a tétel törlésekor');
+    }
+  };
+
+  // Create new container
+  const handleCreateContainer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newContainerName.trim()) return;
 
-    const newCode = `CONT-${newContainerType.toUpperCase().slice(0, 3)}-00${containers.length + 1}`;
-    const newEntry: StorageContainerMock = {
-      id: `cont-custom-${Date.now()}`,
-      name: newContainerName.trim(),
-      containerType: newContainerType,
-      parentId: newContainerParentId ? newContainerParentId : null,
-      code: newCode,
-      locationName: newContainerLocation || 'Alapértelmezett helyszín',
-      description: newContainerDesc.trim() || undefined,
-      items: [],
-      bulkItems: []
-    };
+    setIsSubmitting(true);
+    try {
+      if (isAuthenticated) {
+        const created = await createStorageContainer({
+          name: newContainerName.trim(),
+          container_type: newContainerType,
+          parent_container_id: newContainerParentId ? newContainerParentId : null,
+          location_id: newContainerLocationId ? newContainerLocationId : null,
+          notes: newContainerDesc.trim() || null,
+          ownership_scope: household ? 'household' : 'private',
+          user_id: '',
+        });
 
-    setContainers(prev => [...prev, newEntry]);
-    if (newContainerParentId) {
-      setExpandedIds(prev => new Set([...prev, newContainerParentId]));
-    }
-    setSelectedContainerId(newEntry.id);
-    setIsCreateModalOpen(false);
+        if (created?.id) {
+          if (newContainerParentId) {
+            setExpandedIds(prev => new Set([...prev, newContainerParentId]));
+          }
+          setSelectedContainerId(created.id);
+          window.location.hash = `#storage/${created.id}`;
+        }
+        showToast(`"${newContainerName.trim()}" tároló sikeresen elmentve az adatbázisban!`);
+      } else {
+        showToast(`"${newContainerName.trim()}" hozzáadva a helyi előnézethez.`);
+      }
 
-    // Reset inputs
-    setNewContainerName('');
-    setNewContainerType('box');
-    setNewContainerParentId('');
-    setNewContainerDesc('');
-
-    showToast(`"${newEntry.name}" tároló sikeresen hozzáadva a helyi mintához!`);
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setTimeout(() => {
-        detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 60);
+      setIsCreateModalOpen(false);
+      setNewContainerName('');
+      setNewContainerType('box');
+      setNewContainerParentId('');
+      setNewContainerLocationId('');
+      setNewContainerDesc('');
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a tároló mentésekor');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Filter root containers
+  // Add bulk item to selected container
+  const handleAddBulkItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedContainer || !newBulkName.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      if (isRealDataActive) {
+        await addContainerItem({
+          container_id: selectedContainer.id,
+          user_id: '',
+          ownership_scope: household ? 'household' : 'private',
+          name: newBulkName.trim(),
+          quantity: Math.max(0, newBulkQty),
+          unit: newBulkUnit,
+          min_quantity: newBulkMinQty ? Number(newBulkMinQty) : null,
+          notes: newBulkNotes.trim() || null,
+        });
+        showToast(`"${newBulkName.trim()}" tétel hozzáadva!`);
+      } else {
+        showToast(`Minta készlettétel hozzáadva!`);
+      }
+
+      setIsAddBulkModalOpen(false);
+      setNewBulkName('');
+      setNewBulkQty(1);
+      setNewBulkUnit('db');
+      setNewBulkMinQty('');
+      setNewBulkNotes('');
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a készlettétel mentésekor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Assign existing Thingor item to container
+  const handleAssignItem = async (itemId: string) => {
+    if (!selectedContainer) return;
+    setIsSubmitting(true);
+    try {
+      await assignItemToContainer(itemId, selectedContainer.id);
+      showToast('Tárgy sikeresen hozzárendelve a tárolóhoz!');
+      setIsAssignItemModalOpen(false);
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a tárgy hozzárendelésekor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Unassign item from container
+  const handleUnassignItem = async (itemId: string) => {
+    setIsSubmitting(true);
+    try {
+      await assignItemToContainer(itemId, null);
+      showToast('Tárgy eltávolítva a tárolóból.');
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a tárgy eltávolításakor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete container with safety checks
+  const handleDeleteContainer = async () => {
+    if (!selectedContainer) return;
+
+    const confirmMsg = `Biztosan törölni szeretnéd a(z) "${selectedContainer.name}" tárolót? Csak üres tároló törölhető!`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsSubmitting(true);
+    try {
+      if (isRealDataActive) {
+        const res = await deleteStorageContainer(selectedContainer.id);
+        if (!res.success) {
+          alert(res.error || 'A tároló nem törölhető!');
+          return;
+        }
+        showToast('Tároló sikeresen törölve.');
+        setSelectedContainerId(null);
+      } else {
+        showToast('Minta tároló törölve.');
+        setSelectedContainerId(null);
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Törlési hiba történt');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Filter root containers for search
   const filteredContainers = containers.filter(c => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -271,15 +508,25 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
   const rootContainers = filteredContainers.filter(c => !c.parentId);
 
-  const renderContainerNode = (container: StorageContainerMock, depth = 0) => {
+  // Available unassigned items for assignment modal
+  const assignableItems = useMemo(() => {
+    if (!selectedContainer) return [];
+    return items.filter(it => {
+      if (it.container_id === selectedContainer.id) return false;
+      if (!itemSearchQuery.trim()) return true;
+      const q = itemSearchQuery.toLowerCase();
+      return it.name.toLowerCase().includes(q);
+    });
+  }, [items, selectedContainer, itemSearchQuery]);
+
+  const renderContainerNode = (container: StorageContainerDisplay, depth = 0) => {
     const children = containers.filter(c => c.parentId === container.id);
     const hasChildren = children.length > 0;
     const isExpanded = expandedIds.has(container.id);
-    const isSelected = selectedContainerId === container.id;
+    const isSelected = selectedContainer?.id === container.id;
     const totalItems = container.items.length;
     const totalBulkTypes = container.bulkItems.length;
 
-    // Indentation scale: gentle on mobile so it doesn't crush width
     const depthIndent = depth === 0
       ? ''
       : depth === 1
@@ -304,8 +551,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   e.stopPropagation();
                   toggleExpand(container.id);
                 }}
-                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors shrink-0"
-                aria-label={isExpanded ? 'Összecsukás' : 'Kibontás'}
+                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
+                aria-label={isExpanded ? 'Összecsukás' : 'Kinyitás'}
               >
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
@@ -314,56 +561,41 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 )}
               </button>
             ) : (
-              <div className="w-7 sm:w-8 flex items-center justify-center shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-sub,#B5BDC6)]/40" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center shrink-0">
+                <Box className="w-4 h-4 text-[var(--text-sub,#B5BDC6)]/40" />
               </div>
             )}
 
-            <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-colors ${
-              isSelected
-                ? 'bg-[var(--color-primary-blue,#2563EB)] text-white'
-                : 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] group-hover:bg-[var(--surface-bg,#465362)]/80'
-            }`}>
-              <Box className="w-4 h-4" />
-            </div>
-
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <span className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
+                <span className="font-bold text-xs sm:text-sm text-white truncate max-w-[170px] sm:max-w-[220px]">
                   {container.name}
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)]/50 shrink-0">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] shrink-0">
                   {CONTAINER_TYPE_LABELS[container.containerType]?.hu || container.containerType}
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-[var(--text-sub,#B5BDC6)] truncate">
-                {container.code} • {container.locationName}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[var(--text-sub,#B5BDC6)]">
+                <span className="font-mono text-[var(--color-primary-blue,#2563EB)] truncate">
+                  {container.code}
+                </span>
+                <span>•</span>
+                <span className="truncate max-w-[120px]">{container.locationName}</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="text-right hidden md:block">
-              <span className="text-xs font-semibold text-white block">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1">
+            {totalItems > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20 whitespace-nowrap">
                 {totalItems} tárgy
               </span>
-              <span className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
-                {totalBulkTypes} ömlesztett tétel
+            )}
+            {totalBulkTypes > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 whitespace-nowrap">
+                {totalBulkTypes} tétel
               </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSelectContainer(container.id, true);
-              }}
-              className="px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--color-primary-blue,#2563EB)] text-white text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[var(--border-color,#56616D)]/50 shrink-0 cursor-pointer active:scale-95"
-              title="Tároló megnyitása és részletei"
-            >
-              <span>Megnyitás</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            )}
           </div>
         </div>
 
@@ -386,7 +618,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
         </div>
       )}
 
-      {/* Header & MVP Notice */}
+      {/* Header & Status Notice */}
       <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4 shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
@@ -405,12 +637,19 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   <Package className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                   <span>Fizikai Tárolók és Raktározás</span>
                 </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-[var(--color-primary-blue,#2563EB)] border border-blue-500/20 shrink-0">
-                  MVP Előnézet
-                </span>
+                {isRealDataActive ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
+                    <Database className="w-3 h-3" />
+                    <span>Éles Adatbázis</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-[var(--color-primary-blue,#2563EB)] border border-blue-500/20 shrink-0">
+                    MVP Előnézet
+                  </span>
+                )}
               </div>
               <p className="text-[11px] sm:text-xs md:text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
-                Fizikai tárolódobozok, szekrények, polcok hierarchikus rendszere és QR-címkézése.
+                Fizikai tárolódobozok, szekrények, polcok hierarchikus rendszere, készletkezelés és QR-címkézés.
               </p>
             </div>
           </div>
@@ -426,16 +665,25 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Local Mock Badge Callout */}
-        <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-2.5 sm:gap-3">
-          <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-          <div className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
-            <strong className="text-white font-semibold">Helyi demonstrációs minta:</strong> Az alábbi tárolók és tételek helyi mintaként működnek a felület kipróbálásához. Közvetlen Supabase-módosítás vagy éles adatbázis-írás nem történik.
+        {/* Status Callout Badge */}
+        {isRealDataActive ? (
+          <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-start gap-2.5 sm:gap-3">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] sm:text-xs text-emerald-200/90 leading-relaxed">
+              <strong className="text-white font-semibold">Aktív felhő szinkronizáció:</strong> Tárolóid és a hozzárendelt tételek a Supabase adatbázisban tárolódnak, RLS jogosultságvédelemmel és ciklusvédelemmel.
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-2.5 sm:gap-3">
+            <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+            <div className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
+              <strong className="text-white font-semibold">Helyi demonstrációs minta:</strong> Az alábbi minta tárolók a felület kipróbálására szolgálnak. Az új tároló gombbal bármikor létrehozhatod saját éles tárolóidat.
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Main Grid: Tree Column (Left on Desktop, Top on Mobile) & Detail Drawer (Right on Desktop, Below on Mobile) */}
+      {/* Main Grid: Tree Column (Left) & Detail Drawer (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         {/* Left Column: Container Hierarchy Tree */}
         <div className="lg:col-span-6 space-y-3 sm:space-y-4">
@@ -498,7 +746,6 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     ))}
                   </div>
 
-                  {/* Jump back button on mobile */}
                   <button
                     type="button"
                     onClick={() => {
@@ -520,79 +767,67 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                       {selectedContainer.description || 'Nincs leírás megadva ehhez a tárolóhoz.'}
                     </p>
                   </div>
-                  <span className="self-start px-2.5 sm:px-3 py-1 rounded-xl text-[10px] sm:text-xs font-bold bg-[var(--surface-bg,#465362)] text-white border border-[var(--border-color,#56616D)] shrink-0">
-                    {CONTAINER_TYPE_LABELS[selectedContainer.containerType]?.hu || selectedContainer.containerType}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
-                  <div className="p-2 sm:p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50">
-                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1 mb-0.5">
-                      <Tag className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-                      Azonosító kód
-                    </span>
-                    <span className="text-xs font-extrabold text-white truncate block">{selectedContainer.code}</span>
-                  </div>
-                  <div className="p-2 sm:p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50">
-                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] flex items-center gap-1 mb-0.5">
-                      <MapPin className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-                      Helyszín
-                    </span>
-                    <span className="text-xs font-extrabold text-white truncate block">{selectedContainer.locationName}</span>
-                  </div>
-                  <div className="p-2 sm:p-2.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/50 xs:col-span-2 sm:col-span-1">
-                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[var(--text-sub,#B5BDC6)] block mb-0.5">Kapacitás</span>
-                    <span className="text-xs font-extrabold text-emerald-400">Raktározásra kész</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* QR-kód Előnézet szekció */}
-              <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <QrCode className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Tároló QR Címke Előnézet
-                    </h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-                    Előnézet
-                  </span>
-                </div>
-
-                <div className="flex flex-col xs:flex-row items-center xs:items-start gap-3 sm:gap-4 bg-white/5 p-3 rounded-xl border border-white/5 text-center xs:text-left">
-                  <div className="p-2 bg-white rounded-xl shadow-inner shrink-0">
-                    <QRCodeSVG
-                      value={`thingor://storage/${selectedContainer.code}`}
-                      size={64}
-                      level="M"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-xs font-bold text-white truncate">{selectedContainer.code}</p>
-                    <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] leading-relaxed">
-                      Fizikai dobozra vagy polcra ragasztható azonosító QR kód.
-                    </p>
+                  {/* QR & Action Buttons */}
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => setIsQrModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 text-xs text-[var(--color-primary-blue,#2563EB)] hover:text-white font-semibold transition-colors mt-1 py-1 cursor-pointer"
+                      className="px-3 py-1.5 min-h-[36px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[var(--border-color,#56616D)] cursor-pointer"
+                      title="QR-kód és Címke"
                     >
-                      <Printer className="w-3.5 h-3.5" /> Nagyított címke megtekintése
+                      <QrCode className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                      <span>QR-címke</span>
+                    </button>
+
+                    <button
+                      onClick={handleDeleteContainer}
+                      disabled={isSubmitting}
+                      className="p-2 min-h-[36px] min-w-[36px] rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                      title="Tároló törlése (csak ha üres)"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
+
+                {/* Metadata Pills */}
+                <div className="flex items-center gap-2 text-[11px] text-[var(--text-sub,#B5BDC6)] flex-wrap pt-1">
+                  <span className="font-mono bg-[var(--surface-bg,#465362)] px-2 py-0.5 rounded-md text-[var(--color-primary-blue,#2563EB)] font-bold">
+                    {selectedContainer.code}
+                  </span>
+                  <span className="flex items-center gap-1 bg-[var(--surface-bg,#465362)] px-2 py-0.5 rounded-md">
+                    <MapPin className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]" />
+                    <span>{selectedContainer.locationName}</span>
+                  </span>
+                  <span className="bg-[var(--surface-bg,#465362)] px-2 py-0.5 rounded-md">
+                    Típus: <strong className="text-white">{CONTAINER_TYPE_LABELS[selectedContainer.containerType]?.hu || selectedContainer.containerType}</strong>
+                  </span>
+                </div>
               </div>
 
-              {/* Benne lévő egyedi tárgyak */}
+              {/* SECTION 1: Assigned Thingor Items */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Boxes className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Benne lévő Tárgyak ({selectedContainer.items.length})
-                    </h3>
-                  </div>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                    <Boxes className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    <span>Hozzárendelt Tárgyak</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                      {selectedContainer.items.length} db
+                    </span>
+                  </h3>
+
+                  {isAuthenticated && (
+                    <button
+                      onClick={() => {
+                        setItemSearchQuery('');
+                        setIsAssignItemModalOpen(true);
+                      }}
+                      className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Tárgy hozzárendelése</span>
+                    </button>
+                  )}
                 </div>
 
                 {selectedContainer.items.length > 0 ? (
@@ -600,37 +835,76 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     {selectedContainer.items.map(item => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 gap-2"
+                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/60 text-xs"
                       >
-                        <div className="min-w-0 flex-1 pr-1">
-                          <span className="text-xs font-bold text-white block truncate">{item.name}</span>
-                          <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] block truncate">{item.category} • {item.code}</span>
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="font-bold text-white truncate">{item.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[var(--text-sub,#B5BDC6)]">
+                            <span className="flex items-center gap-1">
+                              <Tag className="w-3 h-3" />
+                              <span>{item.category}</span>
+                            </span>
+                            <span>•</span>
+                            <span className="font-mono text-blue-400">{item.code}</span>
+                          </div>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold bg-[var(--card-bg,#3A4551)] text-white border border-[var(--border-color,#56616D)]/50 shrink-0">
-                          Egyedi tárgy
-                        </span>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.isRealItem && (
+                            <button
+                              onClick={() => setSelectedItemId(item.id)}
+                              className="p-1.5 rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-[var(--card-bg,#3A4551)]/80 text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors"
+                              title="Tárgy adatlapja"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {item.isRealItem && (
+                            <button
+                              onClick={() => handleUnassignItem(item.id)}
+                              className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
+                              title="Eltávolítás a tárolóból"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] italic py-2">
-                    Ebben a tárolóban jelenleg nincs regisztrált egyedi tárgy.
-                  </p>
+                  <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-1">
+                    <p>Még nincs Thingor-tárgy ehhez a tárolóhoz rendelve.</p>
+                    {isAuthenticated && (
+                      <button
+                        onClick={() => setIsAssignItemModalOpen(true)}
+                        className="text-[var(--color-primary-blue,#2563EB)] font-semibold hover:underline"
+                      >
+                        Kattints ide tárgy hozzárendeléséhez
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Egyszerű mennyiségi tételek */}
+              {/* SECTION 2: Bulk / Consumable Items */}
               <div className="space-y-3 pt-2 border-t border-[var(--border-color,#56616D)]/60">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Ömlesztett Tételek ({selectedContainer.bulkItems.length})
-                    </h3>
-                  </div>
-                  <span className="text-[10px] text-[var(--text-sub,#B5BDC6)]">
-                    Interaktív teszt (+/-)
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-amber-400" />
+                    <span>Ömlesztett / Mennyiségi Készlettételek</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                      {selectedContainer.bulkItems.length} tétel
+                    </span>
+                  </h3>
+
+                  <button
+                    onClick={() => setIsAddBulkModalOpen(true)}
+                    className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Új készlettétel</span>
+                  </button>
                 </div>
 
                 {selectedContainer.bulkItems.length > 0 ? (
@@ -638,43 +912,62 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     {selectedContainer.bulkItems.map(bulk => (
                       <div
                         key={bulk.id}
-                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 gap-2"
+                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/60 text-xs"
                       >
-                        <div className="min-w-0 flex-1 pr-1">
-                          <span className="text-xs font-bold text-white block truncate">{bulk.name}</span>
-                          <span className="text-[10px] text-emerald-400 font-bold block truncate">
-                            {bulk.quantity} {bulk.unit}
-                          </span>
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="font-bold text-white truncate">{bulk.name}</p>
+                          <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5">
+                            Mértékegység: <span className="font-semibold text-white">{bulk.unit}</span>
+                            {bulk.minQuantity !== null && bulk.minQuantity !== undefined && (
+                              <span className="ml-2 text-amber-400/80">Min: {bulk.minQuantity} {bulk.unit}</span>
+                            )}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+
+                        {/* Interactive Counter & Delete */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1 bg-[var(--surface-bg,#465362)] p-1 rounded-xl border border-[var(--border-color,#56616D)]/80 shrink-0">
+                            <button
+                              onClick={() => handleAdjustQuantity(bulk.id, -1)}
+                              disabled={bulk.quantity <= 0}
+                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-rose-600 disabled:opacity-30 disabled:hover:bg-[var(--card-bg,#3A4551)] text-white transition-colors active:scale-95 cursor-pointer"
+                              title="Csökkentés (-1)"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-xs font-mono font-bold text-white px-1.5 min-w-[32px] text-center">
+                              {bulk.quantity}
+                            </span>
+                            <button
+                              onClick={() => handleAdjustQuantity(bulk.id, 1)}
+                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-emerald-600 text-white transition-colors active:scale-95 cursor-pointer"
+                              title="Növelés (+1)"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
                           <button
-                            onClick={() => handleAdjustQuantity(selectedContainer.id, bulk.id, -1)}
-                            disabled={bulk.quantity <= 0}
-                            className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-rose-600 disabled:opacity-30 disabled:hover:bg-[var(--card-bg,#3A4551)] text-white transition-colors active:scale-95 cursor-pointer"
-                            title="Csökkentés (-1)"
-                            aria-label="Csökkentés"
+                            onClick={() => handleDeleteBulkItem(bulk.id)}
+                            className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                            title="Készlettétel törlése"
                           >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="text-xs font-mono font-bold text-white px-1 min-w-[28px] sm:min-w-[32px] text-center">
-                            {bulk.quantity}
-                          </span>
-                          <button
-                            onClick={() => handleAdjustQuantity(selectedContainer.id, bulk.id, 1)}
-                            className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-emerald-600 text-white transition-colors active:scale-95 cursor-pointer"
-                            title="Növelés (+1)"
-                            aria-label="Növelés"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] italic py-2">
-                    Nincsenek ömlesztett / mennyiségi cikkek ebben a tárolóban.
-                  </p>
+                  <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-1">
+                    <p>Nincsenek ömlesztett / mennyiségi cikkek ebben a tárolóban.</p>
+                    <button
+                      onClick={() => setIsAddBulkModalOpen(true)}
+                      className="text-amber-400 font-semibold hover:underline"
+                    >
+                      Kattints ide készlettétel felvételéhez
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -687,11 +980,10 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
         </div>
       </div>
 
-      {/* Modal: Create Container Form - Mobile Keyboard Friendly with overflow */}
+      {/* MODAL 1: Create Container Form */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
           <div className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl my-auto overflow-hidden">
-            {/* Modal Header */}
             <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-[var(--border-color,#56616D)]/60 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-[var(--color-primary-blue,#2563EB)]/15 text-[var(--color-primary-blue,#2563EB)]">
@@ -708,7 +1000,6 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               </button>
             </div>
 
-            {/* Modal Body: Scrollable */}
             <form onSubmit={handleCreateContainer} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 sm:space-y-4">
               <div>
                 <label className="text-xs font-bold text-white block mb-1">Tároló Neve *</label>
@@ -717,7 +1008,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   required
                   value={newContainerName}
                   onChange={(e) => setNewContainerName(e.target.value)}
-                  placeholder="Pl. Kis alkatrészes fiók, Kerti szerszámtartó"
+                  placeholder="Pl. Kis alkatrészes fiók, Szerszámos láda"
                   className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                 />
               </div>
@@ -757,40 +1048,46 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
               <div>
                 <label className="text-xs font-bold text-white block mb-1">Fizikai Helyszín</label>
-                <input
-                  type="text"
-                  value={newContainerLocation}
-                  onChange={(e) => setNewContainerLocation(e.target.value)}
-                  placeholder="Pl. Műhely, Garázs, Földszint"
-                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
-                />
+                <select
+                  value={newContainerLocationId}
+                  onChange={(e) => setNewContainerLocationId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                >
+                  <option value="" className="bg-[var(--card-bg,#3A4551)]">-- Válassz helyszínt (vagy hagyd üresen) --</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id} className="bg-[var(--card-bg,#3A4551)]">
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-white block mb-1">Leírás (Opcionális)</label>
+                <label className="text-xs font-bold text-white block mb-1">Megjegyzés / Leírás</label>
                 <textarea
                   rows={2}
                   value={newContainerDesc}
                   onChange={(e) => setNewContainerDesc(e.target.value)}
-                  placeholder="Rövid leírás a tároló funkciójáról..."
+                  placeholder="Belső rekeszek, méretek, kulcs helye..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                 />
               </div>
 
-              {/* Modal Footer: Sticky at bottom */}
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--border-color,#56616D)]/60">
+              <div className="pt-3 border-t border-[var(--border-color,#56616D)]/60 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-bold transition-colors cursor-pointer"
+                  className="px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white font-bold text-xs transition-colors cursor-pointer"
                 >
                   Mégse
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  Létrehozás (Helyi minta)
+                  <Plus className="w-4 h-4" />
+                  <span>{isSubmitting ? 'Mentés...' : 'Tároló Mentése'}</span>
                 </button>
               </div>
             </form>
@@ -798,50 +1095,214 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
         </div>
       )}
 
-      {/* Modal: QR Code Large Preview */}
-      {isQrModalOpen && selectedContainer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-          <div className="w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-5 sm:p-6 text-center space-y-4 shadow-2xl my-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color,#56616D)]/60">
-              <div className="flex items-center gap-2">
-                <QrCode className="w-5 h-5 text-[var(--color-primary-blue,#2563EB)]" />
-                <h3 className="text-sm font-bold text-white">QR Címke Nyomtatási Minta</h3>
+      {/* MODAL 2: Assign Item Modal */}
+      {isAssignItemModalOpen && selectedContainer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden">
+            <div className="p-4 sm:p-6 pb-3 border-b border-[var(--border-color,#56616D)]/60 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white">Tárgy Hozzárendelése</h3>
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)]">Tároló: <strong className="text-white">{selectedContainer.name}</strong></p>
               </div>
               <button
+                onClick={() => setIsAssignItemModalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-[var(--border-color,#56616D)]/60">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-sub,#B5BDC6)]" />
+                <input
+                  type="text"
+                  value={itemSearchQuery}
+                  onChange={(e) => setItemSearchQuery(e.target.value)}
+                  placeholder="Keresés saját tárgyaid között..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {assignableItems.length > 0 ? (
+                assignableItems.map(it => {
+                  const currentCont = it.container_id ? containers.find(c => c.id === it.container_id) : null;
+                  return (
+                    <div
+                      key={it.id}
+                      onClick={() => handleAssignItem(it.id)}
+                      className="p-3 rounded-xl bg-[var(--surface-bg,#465362)]/60 hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between gap-3 cursor-pointer transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">{it.name}</p>
+                        <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">
+                          {currentCont ? `Jelenlegi tároló: ${currentCont.name}` : 'Még nincs tárolóhoz rendelve'}
+                        </p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg bg-[var(--color-primary-blue,#2563EB)] text-white text-[11px] font-bold shrink-0">
+                        Kiválasztás
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-center py-6 text-xs text-[var(--text-sub,#B5BDC6)]">
+                  Nincs hozzárendelhető tárgy.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Add Bulk Item Modal */}
+      {isAddBulkModalOpen && selectedContainer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--border-color,#56616D)]/60 pb-3">
+              <div>
+                <h3 className="text-base font-black text-white">Új Mennyiségi Készlettétel</h3>
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)]">Tároló: <strong className="text-white">{selectedContainer.name}</strong></p>
+              </div>
+              <button
+                onClick={() => setIsAddBulkModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddBulkItem} className="space-y-3.5">
+              <div>
+                <label className="text-xs font-bold text-white block mb-1">Tétel Megnevezése *</label>
+                <input
+                  type="text"
+                  required
+                  value={newBulkName}
+                  onChange={(e) => setNewBulkName(e.target.value)}
+                  placeholder="Pl. M4x20 csavar, Ragasztószalag"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-white block mb-1">Kezdő Mennyiség *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={newBulkQty}
+                    onChange={(e) => setNewBulkQty(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-white block mb-1">Mértékegység *</label>
+                  <select
+                    value={newBulkUnit}
+                    onChange={(e) => setNewBulkUnit(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs"
+                  >
+                    {BULK_UNITS.map(u => (
+                      <option key={u} value={u} className="bg-[var(--card-bg,#3A4551)]">{u}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-white block mb-1">Minimum Készlet (Értesítéshez)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={newBulkMinQty}
+                  onChange={(e) => setNewBulkMinQty(e.target.value)}
+                  placeholder="Opcionális küszöbérték"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddBulkModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] text-white text-xs font-bold"
+                >
+                  Mégse
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold"
+                >
+                  {isSubmitting ? 'Mentés...' : 'Tétel Mentése'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: QR-kód és Címkenyomtatás */}
+      {isQrModalOpen && selectedContainer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-sm rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl p-5 sm:p-6 text-center space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color,#56616D)]/60">
+              <h3 className="font-bold text-white text-sm">Tároló QR Címke</h3>
+              <button
                 onClick={() => setIsQrModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] cursor-pointer"
-                aria-label="Bezárás"
+                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 bg-white rounded-2xl mx-auto inline-block shadow-lg">
-              <QRCodeSVG
-                value={`thingor://storage/${selectedContainer.code}`}
-                size={160}
-                level="H"
-              />
-              <div className="mt-2 text-slate-800 text-center font-mono font-bold text-xs tracking-wider">
-                {selectedContainer.code}
+            {/* Printable Label Preview Box */}
+            <div id="storage-printable-label" className="p-4 rounded-2xl bg-white text-black space-y-2 shadow-inner inline-block mx-auto border-2 border-slate-300">
+              <p className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                THINGOR TÁROLÓ
+              </p>
+              <div className="p-2 bg-white flex justify-center">
+                <QRCodeSVG
+                  value={typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#storage/${selectedContainer.id}` : selectedContainer.code}
+                  size={150}
+                  level="M"
+                  includeMargin={false}
+                />
               </div>
-              <div className="text-slate-600 text-center text-[10px] font-medium truncate max-w-[200px]">
+              <p className="text-xs font-extrabold text-slate-900 truncate max-w-[180px] mx-auto">
                 {selectedContainer.name}
-              </div>
+              </p>
+              <p className="font-mono text-[10px] text-slate-600 font-bold">
+                {selectedContainer.code}
+              </p>
             </div>
 
-            <p className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
-              Ez a QR kód közvetlenül a tároló azonosítására szolgál. Fizikai címkeként nyomtatható és ragasztható a dobozra.
+            <p className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
+              A QR-kód beolvasása a Thingor beépített szkennerével közvetlenül megnyitja ezt a tárolót.
             </p>
 
-            <button
-              onClick={() => {
-                window.print();
-              }}
-              className="w-full py-2.5 min-h-[42px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
-            >
-              <Printer className="w-4 h-4" /> Címke nyomtatása (Böngésző)
-            </button>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 min-h-[38px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Nyomtatás</span>
+              </button>
+              <button
+                onClick={() => setIsQrModalOpen(false)}
+                className="px-4 py-2 min-h-[38px] rounded-xl bg-[var(--surface-bg,#465362)] text-white font-bold text-xs cursor-pointer"
+              >
+                Bezárás
+              </button>
+            </div>
           </div>
         </div>
       )}

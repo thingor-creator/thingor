@@ -156,6 +156,7 @@ export interface Item {
   status?: ItemStatus;
   ownership_scope?: ItemOwnershipScope;
   household_id?: string;
+  container_id?: string | null;
   warranty_start?: string;
   warranty_end?: string;
   notes?: string;
@@ -426,7 +427,7 @@ export interface PantryItem {
   updated_at?: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'lending' | 'collections' | 'pantry' | 'vault' | 'admin' | 'guest_share' | 'legal' | 'settings';
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'lending' | 'collections' | 'pantry' | 'vault' | 'admin' | 'guest_share' | 'legal' | 'settings' | 'storage';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';
@@ -462,6 +463,43 @@ export interface UserNotificationSettings {
   repair_enabled: boolean;
   email_enabled: boolean;
   inapp_enabled: boolean;
+  updated_at?: string;
+}
+
+// Physical Storage System Types
+export type ContainerType = 'box' | 'shelf' | 'cabinet' | 'drawer' | 'crate' | 'bag' | 'bin' | 'case' | 'other';
+export type StorageOwnershipScope = 'private' | 'household';
+export type ContainerItemUnit = 'db' | 'pár' | 'készlet' | 'csomag' | 'm' | 'kg' | 'l' | 'doboz';
+
+export interface StorageContainer {
+  id: string;
+  user_id: string;
+  ownership_scope: StorageOwnershipScope;
+  household_id?: string | null;
+  location_id?: string | null;
+  parent_container_id?: string | null;
+  name: string;
+  container_type: ContainerType;
+  qr_code?: string | null;
+  photo_url?: string | null;
+  color?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContainerItem {
+  id: string;
+  container_id: string;
+  user_id: string;
+  ownership_scope: StorageOwnershipScope;
+  household_id?: string | null;
+  name: string;
+  quantity: number;
+  unit: ContainerItemUnit | string;
+  min_quantity?: number | null;
+  notes?: string | null;
+  created_at?: string;
   updated_at?: string;
 }
 

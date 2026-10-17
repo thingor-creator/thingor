@@ -65,6 +65,156 @@ export type Database = {
         }
         Relationships: []
       }
+      collection_items: {
+        Row: {
+          acquired_year: number | null
+          catalog_number: string | null
+          collection_id: string
+          collector_grade: string | null
+          created_at: string
+          custom_attributes: Json
+          estimated_collector_value: number | null
+          id: string
+          item_id: string
+          rarity: string | null
+        }
+        Insert: {
+          acquired_year?: number | null
+          catalog_number?: string | null
+          collection_id: string
+          collector_grade?: string | null
+          created_at?: string
+          custom_attributes?: Json
+          estimated_collector_value?: number | null
+          id?: string
+          item_id: string
+          rarity?: string | null
+        }
+        Update: {
+          acquired_year?: number | null
+          catalog_number?: string | null
+          collection_id?: string
+          collector_grade?: string | null
+          created_at?: string
+          custom_attributes?: Json
+          estimated_collector_value?: number | null
+          id?: string
+          item_id?: string
+          rarity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collections: {
+        Row: {
+          collection_type: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          collection_type?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          collection_type?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      container_items: {
+        Row: {
+          container_id: string
+          created_at: string | null
+          household_id: string | null
+          id: string
+          min_quantity: number | null
+          name: string
+          notes: string | null
+          ownership_scope: string
+          quantity: number
+          unit: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          container_id: string
+          created_at?: string | null
+          household_id?: string | null
+          id?: string
+          min_quantity?: number | null
+          name: string
+          notes?: string | null
+          ownership_scope?: string
+          quantity?: number
+          unit?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          container_id?: string
+          created_at?: string | null
+          household_id?: string | null
+          id?: string
+          min_quantity?: number | null
+          name?: string
+          notes?: string | null
+          ownership_scope?: string
+          quantity?: number
+          unit?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "container_items_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "storage_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_items_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       household_invites: {
         Row: {
           created_at: string | null
@@ -114,33 +264,45 @@ export type Database = {
       }
       household_members: {
         Row: {
+          allowed_category_ids: string[] | null
           allowed_location_ids: string[] | null
+          allowed_modules: Json | null
+          excluded_item_ids: string[] | null
           household_id: string | null
           id: string
           joined_at: string | null
           role: string | null
+          sharing_mode: string | null
           title: string | null
           user_email: string | null
           user_id: string | null
           user_name: string | null
         }
         Insert: {
+          allowed_category_ids?: string[] | null
           allowed_location_ids?: string[] | null
+          allowed_modules?: Json | null
+          excluded_item_ids?: string[] | null
           household_id?: string | null
           id?: string
           joined_at?: string | null
           role?: string | null
+          sharing_mode?: string | null
           title?: string | null
           user_email?: string | null
           user_id?: string | null
           user_name?: string | null
         }
         Update: {
+          allowed_category_ids?: string[] | null
           allowed_location_ids?: string[] | null
+          allowed_modules?: Json | null
+          excluded_item_ids?: string[] | null
           household_id?: string | null
           id?: string
           joined_at?: string | null
           role?: string | null
+          sharing_mode?: string | null
           title?: string | null
           user_email?: string | null
           user_id?: string | null
@@ -163,6 +325,7 @@ export type Database = {
           id: string
           name: string
           owner_id: string | null
+          shared_category_ids: string[] | null
           shared_location_ids: string[] | null
         }
         Insert: {
@@ -171,6 +334,7 @@ export type Database = {
           id?: string
           name: string
           owner_id?: string | null
+          shared_category_ids?: string[] | null
           shared_location_ids?: string[] | null
         }
         Update: {
@@ -179,6 +343,7 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string | null
+          shared_category_ids?: string[] | null
           shared_location_ids?: string[] | null
         }
         Relationships: []
@@ -190,6 +355,7 @@ export type Database = {
           file_name: string
           file_url: string
           id: string
+          is_vault_protected: boolean
           item_id: string
           user_id: string
         }
@@ -199,6 +365,7 @@ export type Database = {
           file_name: string
           file_url: string
           id?: string
+          is_vault_protected?: boolean
           item_id: string
           user_id: string
         }
@@ -208,6 +375,7 @@ export type Database = {
           file_name?: string
           file_url?: string
           id?: string
+          is_vault_protected?: boolean
           item_id?: string
           user_id?: string
         }
@@ -276,12 +444,68 @@ export type Database = {
           remaining_debt?: number
           remaining_installments?: number
           start_date?: string | null
-          total_installments: number
+          total_installments?: number
           user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "item_financings_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_loans: {
+        Row: {
+          actual_return_date: string | null
+          borrower_contact: string | null
+          borrower_email: string | null
+          borrower_name: string
+          created_at: string
+          expected_return_date: string | null
+          id: string
+          item_id: string
+          lent_date: string
+          notes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_return_date?: string | null
+          borrower_contact?: string | null
+          borrower_email?: string | null
+          borrower_name: string
+          created_at?: string
+          expected_return_date?: string | null
+          id?: string
+          item_id: string
+          lent_date?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_return_date?: string | null
+          borrower_contact?: string | null
+          borrower_email?: string | null
+          borrower_name?: string
+          created_at?: string
+          expected_return_date?: string | null
+          id?: string
+          item_id?: string
+          lent_date?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_loans_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
@@ -448,11 +672,13 @@ export type Database = {
           additional_photos: string[] | null
           category_id: string | null
           condition: string
+          container_id: string | null
           created_at: string | null
           current_value: number | null
           description: string | null
           household_id: string | null
           id: string
+          is_vault_protected: boolean
           location_id: string | null
           name: string
           notes: string | null
@@ -471,11 +697,13 @@ export type Database = {
           additional_photos?: string[] | null
           category_id?: string | null
           condition?: string
+          container_id?: string | null
           created_at?: string | null
           current_value?: number | null
           description?: string | null
           household_id?: string | null
           id?: string
+          is_vault_protected?: boolean
           location_id?: string | null
           name: string
           notes?: string | null
@@ -494,11 +722,13 @@ export type Database = {
           additional_photos?: string[] | null
           category_id?: string | null
           condition?: string
+          container_id?: string | null
           created_at?: string | null
           current_value?: number | null
           description?: string | null
           household_id?: string | null
           id?: string
+          is_vault_protected?: boolean
           location_id?: string | null
           name?: string
           notes?: string | null
@@ -519,6 +749,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "storage_containers"
             referencedColumns: ["id"]
           },
           {
@@ -618,12 +855,79 @@ export type Database = {
         }
         Relationships: []
       }
+      pantry_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          current_quantity: number
+          expiration_date: string | null
+          household_id: string | null
+          id: string
+          is_staple: boolean
+          location_id: string | null
+          min_threshold: number
+          name: string
+          notes: string | null
+          unit: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          current_quantity?: number
+          expiration_date?: string | null
+          household_id?: string | null
+          id?: string
+          is_staple?: boolean
+          location_id?: string | null
+          min_threshold?: number
+          name: string
+          notes?: string | null
+          unit?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          current_quantity?: number
+          expiration_date?: string | null
+          household_id?: string | null
+          id?: string
+          is_staple?: boolean
+          location_id?: string | null
+          min_threshold?: number
+          name?: string
+          notes?: string | null
+          unit?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pantry_items_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pantry_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
           display_name: string | null
           email: string | null
           id: string
+          preferences: Json | null
           role: string | null
           status: string | null
           user_id: string
@@ -633,6 +937,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          preferences?: Json | null
           role?: string | null
           status?: string | null
           user_id: string
@@ -642,6 +947,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          preferences?: Json | null
           role?: string | null
           status?: string | null
           user_id?: string
@@ -767,6 +1073,79 @@ export type Database = {
         }
         Relationships: []
       }
+      storage_containers: {
+        Row: {
+          color: string | null
+          container_type: string
+          created_at: string | null
+          household_id: string | null
+          id: string
+          location_id: string | null
+          name: string
+          notes: string | null
+          ownership_scope: string
+          parent_container_id: string | null
+          photo_url: string | null
+          qr_code: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          container_type?: string
+          created_at?: string | null
+          household_id?: string | null
+          id?: string
+          location_id?: string | null
+          name: string
+          notes?: string | null
+          ownership_scope?: string
+          parent_container_id?: string | null
+          photo_url?: string | null
+          qr_code?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          container_type?: string
+          created_at?: string | null
+          household_id?: string | null
+          id?: string
+          location_id?: string | null
+          name?: string
+          notes?: string | null
+          ownership_scope?: string
+          parent_container_id?: string | null
+          photo_url?: string | null
+          qr_code?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storage_containers_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storage_containers_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storage_containers_parent_container_id_fkey"
+            columns: ["parent_container_id"]
+            isOneToOne: false
+            referencedRelation: "storage_containers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_notification_settings: {
         Row: {
           email_enabled: boolean
@@ -797,11 +1176,79 @@ export type Database = {
         }
         Relationships: []
       }
+      vault_settings: {
+        Row: {
+          auto_lock_minutes: number
+          created_at: string | null
+          id: string
+          pin_hash: string
+          salt: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_lock_minutes?: number
+          created_at?: string | null
+          id?: string
+          pin_hash: string
+          salt: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_lock_minutes?: number
+          created_at?: string | null
+          id?: string
+          pin_hash?: string
+          salt?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      adjust_container_item_quantity: {
+        Args: { p_delta: number; p_item_id: string }
+        Returns: number
+      }
+      can_access_shared_category: {
+        Args: { p_category_id: string; p_category_user_id: string }
+        Returns: boolean
+      }
+      can_access_shared_item:
+        | {
+            Args: {
+              p_item_category_id: string
+              p_item_household_id: string
+              p_item_location_id: string
+              p_item_user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_item_category_id: string
+              p_item_household_id: string
+              p_item_id: string
+              p_item_location_id: string
+              p_item_user_id: string
+            }
+            Returns: boolean
+          }
+      can_access_shared_location: {
+        Args: {
+          p_location_household_id: string
+          p_location_id: string
+          p_location_parent_id?: string
+          p_location_user_id: string
+        }
+        Returns: boolean
+      }
+      get_dashboard_metrics: { Args: never; Returns: Json }
       get_my_household_ids: {
         Args: never
         Returns: {
