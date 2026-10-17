@@ -71,10 +71,19 @@ export const Navbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [currentHash, setCurrentHash] = useState(typeof window !== 'undefined' ? window.location.hash : '');
+
+  useEffect(() => {
+    const handleHash = () => setCurrentHash(window.location.hash);
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
   const handleNav = (view: ViewMode) => {
     if (window.location.hash.includes('storage')) {
       window.location.hash = '';
     }
+    setCurrentHash('');
     setCurrentView(view);
     setIsMobileMenuOpen(false);
     setIsUserDropdownOpen(false);
@@ -89,8 +98,9 @@ export const Navbar: React.FC = () => {
   };
 
   // Active state helpers for grouped menus
-  const isThingsActive = currentView === 'items' || currentView === 'locations' || currentView === 'categories';
-  const isModulesActive = currentView === 'repairs' || currentView === 'financing' || currentView === 'household' || currentView === 'lending' || currentView === 'collections' || currentView === 'pantry' || currentView === 'vault';
+  const isStorageActive = currentHash === '#storage' || currentHash.startsWith('#storage/');
+  const isThingsActive = isStorageActive || currentView === 'items' || currentView === 'locations' || currentView === 'categories';
+  const isModulesActive = !isStorageActive && (currentView === 'repairs' || currentView === 'financing' || currentView === 'household' || currentView === 'lending' || currentView === 'collections' || currentView === 'pantry' || currentView === 'vault');
 
   return (
     <>
@@ -121,12 +131,12 @@ export const Navbar: React.FC = () => {
                 <button
                   onClick={() => handleNav('dashboard')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
-                    currentView === 'dashboard'
+                    !isStorageActive && currentView === 'dashboard'
                       ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
                       : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                   }`}
                 >
-                  <LayoutDashboard className={`h-4 w-4 shrink-0 ${currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
+                  <LayoutDashboard className={`h-4 w-4 shrink-0 ${!isStorageActive && currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                   <span>{t('dashboard')}</span>
                 </button>
 
@@ -146,11 +156,11 @@ export const Navbar: React.FC = () => {
                   </button>
 
                   {openDropdown === 'things' && (
-                    <div className="absolute left-0 mt-2 w-48 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="absolute left-0 mt-2 w-52 rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                       <button
                         onClick={() => handleNav('items')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'items' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                          !isStorageActive && currentView === 'items' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
                         <Boxes className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
@@ -159,7 +169,7 @@ export const Navbar: React.FC = () => {
                       <button
                         onClick={() => handleNav('locations')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'locations' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                          !isStorageActive && currentView === 'locations' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
                         <MapPin className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
@@ -168,11 +178,24 @@ export const Navbar: React.FC = () => {
                       <button
                         onClick={() => handleNav('categories')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          currentView === 'categories' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                          !isStorageActive && currentView === 'categories' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
                       >
                         <Tag className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                         <span>{t('categories')}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          window.location.hash = '#storage';
+                          setCurrentHash('#storage');
+                          setOpenDropdown(null);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          isStorageActive ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
+                        }`}
+                      >
+                        <Package className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
+                        <span>{isHu ? 'Fizikai tárolók' : 'Physical storage'}</span>
                       </button>
                     </div>
                   )}
@@ -182,12 +205,12 @@ export const Navbar: React.FC = () => {
                 <button
                   onClick={() => handleNav('documents')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
-                    currentView === 'documents'
+                    !isStorageActive && currentView === 'documents'
                       ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
                       : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
                   }`}
                 >
-                  <FileText className={`h-4 w-4 shrink-0 ${currentView === 'documents' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
+                  <FileText className={`h-4 w-4 shrink-0 ${!isStorageActive && currentView === 'documents' ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
                   <span>{t('documents')}</span>
                 </button>
 
@@ -473,7 +496,7 @@ export const Navbar: React.FC = () => {
           <button
             onClick={() => handleNav('dashboard')}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+              !isStorageActive && currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
           >
             <LayoutDashboard className="h-5 w-5 shrink-0" />
@@ -484,7 +507,7 @@ export const Navbar: React.FC = () => {
           <button
             onClick={() => handleNav('items')}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              currentView === 'items' || currentView === 'locations' || currentView === 'categories'
+              !isStorageActive && (currentView === 'items' || currentView === 'locations' || currentView === 'categories')
                 ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
                 : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
@@ -506,10 +529,11 @@ export const Navbar: React.FC = () => {
           <button
             onClick={() => {
               window.location.hash = '#storage';
+              setCurrentHash('#storage');
               setIsMobileMenuOpen(false);
             }}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              window.location.hash === '#storage' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+              isStorageActive ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
             title={isHu ? 'Fizikai tárolók és raktározás' : 'Storage'}
           >
@@ -603,10 +627,11 @@ export const Navbar: React.FC = () => {
                     <button
                       onClick={() => {
                         window.location.hash = '#storage';
+                        setCurrentHash('#storage');
                         setIsMobileMenuOpen(false);
                       }}
                       className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
-                        window.location.hash === '#storage' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                        isStorageActive ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                       }`}
                     >
                       <Package className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
