@@ -141,96 +141,92 @@ export const LandingPage: React.FC = () => {
 
           </div>
 
-          {/* RIGHT COLUMN: Realistic SaaS Inventory Preview (Windows Desktop Style) */}
+          {/* RIGHT COLUMN: Realistic SaaS Inventory Preview (Windows Desktop Window) */}
           <div className="lg:col-span-6 relative w-full max-w-xl lg:max-w-none mx-auto">
             <div className="rounded-xl border border-[#3E4A59] bg-[#2B3542] shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5">
               
-              {/* Windows 10/11 Title Bar */}
-              <div className="flex items-center justify-between pl-3 pr-0 py-0 border-b border-[#3E4A59] bg-[#1E252E] h-10 select-none">
-                {/* Left: App icon and Window title */}
-                <div className="flex items-center gap-2 overflow-hidden mr-2">
-                  <div className="w-4 h-4 rounded-sm bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0 shadow-xs">
-                    T
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs truncate">
-                    <span className="font-medium text-[#E2E8F0]">Thingor</span>
-                    <span className="hidden sm:inline text-[#64748B]">— {isHu ? 'Leltárkezelő' : 'Inventory'}</span>
-                  </div>
-                  <div className="hidden md:flex items-center gap-1.5 ml-2 px-2.5 py-0.5 rounded-sm bg-[#242C35] border border-[#3E4A59] text-[11px] text-[#94A3B8]">
-                    <Search className="h-3 w-3 text-[#94A3B8]" />
-                    <span>thingor.app/leltár</span>
-                  </div>
+              {/* Native Windows 10/11 Title Bar */}
+              <div className="flex items-center justify-between pl-3 pr-0 border-b border-[#3E4A59] bg-[#1E252E] h-8 select-none">
+                {/* Left: Window Icon & Title */}
+                <div className="flex items-center gap-2">
+                  <img src="/favicon.png" alt="" className="w-3.5 h-3.5 object-contain opacity-80" />
+                  <span className="text-xs text-[#94A3B8] font-normal tracking-tight">Thingor</span>
                 </div>
 
-                {/* Right: Summary badges & Windows Window Controls */}
+                {/* Right: Window Controls (Minimize, Maximize, Close) */}
                 <div className="flex items-center h-full">
-                  <div className="hidden sm:flex items-center gap-1.5 text-[11px] mr-2">
-                    <span className="px-2 py-0.5 rounded-sm bg-blue-500/15 border border-blue-500/30 text-blue-300 font-medium">
-                      128 {isHu ? 'tárgy' : 'items'}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-sm bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold font-mono">
-                      3.420.000 Ft
-                    </span>
-                  </div>
-
-                  {/* Windows Window Controls (Minimize, Maximize, Close) */}
-                  <div className="flex items-center h-full border-l border-[#3E4A59]/60">
-                    <button
-                      type="button"
-                      aria-label={isHu ? 'Kis méret' : 'Minimize'}
-                      title={isHu ? 'Kis méret' : 'Minimize'}
-                      className="h-full px-3 sm:px-3.5 flex items-center justify-center text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/10 transition-colors"
-                    >
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor">
-                        <line x1="1" y1="5" x2="9" y2="5" strokeWidth="1.2" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={isHu ? 'Teljes méret' : 'Maximize'}
-                      title={isHu ? 'Teljes méret' : 'Maximize'}
-                      className="h-full px-3 sm:px-3.5 flex items-center justify-center text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/10 transition-colors"
-                    >
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor">
-                        <rect x="1.5" y="1.5" width="7" height="7" strokeWidth="1.1" fill="none" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={isHu ? 'Bezárás' : 'Close'}
-                      title={isHu ? 'Bezárás' : 'Close'}
-                      className="h-full px-3 sm:px-3.5 flex items-center justify-center text-[#94A3B8] hover:text-white hover:bg-[#E81123] transition-colors"
-                    >
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor">
-                        <line x1="1.5" y1="1.5" x2="8.5" y2="8.5" strokeWidth="1.2" />
-                        <line x1="8.5" y1="1.5" x2="1.5" y2="8.5" strokeWidth="1.2" />
-                      </svg>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    aria-label={isHu ? 'Kis méret' : 'Minimize'}
+                    title={isHu ? 'Kis méret' : 'Minimize'}
+                    className="h-full px-3 flex items-center justify-center text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/10 transition-colors"
+                  >
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor">
+                      <line x1="1" y1="5" x2="9" y2="5" strokeWidth="1.2" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={isHu ? 'Teljes méret' : 'Maximize'}
+                    title={isHu ? 'Teljes méret' : 'Maximize'}
+                    className="h-full px-3 flex items-center justify-center text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/10 transition-colors"
+                  >
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor">
+                      <rect x="1.5" y="1.5" width="7" height="7" strokeWidth="1.1" fill="none" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={isHu ? 'Bezárás' : 'Close'}
+                    title={isHu ? 'Bezárás' : 'Close'}
+                    className="h-full px-3 flex items-center justify-center text-[#94A3B8] hover:text-white hover:bg-[#E81123] transition-colors"
+                  >
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor">
+                      <line x1="1.5" y1="1.5" x2="8.5" y2="8.5" strokeWidth="1.2" />
+                      <line x1="8.5" y1="1.5" x2="1.5" y2="8.5" strokeWidth="1.2" />
+                    </svg>
+                  </button>
                 </div>
               </div>
 
-              {/* Quick filter tabs / Command bar */}
-              <div className="px-4 py-2 border-b border-[#3E4A59]/70 bg-[#242C35] flex items-center gap-1.5 text-xs overflow-x-auto scrollbar-none">
-                <span className="px-2.5 py-1 rounded-sm bg-blue-600 text-white font-medium shrink-0 shadow-xs">
+              {/* Inner App Toolbar / Status Bar */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#3E4A59] bg-[#242C35]/80">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#2B3542] border border-[#3E4A59] text-[11px] text-[#94A3B8]">
+                  <Search className="h-3 w-3 text-[#94A3B8]" />
+                  <span>thingor.app/leltár</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold">
+                    128 {isHu ? 'tárgy' : 'items'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
+                    3.420.000 Ft
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick filter pills */}
+              <div className="px-4 py-2.5 border-b border-[#3E4A59]/70 bg-[#27313E] flex items-center gap-2 text-xs overflow-x-auto scrollbar-none">
+                <span className="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-medium shrink-0">
                   {isHu ? 'Összes (128)' : 'All (128)'}
                 </span>
-                <span className="px-2.5 py-1 rounded-sm bg-[#2B3542] hover:bg-[#343F4E] text-[#94A3B8] hover:text-[#E2E8F0] font-medium shrink-0 border border-transparent hover:border-[#3E4A59] transition-colors cursor-default">
+                <span className="px-2.5 py-1 rounded-lg bg-[#313B49] text-[#94A3B8] hover:text-[#E2E8F0] font-medium shrink-0">
                   {isHu ? 'Szerszámok (34)' : 'Tools (34)'}
                 </span>
-                <span className="px-2.5 py-1 rounded-sm bg-[#2B3542] hover:bg-[#343F4E] text-[#94A3B8] hover:text-[#E2E8F0] font-medium shrink-0 border border-transparent hover:border-[#3E4A59] transition-colors cursor-default">
+                <span className="px-2.5 py-1 rounded-lg bg-[#313B49] text-[#94A3B8] hover:text-[#E2E8F0] font-medium shrink-0">
                   {isHu ? 'Elektronika (18)' : 'Electronics (18)'}
                 </span>
-                <span className="px-2.5 py-1 rounded-sm bg-[#2B3542] hover:bg-[#343F4E] text-[#94A3B8] hover:text-[#E2E8F0] font-medium shrink-0 border border-transparent hover:border-[#3E4A59] transition-colors cursor-default">
+                <span className="px-2.5 py-1 rounded-lg bg-[#313B49] text-[#94A3B8] hover:text-[#E2E8F0] font-medium shrink-0">
                   {isHu ? 'Otthon (42)' : 'Home (42)'}
                 </span>
               </div>
 
               {/* Inventory Items Stack */}
-              <div className="p-4 sm:p-5 space-y-2.5">
+              <div className="p-4 sm:p-5 space-y-3">
                 
                 {/* Item 1 */}
-                <div className="p-3.5 rounded-lg border border-[#3E4A59] bg-[#313B49]/80 hover:border-blue-500/50 transition-colors">
+                <div className="p-3.5 rounded-xl border border-[#3E4A59] bg-[#313B49]/80 hover:border-blue-500/50 transition-colors">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div>
                       <h4 className="text-sm font-bold text-[#F1F5F9]">Makita DHP486 Ütvefúró</h4>
@@ -239,7 +235,7 @@ export const LandingPage: React.FC = () => {
                         <span>Otthon → Garázs → Műhely (1. szekrény)</span>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-sm text-[11px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium shrink-0">
+                    <span className="px-2 py-0.5 rounded text-[11px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium shrink-0">
                       {isHu ? 'Jó állapot' : 'Good'}
                     </span>
                   </div>
@@ -257,7 +253,7 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 {/* Item 2 */}
-                <div className="p-3.5 rounded-lg border border-[#3E4A59] bg-[#313B49]/80 hover:border-blue-500/50 transition-colors">
+                <div className="p-3.5 rounded-xl border border-[#3E4A59] bg-[#313B49]/80 hover:border-blue-500/50 transition-colors">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div>
                       <h4 className="text-sm font-bold text-[#F1F5F9]">MacBook Pro 16" M3 Max</h4>
@@ -266,7 +262,7 @@ export const LandingPage: React.FC = () => {
                         <span>Otthon → Dolgozó → Íróasztal</span>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-sm text-[11px] bg-blue-500/15 text-blue-300 border border-blue-500/30 font-medium shrink-0">
+                    <span className="px-2 py-0.5 rounded text-[11px] bg-blue-500/15 text-blue-300 border border-blue-500/30 font-medium shrink-0">
                       {isHu ? 'Kitűnő állapot' : 'Excellent'}
                     </span>
                   </div>
@@ -284,7 +280,7 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 {/* Item 3 */}
-                <div className="p-3.5 rounded-lg border border-[#3E4A59] bg-[#313B49]/80 hover:border-blue-500/50 transition-colors">
+                <div className="p-3.5 rounded-xl border border-[#3E4A59] bg-[#313B49]/80 hover:border-blue-500/50 transition-colors">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div>
                       <h4 className="text-sm font-bold text-[#F1F5F9]">DeWalt DWE7492 Asztali körfűrész</h4>
@@ -293,7 +289,7 @@ export const LandingPage: React.FC = () => {
                         <span>Otthon → Garázs → Műhely (Munkaasztal)</span>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-sm text-[11px] bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium shrink-0">
+                    <span className="px-2 py-0.5 rounded text-[11px] bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium shrink-0">
                       {isHu ? 'Karbantartva' : 'Maintained'}
                     </span>
                   </div>
