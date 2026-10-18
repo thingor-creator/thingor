@@ -1552,6 +1552,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 );
               });
             }
+
+            // Re-sync all shared household modules
+            const [
+              { data: freshCollections },
+              { data: freshColItems },
+              { data: freshPantry },
+              { data: freshContainers },
+              { data: freshContItems },
+              { data: freshNotes },
+              { data: freshLoans },
+              { data: freshContacts },
+              { data: freshRepairs },
+              { data: freshFinancings }
+            ] = await Promise.all([
+              supabase.from('collections').select('*').order('created_at', { ascending: false }),
+              supabase.from('collection_items').select('*').order('created_at', { ascending: false }),
+              supabase.from('pantry_items').select('*').order('created_at', { ascending: false }),
+              supabase.from('storage_containers').select('*').order('created_at', { ascending: true }),
+              supabase.from('container_items').select('*').order('created_at', { ascending: false }),
+              supabase.from('quick_notes').select('*').order('created_at', { ascending: false }),
+              supabase.from('item_loans').select('*').order('created_at', { ascending: false }),
+              supabase.from('lending_contacts').select('*').order('name', { ascending: true }),
+              supabase.from('item_repairs').select('*').order('created_at', { ascending: false }),
+              supabase.from('item_financings').select('*').order('created_at', { ascending: false })
+            ]);
+
+            if (isMounted) {
+              if (freshCollections) setCollections(freshCollections as Collection[]);
+              if (freshColItems) setCollectionItems(freshColItems as CollectionItem[]);
+              if (freshPantry) setPantryItems(freshPantry as PantryItem[]);
+              if (freshContainers) setStorageContainers(freshContainers as StorageContainer[]);
+              if (freshContItems) setContainerItems(freshContItems as ContainerItem[]);
+              if (freshNotes) setQuickNotes(freshNotes as QuickNote[]);
+              if (freshLoans) setLoans(freshLoans as ItemLoan[]);
+              if (freshContacts) setLendingContacts(freshContacts as LendingContact[]);
+              if (freshRepairs) setRepairs(freshRepairs as ItemRepair[]);
+              if (freshFinancings) setFinancings(freshFinancings as ItemFinancing[]);
+            }
           }
         } else if (isMounted && household && !isUUID(household.id)) {
           ensureValidHousehold(household);
@@ -1586,11 +1624,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       });
 
-    // Load quick notes
+    // Load quick notes (RLS handles household permission)
     supabase
       .from('quick_notes')
       .select('*')
-      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
