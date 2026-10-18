@@ -42,9 +42,9 @@ import type {
   StorageContainer,
   ContainerItem,
   LendingContact,
-  HouseholdMemberAllowedModules,
-  DEFAULT_HOUSEHOLD_MODULES
+  HouseholdMemberAllowedModules
 } from '../types';
+import { DEFAULT_HOUSEHOLD_MODULES } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { generateSalt, hashPin, verifyPin } from '../lib/vault';
 import { deleteFileFromStorage } from '../lib/storage';
