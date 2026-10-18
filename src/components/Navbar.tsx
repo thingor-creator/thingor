@@ -366,10 +366,10 @@ export const Navbar: React.FC = () => {
     <>
       {/* Main Top Header */}
       <header className="sticky top-0 z-40 w-full border-b border-[var(--border-color,#56616D)] bg-[var(--bg-main,#303943)]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-2 sm:gap-4 px-2.5 sm:px-6 lg:px-8">
           
             {/* Logo & Brand */}
-            <div className="flex items-center gap-2 sm:gap-4 xl:gap-6 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-4 xl:gap-6 shrink-0 min-w-0">
               <button
                 onClick={() => handleNav(isAuthenticated ? 'dashboard' : 'landing')}
                 className="flex items-center gap-2 text-left focus:outline-none group py-1 shrink-0"
@@ -377,7 +377,7 @@ export const Navbar: React.FC = () => {
                 <img
                   src={siteSettings.logo_url || '/logo.png'}
                   alt={siteSettings.site_name || 'Thingor Logo'}
-                  className="h-8 sm:h-9 md:h-10 max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] w-auto object-contain group-hover:opacity-90 transition-opacity shrink-0"
+                  className="h-7 sm:h-9 md:h-10 max-w-[105px] xs:max-w-[140px] sm:max-w-[200px] w-auto object-contain group-hover:opacity-90 transition-opacity shrink-0"
                 />
               </button>
 
@@ -685,13 +685,13 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
                 <button
                   onClick={() => {
                     setAuthModalMode('login');
                     setIsAuthModalOpen(true);
                   }}
-                  className="h-9 px-3 text-xs sm:text-sm font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white transition-colors shrink-0 whitespace-nowrap flex items-center"
+                  className="h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm font-medium text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white transition-colors shrink-0 whitespace-nowrap flex items-center"
                 >
                   {t('sign_in')}
                 </button>
@@ -700,26 +700,28 @@ export const Navbar: React.FC = () => {
                     setAuthModalMode('signup');
                     setIsAuthModalOpen(true);
                   }}
-                  className="h-9 px-3.5 sm:px-4 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs sm:text-sm transition-all shadow-md shrink-0 whitespace-nowrap flex items-center justify-center"
+                  className="h-8 sm:h-9 px-2.5 sm:px-4 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-blue-600 text-white font-bold text-xs sm:text-sm transition-all shadow-md shrink-0 whitespace-nowrap flex items-center justify-center"
                 >
                   {t('start_organizing')}
                 </button>
               </div>
             )}
 
-            {/* Mobile Sandwich / Hamburger Menu Toggle */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="flex lg:hidden items-center justify-center p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
-              aria-label={isMobileMenuOpen ? (isHu ? 'Menü bezárása' : 'Close menu') : (isHu ? 'Menü megnyitása' : 'Open menu')}
-              title={isHu ? 'Menü' : 'Menu'}
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-              ) : (
-                <Menu className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-              )}
-            </button>
+            {/* Mobile Sandwich / Hamburger Menu Toggle (Only for authenticated app views) */}
+            {isAuthenticated && currentView !== 'landing' && (
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="flex lg:hidden items-center justify-center p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
+                aria-label={isMobileMenuOpen ? (isHu ? 'Menü bezárása' : 'Close menu') : (isHu ? 'Menü megnyitása' : 'Open menu')}
+                title={isHu ? 'Menü' : 'Menu'}
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                ) : (
+                  <Menu className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -751,7 +753,7 @@ export const Navbar: React.FC = () => {
       )}
 
       {/* MOBILE DRAWER MENU MODAL */}
-      {isMobileMenuOpen && (
+      {isAuthenticated && currentView !== 'landing' && isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm lg:hidden animate-in fade-in duration-200">
           <div className="bg-[var(--card-bg,#3A4551)] border-t border-[var(--border-color,#56616D)] rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl text-[var(--text-primary,var(--text-main,#E0E3E6))]">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
