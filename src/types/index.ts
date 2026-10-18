@@ -189,6 +189,10 @@ export interface UserPreferences {
   currency?: 'HUF' | 'EUR' | 'USD';
   mobile_bottom_bar_left?: string;
   mobile_bottom_bar_right?: string;
+  mobile_bottom_bar_slot1?: string;
+  mobile_bottom_bar_slot2?: string;
+  mobile_bottom_bar_slot3?: string;
+  mobile_bottom_bar_slot4?: string;
   theme_id?: string;
   accent_color?: string;
 }

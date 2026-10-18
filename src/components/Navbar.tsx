@@ -16,7 +16,6 @@ import {
   Menu,
   X,
   ChevronDown,
-  Globe,
   ShieldCheck,
   Bell,
   QrCode,
@@ -45,7 +44,6 @@ export const Navbar: React.FC = () => {
     setIsCategoryModalOpen,
     setEditingItem,
     language,
-    setLanguage,
     t,
     siteSettings,
     unreadNotificationCount,
@@ -60,7 +58,6 @@ export const Navbar: React.FC = () => {
   const [openDropdown, setOpenDropdown] = useState<'things' | 'modules' | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
-  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -147,8 +144,40 @@ export const Navbar: React.FC = () => {
   const isThingsActive = isStorageActive || currentView === 'items' || currentView === 'locations' || currentView === 'categories';
   const isModulesActive = !isStorageActive && (currentView === 'repairs' || currentView === 'financing' || currentView === 'household' || currentView === 'lending' || currentView === 'collections' || currentView === 'pantry' || currentView === 'vault');
 
-  const renderBottomNavButton = (slotOptionId: string, slotPosition: 'left' | 'right') => {
+  const renderBottomNavButton = (slotOptionId: string, slotPosition: string) => {
     switch (slotOptionId) {
+      case 'dashboard':
+        return (
+          <button
+            key={`slot-${slotPosition}-dashboard`}
+            onClick={() => handleNav('dashboard')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'dashboard'
+                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Vezérlőpult' : 'Dashboard'}</span>
+          </button>
+        );
+
+      case 'documents':
+        return (
+          <button
+            key={`slot-${slotPosition}-documents`}
+            onClick={() => handleNav('documents')}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
+              !isStorageActive && currentView === 'documents'
+                ? 'text-[var(--color-primary-blue,#2563EB)] font-bold'
+                : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
+            }`}
+          >
+            <FileText className="h-5 w-5 shrink-0 text-cyan-400" />
+            <span className="text-[10px] truncate max-w-full">{isHu ? 'Dokumentumok' : 'Documents'}</span>
+          </button>
+        );
+
       case 'items':
         return (
           <button
@@ -561,43 +590,6 @@ export const Navbar: React.FC = () => {
           {/* Right Action controls */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
 
-            {/* Language Selector */}
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-xs font-semibold text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
-              >
-                <Globe className="h-3.5 w-3.5 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
-                <span className="font-bold uppercase">{language}</span>
-              </button>
-
-              {isLangDropdownOpen && (
-                <div
-                  className="absolute right-0 mt-2 w-36 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] p-1.5 shadow-2xl z-50 animate-in fade-in"
-                  onClick={() => setIsLangDropdownOpen(false)}
-                >
-                  <button
-                    onClick={() => setLanguage('hu')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold ${
-                      language === 'hu' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                    }`}
-                  >
-                    <span>🇭🇺 Magyar</span>
-                    {language === 'hu' && <span className="text-[10px]">✓</span>}
-                  </button>
-                  <button
-                    onClick={() => setLanguage('en')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold ${
-                      language === 'en' ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
-                    }`}
-                  >
-                    <span>🇬🇧 English</span>
-                    {language === 'en' && <span className="text-[10px]">✓</span>}
-                  </button>
-                </div>
-              )}
-            </div>
-
             {/* Notification Bell Icon & QR Scanner (Authenticated) */}
             {isAuthenticated && (
               <>
@@ -714,6 +706,20 @@ export const Navbar: React.FC = () => {
                 </button>
               </div>
             )}
+
+            {/* Mobile Sandwich / Hamburger Menu Toggle */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="flex lg:hidden items-center justify-center p-2 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white hover:bg-[var(--surface-bg,#465362)] transition-colors shrink-0"
+              aria-label={isMobileMenuOpen ? (isHu ? 'Menü bezárása' : 'Close menu') : (isHu ? 'Menü megnyitása' : 'Open menu')}
+              title={isHu ? 'Menü' : 'Menu'}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+              ) : (
+                <Menu className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -721,21 +727,13 @@ export const Navbar: React.FC = () => {
       {/* MOBILE BOTTOM NAVIGATION BAR (Logged In Users) */}
       {isAuthenticated && (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-main,#303943)]/95 border-t border-[var(--border-color,#56616D)] backdrop-blur-md px-2 py-1 flex items-center justify-around shadow-2xl">
-          {/* 1. Vezérlőpult */}
-          <button
-            onClick={() => handleNav('dashboard')}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              !isStorageActive && currentView === 'dashboard' ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] truncate max-w-full">{isHu ? 'Vezérlőpult' : 'Dashboard'}</span>
-          </button>
+          {/* 1. Gomb (Slot 1) */}
+          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_slot1 || 'items', 'slot1')}
 
-          {/* 2. Bal oldali konfigurálható gomb */}
-          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_left || 'items', 'left')}
+          {/* 2. Gomb (Slot 2) */}
+          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_slot2 || userPreferences?.mobile_bottom_bar_left || 'storage', 'slot2')}
 
-          {/* 3. Kiemelt Új Tárgy Hozzáadás Gomb (FAB) */}
+          {/* Központi Kiemelt Új Tárgy Hozzáadás Gomb (FAB) */}
           <button
             onClick={handleOpenAddModal}
             className="flex items-center justify-center -mt-4 h-12 w-12 rounded-full bg-[var(--color-primary-blue,#2563EB)] text-white shadow-lg shadow-blue-500/40 hover:bg-blue-600 active:scale-95 transition-all shrink-0 border-2 border-[var(--bg-main,#303943)]"
@@ -744,19 +742,11 @@ export const Navbar: React.FC = () => {
             <Plus className="h-6 w-6 stroke-[2.5]" />
           </button>
 
-          {/* 4. Jobb oldali konfigurálható gomb */}
-          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_right || 'storage', 'right')}
+          {/* 3. Gomb (Slot 3) */}
+          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_slot3 || userPreferences?.mobile_bottom_bar_right || 'pantry', 'slot3')}
 
-          {/* 5. Menü (Drawer toggle) */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
-              isMobileMenuOpen ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
-            }`}
-          >
-            <Menu className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] truncate max-w-full">{isHu ? 'Menü' : 'Menu'}</span>
-          </button>
+          {/* 4. Gomb (Slot 4) */}
+          {renderBottomNavButton(userPreferences?.mobile_bottom_bar_slot4 || 'household', 'slot4')}
         </nav>
       )}
 

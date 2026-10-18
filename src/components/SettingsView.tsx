@@ -32,19 +32,21 @@ import {
   ShoppingCart,
   LayoutDashboard,
   Plus,
-  Menu,
   Sun,
   Moon,
   Sparkles,
   RotateCcw,
+  FileText,
 } from 'lucide-react';
 import { THEMES, ACCENT_COLORS, applyTheme } from '../lib/theme';
 
 type SettingsTab = 'account' | 'appearance' | 'regional' | 'notifications' | 'security' | 'data';
 
 const BOTTOM_BAR_OPTIONS = [
+  { id: 'dashboard', labelHu: 'Vezérlőpult', labelEn: 'Dashboard', icon: LayoutDashboard },
   { id: 'items', labelHu: 'Tárgyaim', labelEn: 'Items', icon: Boxes },
   { id: 'storage', labelHu: 'Tárolók (Fizikai dobozok)', labelEn: 'Storage (Boxes & Shelves)', icon: Package },
+  { id: 'documents', labelHu: 'Dokumentumok', labelEn: 'Documents', icon: FileText },
   { id: 'household', labelHu: 'Családi megosztás', labelEn: 'Family Sharing', icon: Users },
   { id: 'repairs', labelHu: 'Javítások & Karbantartás', labelEn: 'Repairs & Maintenance', icon: Wrench },
   { id: 'financing', labelHu: 'Finanszírozás & Részletek', labelEn: 'Financing & Installments', icon: CreditCard },
@@ -761,53 +763,99 @@ export const SettingsView: React.FC = () => {
                 </h3>
                 <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
                   {isHu
-                    ? 'Szabd testre a képernyő alján megjelenő központi [+] gomb bal és jobb oldalán lévő gyorsfunkciókat.'
-                    : 'Configure the quick-action buttons placed to the left and right of the central [+] button.'}
+                    ? 'A vezérlőpult és a menü gomb helyett tetszőleges 4 gyorsfunkciót állíthatsz be a központi [+] gomb körül (a szendvicsmenü felülre került).'
+                    : 'Customize all 4 action buttons around the central [+] button. The hamburger menu is moved to the top header.'}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Bal oldali gomb választó */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* 1. Slot */}
               <div className="space-y-2 p-4 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]">
                 <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
-                  {isHu ? 'Bal oldali gyorsgomb (a [+] előtt)' : 'Left Quick Button (before [+])'}
+                  {isHu ? '1. Gomb (bal szélső)' : 'Button 1 (far left)'}
                 </label>
                 <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mb-2">
                   {isHu ? 'Alapértelmezett: Tárgyaim' : 'Default: Items'}
                 </p>
                 <select
-                  value={userPreferences.mobile_bottom_bar_left || 'items'}
+                  value={userPreferences.mobile_bottom_bar_slot1 || 'items'}
                   onChange={async e => {
-                    await updateUserPreferences({ mobile_bottom_bar_left: e.target.value });
+                    await updateUserPreferences({ mobile_bottom_bar_slot1: e.target.value });
                   }}
                   className="w-full px-3.5 py-2.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-xl text-xs sm:text-sm text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
                 >
                   {BOTTOM_BAR_OPTIONS.map(opt => (
-                    <option key={`left-${opt.id}`} value={opt.id}>
+                    <option key={`slot1-${opt.id}`} value={opt.id}>
                       {isHu ? opt.labelHu : opt.labelEn}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Jobb oldali gomb választó */}
+              {/* 2. Slot */}
               <div className="space-y-2 p-4 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]">
                 <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
-                  {isHu ? 'Jobb oldali gyorsgomb (a [+] után)' : 'Right Quick Button (after [+])'}
+                  {isHu ? '2. Gomb (a [+] előtt)' : 'Button 2 (before [+])'}
                 </label>
                 <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mb-2">
                   {isHu ? 'Alapértelmezett: Tárolók' : 'Default: Storage'}
                 </p>
                 <select
-                  value={userPreferences.mobile_bottom_bar_right || 'storage'}
+                  value={userPreferences.mobile_bottom_bar_slot2 || userPreferences.mobile_bottom_bar_left || 'storage'}
                   onChange={async e => {
-                    await updateUserPreferences({ mobile_bottom_bar_right: e.target.value });
+                    await updateUserPreferences({ mobile_bottom_bar_slot2: e.target.value });
                   }}
                   className="w-full px-3.5 py-2.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-xl text-xs sm:text-sm text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
                 >
                   {BOTTOM_BAR_OPTIONS.map(opt => (
-                    <option key={`right-${opt.id}`} value={opt.id}>
+                    <option key={`slot2-${opt.id}`} value={opt.id}>
+                      {isHu ? opt.labelHu : opt.labelEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 3. Slot */}
+              <div className="space-y-2 p-4 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]">
+                <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                  {isHu ? '3. Gomb (a [+] után)' : 'Button 3 (after [+])'}
+                </label>
+                <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mb-2">
+                  {isHu ? 'Alapértelmezett: Spájz' : 'Default: Pantry'}
+                </p>
+                <select
+                  value={userPreferences.mobile_bottom_bar_slot3 || userPreferences.mobile_bottom_bar_right || 'pantry'}
+                  onChange={async e => {
+                    await updateUserPreferences({ mobile_bottom_bar_slot3: e.target.value });
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-xl text-xs sm:text-sm text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
+                >
+                  {BOTTOM_BAR_OPTIONS.map(opt => (
+                    <option key={`slot3-${opt.id}`} value={opt.id}>
+                      {isHu ? opt.labelHu : opt.labelEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 4. Slot */}
+              <div className="space-y-2 p-4 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]">
+                <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)]">
+                  {isHu ? '4. Gomb (jobb szélső)' : 'Button 4 (far right)'}
+                </label>
+                <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mb-2">
+                  {isHu ? 'Alapértelmezett: Családi megosztás' : 'Default: Family Sharing'}
+                </p>
+                <select
+                  value={userPreferences.mobile_bottom_bar_slot4 || 'household'}
+                  onChange={async e => {
+                    await updateUserPreferences({ mobile_bottom_bar_slot4: e.target.value });
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-xl text-xs sm:text-sm text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
+                >
+                  {BOTTOM_BAR_OPTIONS.map(opt => (
+                    <option key={`slot4-${opt.id}`} value={opt.id}>
                       {isHu ? opt.labelHu : opt.labelEn}
                     </option>
                   ))}
@@ -821,46 +869,58 @@ export const SettingsView: React.FC = () => {
                 {isHu ? 'Mobil alsó sáv élő előnézete' : 'Live Mobile Bar Preview'}
               </span>
               <div className="max-w-md mx-auto p-2.5 bg-[var(--bg-main,#303943)] rounded-2xl border border-[var(--border-color,#56616D)] shadow-inner flex items-center justify-around">
-                {/* 1. Vezérlőpult */}
-                <div className="flex flex-col items-center gap-0.5 text-[var(--text-sub,#B5BDC6)] px-2">
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span className="text-[9px]">{isHu ? 'Vezérlőpult' : 'Dashboard'}</span>
-                </div>
-
-                {/* 2. Választott bal gomb */}
+                {/* 1. Gomb */}
                 {(() => {
-                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_left || 'items')) || BOTTOM_BAR_OPTIONS[0];
+                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_slot1 || 'items')) || BOTTOM_BAR_OPTIONS[1];
                   const Icon = opt.icon;
                   return (
-                    <div className="flex flex-col items-center gap-0.5 text-[var(--color-primary-blue,#2563EB)] font-bold px-2">
+                    <div className="flex flex-col items-center gap-0.5 text-[var(--color-primary-blue,#2563EB)] font-bold px-1 text-center">
                       <Icon className="h-4 w-4" />
-                      <span className="text-[9px] truncate max-w-[65px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
+                      <span className="text-[9px] truncate max-w-[60px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
                     </div>
                   );
                 })()}
 
-                {/* 3. Központi FAB [+] */}
+                {/* 2. Gomb */}
+                {(() => {
+                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_slot2 || userPreferences.mobile_bottom_bar_left || 'storage')) || BOTTOM_BAR_OPTIONS[2];
+                  const Icon = opt.icon;
+                  return (
+                    <div className="flex flex-col items-center gap-0.5 text-[var(--color-primary-blue,#2563EB)] font-bold px-1 text-center">
+                      <Icon className="h-4 w-4" />
+                      <span className="text-[9px] truncate max-w-[60px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* Központi FAB [+] */}
                 <div className="h-8 w-8 rounded-full bg-[var(--color-primary-blue,#2563EB)] text-white flex items-center justify-center shadow">
                   <Plus className="h-4 w-4 stroke-[3]" />
                 </div>
 
-                {/* 4. Választott jobb gomb */}
+                {/* 3. Gomb */}
                 {(() => {
-                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_right || 'storage')) || BOTTOM_BAR_OPTIONS[1];
+                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_slot3 || userPreferences.mobile_bottom_bar_right || 'pantry')) || BOTTOM_BAR_OPTIONS[9];
                   const Icon = opt.icon;
                   return (
-                    <div className="flex flex-col items-center gap-0.5 text-[var(--text-sub,#B5BDC6)] px-2">
+                    <div className="flex flex-col items-center gap-0.5 text-[var(--color-primary-blue,#2563EB)] font-bold px-1 text-center">
                       <Icon className="h-4 w-4" />
-                      <span className="text-[9px] truncate max-w-[65px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
+                      <span className="text-[9px] truncate max-w-[60px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
                     </div>
                   );
                 })()}
 
-                {/* 5. Menü */}
-                <div className="flex flex-col items-center gap-0.5 text-[var(--text-sub,#B5BDC6)] px-2">
-                  <Menu className="h-4 w-4" />
-                  <span className="text-[9px]">{isHu ? 'Menü' : 'Menu'}</span>
-                </div>
+                {/* 4. Gomb */}
+                {(() => {
+                  const opt = BOTTOM_BAR_OPTIONS.find(o => o.id === (userPreferences.mobile_bottom_bar_slot4 || 'household')) || BOTTOM_BAR_OPTIONS[4];
+                  const Icon = opt.icon;
+                  return (
+                    <div className="flex flex-col items-center gap-0.5 text-[var(--color-primary-blue,#2563EB)] font-bold px-1 text-center">
+                      <Icon className="h-4 w-4" />
+                      <span className="text-[9px] truncate max-w-[60px]">{isHu ? opt.labelHu.split(' ')[0] : opt.labelEn.split(' ')[0]}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
