@@ -72,7 +72,12 @@ const AppContent: React.FC = () => {
   }, [currentView]);
 
   useEffect(() => {
-    if (isStorageViewOpen && window.location.hash !== '#storage' && !window.location.hash.startsWith('#storage/')) {
+    if (currentView === 'storage') {
+      setIsStorageViewOpen(true);
+      if (typeof window !== 'undefined' && !window.location.hash.startsWith('#storage')) {
+        window.location.hash = '#storage';
+      }
+    } else if (isStorageViewOpen && window.location.hash !== '#storage' && !window.location.hash.startsWith('#storage/')) {
       setIsStorageViewOpen(false);
     }
   }, [currentView, isStorageViewOpen]);
@@ -98,9 +103,15 @@ const AppContent: React.FC = () => {
       // 1. Check storage view (#storage, ?view=storage, /storage)
       if (hash === '#storage' || hash.startsWith('#storage/') || searchParams.get('view') === 'storage' || pathname === '/storage') {
         setIsStorageViewOpen(true);
+        if (currentView !== 'storage') {
+          setCurrentView('storage');
+        }
         return;
       }
       setIsStorageViewOpen(false);
+      if (currentView === 'storage') {
+        setCurrentView(isAuthenticated ? 'dashboard' : 'landing');
+      }
 
       // 2. Check share token (#share/xyz, ?share=xyz, /share/xyz)
       if (hash.startsWith('#share/')) {
@@ -250,13 +261,13 @@ const AppContent: React.FC = () => {
       {/* Top sticky navigation bar */}
       <Navbar />
 
-      {/* Main Container View Routing */}
-      {isStorageViewOpen ? (
+      {(isStorageViewOpen || currentView === 'storage') ? (
         <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-10">
           <StorageView
             onClose={() => {
               window.location.hash = '';
               setIsStorageViewOpen(false);
+              setCurrentView(isAuthenticated ? 'dashboard' : 'landing');
             }}
           />
         </main>

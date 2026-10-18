@@ -81,10 +81,15 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const handleNav = (view: ViewMode) => {
-    if (window.location.hash.includes('storage')) {
-      window.location.hash = '';
+    if (view === 'storage') {
+      window.location.hash = '#storage';
+      setCurrentHash('#storage');
+    } else {
+      if (window.location.hash.includes('storage')) {
+        window.location.hash = '';
+      }
+      setCurrentHash('');
     }
-    setCurrentHash('');
     setCurrentView(view);
     setIsMobileMenuOpen(false);
     setIsUserDropdownOpen(false);
@@ -140,8 +145,8 @@ export const Navbar: React.FC = () => {
   };
 
   // Active state helpers for grouped menus
-  const isStorageActive = currentHash === '#storage' || currentHash.startsWith('#storage/');
-  const isThingsActive = isStorageActive || currentView === 'items' || currentView === 'locations' || currentView === 'categories';
+  const isStorageActive = currentView === 'storage' || currentHash === '#storage' || currentHash.startsWith('#storage/');
+  const isThingsActive = (isStorageActive && currentView !== 'storage') || currentView === 'items' || currentView === 'locations' || currentView === 'categories';
   const isModulesActive = !isStorageActive && (currentView === 'repairs' || currentView === 'financing' || currentView === 'household' || currentView === 'lending' || currentView === 'collections' || currentView === 'pantry' || currentView === 'vault');
 
   const renderBottomNavButton = (slotOptionId: string, slotPosition: string) => {
@@ -198,11 +203,7 @@ export const Navbar: React.FC = () => {
         return (
           <button
             key={`slot-${slotPosition}-storage`}
-            onClick={() => {
-              window.location.hash = '#storage';
-              setCurrentHash('#storage');
-              setIsMobileMenuOpen(false);
-            }}
+            onClick={() => handleNav('storage')}
             className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition flex-1 min-w-0 ${
               isStorageActive ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white'
             }`}
@@ -443,11 +444,7 @@ export const Navbar: React.FC = () => {
                         <span>{t('categories')}</span>
                       </button>
                       <button
-                        onClick={() => {
-                          window.location.hash = '#storage';
-                          setCurrentHash('#storage');
-                          setOpenDropdown(null);
-                        }}
+                        onClick={() => handleNav('storage')}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
                           isStorageActive ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
                         }`}
@@ -458,6 +455,19 @@ export const Navbar: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* 3. Fizikai tárolók (Közvetlen Asztali Menüpont) */}
+                <button
+                  onClick={() => handleNav('storage')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
+                    isStorageActive
+                      ? 'bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] border-[var(--border-color,#56616D)] shadow-sm'
+                      : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
+                  }`}
+                >
+                  <Package className={`h-4 w-4 shrink-0 ${isStorageActive ? 'text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))]'}`} />
+                  <span>{isHu ? 'Fizikai tárolók' : 'Physical storage'}</span>
+                </button>
 
                 {/* 3. Dokumentumok */}
                 <button
@@ -653,6 +663,17 @@ export const Navbar: React.FC = () => {
                       <Boxes className="h-3.5 w-3.5 text-[var(--text-secondary,var(--text-sub,#B5BDC6))]" />
                       {t('my_things')}
                     </button>
+                    <button
+                      onClick={() => handleNav('storage')}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isStorageActive
+                          ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-semibold'
+                          : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)] hover:text-white'
+                      }`}
+                    >
+                      <Package className="h-3.5 w-3.5 text-[var(--text-secondary,var(--text-sub,#B5BDC6))]" />
+                      <span>{isHu ? 'Fizikai tárolók' : 'Physical storage'}</span>
+                    </button>
                     {isAdmin && (
                       <button
                         onClick={() => handleNav('admin')}
@@ -823,11 +844,7 @@ export const Navbar: React.FC = () => {
                       <span>{t('documents')}</span>
                     </button>
                     <button
-                      onClick={() => {
-                        window.location.hash = '#storage';
-                        setCurrentHash('#storage');
-                        setIsMobileMenuOpen(false);
-                      }}
+                      onClick={() => handleNav('storage')}
                       className={`flex items-center gap-2.5 p-2.5 rounded-xl font-medium text-xs transition-colors ${
                         isStorageActive ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
                       }`}

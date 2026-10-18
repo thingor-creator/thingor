@@ -868,9 +868,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return;
       }
 
-      // 3. Storage hash
-      if (typeof window !== 'undefined' && window.location.hash.includes('storage')) {
+      // 3. Storage hash or storage view
+      if (typeof window !== 'undefined' && (currentView === 'storage' || window.location.hash.includes('storage'))) {
         window.location.hash = '';
+        if (currentView === 'storage') {
+          const prev = viewHistoryRef.current.pop() || (user ? 'dashboard' : 'landing');
+          setCurrentView(prev);
+        }
         return;
       }
 
@@ -976,9 +980,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isQRScannerOpen) { setIsQRScannerOpen(false); return; }
     if (isSupabaseInfoOpen) { setIsSupabaseInfoOpen(false); return; }
 
-    // 3. Storage view hash
-    if (typeof window !== 'undefined' && window.location.hash.includes('storage')) {
+    // 3. Storage view hash or view
+    if (typeof window !== 'undefined' && (currentView === 'storage' || window.location.hash.includes('storage'))) {
       window.location.hash = '';
+      if (currentView === 'storage') {
+        const prev = viewHistoryRef.current.pop() || (user ? 'dashboard' : 'landing');
+        setCurrentView(prev);
+      }
       return;
     }
 
