@@ -100,10 +100,29 @@ export interface Household {
 
 export interface HouseholdMemberAllowedModules {
   inventory?: boolean;
+  storage?: boolean;
   documents?: boolean;
-  pantry?: boolean;
+  repairs?: boolean;
+  financing?: boolean;
   lending?: boolean;
+  collections?: boolean;
+  pantry?: boolean;
+  vault?: boolean;
+  notes?: boolean;
 }
+
+export const DEFAULT_HOUSEHOLD_MODULES: Required<HouseholdMemberAllowedModules> = {
+  inventory: true,
+  storage: true,
+  documents: true,
+  repairs: true,
+  financing: true,
+  lending: true,
+  collections: true,
+  pantry: true,
+  vault: true,
+  notes: true,
+};
 
 export interface HouseholdMember {
   id: string;

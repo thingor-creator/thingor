@@ -4,7 +4,7 @@ import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, Trash2, ShieldCheck, D
 import type { RepairStatus, RepairUrgency } from '../types';
 
 export const RepairsView: React.FC = () => {
-  const { items, repairs, addRepair, updateRepairStatus, deleteRepair, t, setSelectedItemId, language } = useApp();
+  const { items, repairs, addRepair, updateRepairStatus, deleteRepair, t, setSelectedItemId, language, user, isHouseholdModuleAllowed } = useApp();
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -76,15 +76,25 @@ export const RepairsView: React.FC = () => {
     setIsWarranty(false);
   };
 
-  const filteredRepairs = repairs.filter(r => {
+  const itemMap = new Map(items.map(i => [i.id, i]));
+  const isAllowedRepair = (r: (typeof repairs)[0]) => {
+    if (isHouseholdModuleAllowed('repairs')) return true;
+    if (user?.id && r.user_id === user.id) return true;
+    const parentItem = r.item_id ? itemMap.get(r.item_id) : undefined;
+    if (user?.id && parentItem?.user_id === user.id) return true;
+    return false;
+  };
+  const accessibleRepairs = repairs.filter(isAllowedRepair);
+
+  const filteredRepairs = accessibleRepairs.filter(r => {
     if (filterStatus === 'all') return true;
     return r.status === filterStatus;
   });
 
-  const pendingCount = repairs.filter(r => r.status === 'pending').length;
-  const inProgressCount = repairs.filter(r => r.status === 'in_progress').length;
-  const completedCount = repairs.filter(r => r.status === 'completed').length;
-  const totalRepairCost = repairs.reduce((sum, r) => sum + (r.total_cost || 0), 0);
+  const pendingCount = accessibleRepairs.filter(r => r.status === 'pending').length;
+  const inProgressCount = accessibleRepairs.filter(r => r.status === 'in_progress').length;
+  const completedCount = accessibleRepairs.filter(r => r.status === 'completed').length;
+  const totalRepairCost = accessibleRepairs.reduce((sum, r) => sum + (r.total_cost || 0), 0);
 
   const getUrgencyBadge = (urg: RepairUrgency) => {
     switch (urg) {
@@ -368,9 +378,11 @@ export const RepairsView: React.FC = () => {
                   className="w-full rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] p-2.5 focus:border-[var(--color-primary-blue,#2563EB)] outline-none transition-colors"
                 >
                   <option value="">{language === 'hu' ? '-- Válassz tárgyat --' : '-- Select Item --'}</option>
-                  {items.map(i => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
-                  ))}
+                  {items
+                    .filter(i => isHouseholdModuleAllowed('repairs') || !user?.id || i.user_id === user.id)
+                    .map(i => (
+                      <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
                 </select>
               </div>
 

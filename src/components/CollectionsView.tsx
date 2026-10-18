@@ -42,7 +42,8 @@ export const CollectionsView: React.FC = () => {
     updateCollectionItem,
     setSelectedItemId,
     language,
-    user
+    user,
+    isHouseholdModuleAllowed
   } = useApp();
 
   const isHu = language === 'hu';
@@ -256,17 +257,23 @@ export const CollectionsView: React.FC = () => {
     }
   };
 
+  // Accessible collections based on household permissions
+  const accessibleCollections = useMemo(() => {
+    if (isHouseholdModuleAllowed('collections')) return collections;
+    return collections.filter(c => !user?.id || c.user_id === user.id);
+  }, [collections, isHouseholdModuleAllowed, user?.id]);
+
   // Selected collection object
   const currentCollection = useMemo(() => {
     if (!selectedCollectionId) return null;
-    return collections.find(c => c.id === selectedCollectionId) || null;
-  }, [selectedCollectionId, collections]);
+    return accessibleCollections.find(c => c.id === selectedCollectionId) || null;
+  }, [selectedCollectionId, accessibleCollections]);
 
   // Dynamic filter types derived from user's actual collections
   const availableFilterTypes = useMemo(() => {
-    const typesInUse = new Set(collections.map(c => c.collection_type).filter(Boolean));
+    const typesInUse = new Set(accessibleCollections.map(c => c.collection_type).filter(Boolean));
     return ['all', ...Array.from(typesInUse)];
-  }, [collections]);
+  }, [accessibleCollections]);
 
   // Items belonging to selected collection
   const currentCollectionItems = useMemo(() => {
@@ -283,7 +290,7 @@ export const CollectionsView: React.FC = () => {
 
   // Overall KPI stats
   const stats = useMemo(() => {
-    const totalCols = collections.length;
+    const totalCols = accessibleCollections.length;
     const totalCatalogedItems = collectionItems.length;
     let totalEstValue = 0;
     let rareCount = 0;
@@ -298,11 +305,11 @@ export const CollectionsView: React.FC = () => {
     });
 
     return { totalCols, totalCatalogedItems, totalEstValue, rareCount };
-  }, [collections, collectionItems, items]);
+  }, [accessibleCollections, collectionItems, items]);
 
   // Filtered collections
   const filteredCollections = useMemo(() => {
-    return collections.filter(c => {
+    return accessibleCollections.filter(c => {
       if (filterType !== 'all' && c.collection_type !== filterType) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -310,7 +317,7 @@ export const CollectionsView: React.FC = () => {
       }
       return true;
     });
-  }, [collections, filterType, searchQuery]);
+  }, [accessibleCollections, filterType, searchQuery]);
 
   const handleOpenAddCollection = () => {
     setEditingCol(null);

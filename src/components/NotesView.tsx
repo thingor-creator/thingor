@@ -14,7 +14,9 @@ export const NotesView: React.FC = () => {
     setSelectedItemId,
     setCurrentView,
     language,
-    t
+    t,
+    user,
+    isHouseholdModuleAllowed
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -129,12 +131,17 @@ export const NotesView: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  // Accessible notes based on household permissions
+  const accessibleNotes = isHouseholdModuleAllowed('notes')
+    ? quickNotes
+    : quickNotes.filter(n => !user?.id || n.user_id === user.id);
+
   // Collect all unique tags
   const allTags = Array.from(
-    new Set(quickNotes.flatMap(n => n.tags || []))
+    new Set(accessibleNotes.flatMap(n => n.tags || []))
   );
 
-  const filteredNotes = quickNotes.filter(note => {
+  const filteredNotes = accessibleNotes.filter(note => {
     const matchesSearch =
       note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||

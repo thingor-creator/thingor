@@ -29,7 +29,9 @@ export const PantryView: React.FC = () => {
     adjustPantryQuantity,
     locations,
     getLocationPath,
-    language
+    language,
+    user,
+    isHouseholdModuleAllowed
   } = useApp();
 
   const isHu = language === 'hu';
@@ -119,13 +121,19 @@ export const PantryView: React.FC = () => {
     return result;
   }, [isHu, pantryItems, customCategories]);
 
+  // Accessible pantry items based on household permissions
+  const accessiblePantryItems = useMemo(() => {
+    if (isHouseholdModuleAllowed('pantry')) return pantryItems;
+    return pantryItems.filter(item => !user?.id || item.user_id === user.id);
+  }, [pantryItems, isHouseholdModuleAllowed, user?.id]);
+
   // Compute KPI stats
   const stats = useMemo(() => {
     let lowStockCount = 0;
     let expiringCount = 0;
     let shoppingListCount = 0;
 
-    pantryItems.forEach(item => {
+    accessiblePantryItems.forEach(item => {
       const isLow = Number(item.current_quantity) <= Number(item.min_threshold);
       if (isLow) lowStockCount++;
 
@@ -136,16 +144,16 @@ export const PantryView: React.FC = () => {
     });
 
     return {
-      total: pantryItems.length,
+      total: accessiblePantryItems.length,
       lowStock: lowStockCount,
       expiring: expiringCount,
       shoppingList: shoppingListCount
     };
-  }, [pantryItems, inSevenDaysStr]);
+  }, [accessiblePantryItems, inSevenDaysStr]);
 
   // Filtered items
   const filteredItems = useMemo(() => {
-    return pantryItems.filter(item => {
+    return accessiblePantryItems.filter(item => {
       const isLow = Number(item.current_quantity) <= Number(item.min_threshold);
       const isExpiring = item.expiration_date && item.expiration_date <= inSevenDaysStr;
 
@@ -165,12 +173,12 @@ export const PantryView: React.FC = () => {
 
       return true;
     });
-  }, [pantryItems, activeTab, selectedCategory, searchQuery, inSevenDaysStr]);
+  }, [accessiblePantryItems, activeTab, selectedCategory, searchQuery, inSevenDaysStr]);
 
   // Shopping list items
   const shoppingListItems = useMemo(() => {
-    return pantryItems.filter(i => Number(i.current_quantity) <= Number(i.min_threshold) && i.is_staple);
-  }, [pantryItems]);
+    return accessiblePantryItems.filter(i => Number(i.current_quantity) <= Number(i.min_threshold) && i.is_staple);
+  }, [accessiblePantryItems]);
 
   const handleOpenAddModal = () => {
     setEditingItem(null);

@@ -29,6 +29,8 @@ export const VaultView: React.FC = () => {
     setItemVaultProtection,
     setDocumentVaultProtection,
     setSelectedItemId,
+    user,
+    isHouseholdModuleAllowed
   } = useApp();
 
   // PIN Input states
@@ -196,10 +198,10 @@ export const VaultView: React.FC = () => {
   };
 
   // Protected items and documents
-  const vaultItems = items.filter(i => i.is_vault_protected);
-  const vaultDocuments = documents.filter(d => d.is_vault_protected);
+  const vaultItems = items.filter(i => i.is_vault_protected && (isHouseholdModuleAllowed('vault') || !user?.id || i.user_id === user.id));
+  const vaultDocuments = documents.filter(d => d.is_vault_protected && (isHouseholdModuleAllowed('vault') || !user?.id || d.user_id === user.id));
 
-  const availableItemsToProtect = items.filter(i => !i.is_vault_protected);
+  const availableItemsToProtect = items.filter(i => !i.is_vault_protected && (isHouseholdModuleAllowed('vault') || !user?.id || i.user_id === user.id));
 
   const totalVaultValue = vaultItems.reduce((acc, item) => {
     const val = item.current_value ?? item.purchase_price ?? 0;

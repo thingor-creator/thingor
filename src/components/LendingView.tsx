@@ -36,7 +36,9 @@ export const LendingView: React.FC = () => {
     updateLendingContact,
     deleteLendingContact,
     setSelectedItemId,
-    language
+    language,
+    user,
+    isHouseholdModuleAllowed
   } = useApp();
 
   const isHu = language === 'hu';
@@ -103,10 +105,20 @@ export const LendingView: React.FC = () => {
     setTimeout(() => setCopiedNotice(null), 3000);
   };
 
+  const itemMap = useMemo(() => new Map(items.map(i => [i.id, i])), [items]);
+  const accessibleLoans = useMemo(() => {
+    if (isHouseholdModuleAllowed('lending')) return loans;
+    return loans.filter(l => {
+      if (user?.id && l.user_id === user.id) return true;
+      const parentItem = itemMap.get(l.item_id);
+      return user?.id && parentItem?.user_id === user.id;
+    });
+  }, [loans, isHouseholdModuleAllowed, user?.id, itemMap]);
+
   // Lendable items
   const lendableItems = useMemo(() => {
-    return items.filter(i => Boolean(i.is_lendable));
-  }, [items]);
+    return items.filter(i => Boolean(i.is_lendable) && (isHouseholdModuleAllowed('lending') || !user?.id || i.user_id === user.id));
+  }, [items, isHouseholdModuleAllowed, user?.id]);
 
   // Compute stats
   const stats = useMemo(() => {
@@ -115,7 +127,7 @@ export const LendingView: React.FC = () => {
     let returned = 0;
     let totalLentValue = 0;
 
-    loans.forEach(loan => {
+    accessibleLoans.forEach(loan => {
       const isOverdue = loan.status === 'active' && loan.expected_return_date && loan.expected_return_date < todayStr;
       if (loan.status === 'returned') {
         returned++;
@@ -133,11 +145,11 @@ export const LendingView: React.FC = () => {
     });
 
     return { active, overdue, returned, totalLentValue, lendableCount: lendableItems.length };
-  }, [loans, items, todayStr, lendableItems.length]);
+  }, [accessibleLoans, items, todayStr, lendableItems.length]);
 
   // Filtered loans list
   const filteredLoans = useMemo(() => {
-    return loans.filter(loan => {
+    return accessibleLoans.filter(loan => {
       const isOverdue = loan.status === 'active' && loan.expected_return_date && loan.expected_return_date < todayStr;
       const actualStatus = isOverdue ? 'overdue' : loan.status;
 

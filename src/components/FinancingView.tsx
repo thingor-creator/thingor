@@ -3,7 +3,7 @@ import { useApp, useModalBack } from '../context/AppContext';
 import { CreditCard, Calendar, CheckCircle2, Plus, Trash2, DollarSign, Package } from 'lucide-react';
 
 export const FinancingView: React.FC = () => {
-  const { items, financings, saveFinancing, recordInstallmentPayment, deleteFinancing, t, setSelectedItemId, language } = useApp();
+  const { items, financings, saveFinancing, recordInstallmentPayment, deleteFinancing, t, setSelectedItemId, language, user, isHouseholdModuleAllowed } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useModalBack(isModalOpen, () => setIsModalOpen(false), 'financing-modal');
@@ -78,12 +78,22 @@ export const FinancingView: React.FC = () => {
     setNotes('');
   };
 
-  const totalMonthlyPayment = financings.reduce((sum, f) => f.remaining_installments > 0 ? sum + f.monthly_installment : sum, 0);
-  const totalRemainingDebt = financings.reduce((sum, f) => sum + f.remaining_debt, 0);
-  const activeFinancingCount = financings.filter(f => f.remaining_installments > 0).length;
+  const itemMap = new Map(items.map(i => [i.id, i]));
+  const isAllowedFinancing = (f: (typeof financings)[0]) => {
+    if (isHouseholdModuleAllowed('financing')) return true;
+    if (user?.id && f.user_id === user.id) return true;
+    const parentItem = f.item_id ? itemMap.get(f.item_id) : undefined;
+    if (user?.id && parentItem?.user_id === user.id) return true;
+    return false;
+  };
+  const accessibleFinancings = financings.filter(isAllowedFinancing);
+
+  const totalMonthlyPayment = accessibleFinancings.reduce((sum, f) => f.remaining_installments > 0 ? sum + f.monthly_installment : sum, 0);
+  const totalRemainingDebt = accessibleFinancings.reduce((sum, f) => sum + f.remaining_debt, 0);
+  const activeFinancingCount = accessibleFinancings.filter(f => f.remaining_installments > 0).length;
 
   // Next upcoming payment
-  const activeFinancingsWithDates = financings
+  const activeFinancingsWithDates = accessibleFinancings
     .filter(f => f.remaining_installments > 0 && f.next_payment_date)
     .sort((a, b) => new Date(a.next_payment_date!).getTime() - new Date(b.next_payment_date!).getTime());
 
@@ -164,7 +174,7 @@ export const FinancingView: React.FC = () => {
       </div>
 
       {/* Financings List */}
-      {financings.length === 0 ? (
+      {accessibleFinancings.length === 0 ? (
         <div className="bg-[var(--card-bg,#3A4551)] rounded-2xl border border-[var(--border-color,#56616D)] p-12 text-center shadow-sm">
           <CreditCard className="w-12 h-12 text-[var(--text-sub,#B5BDC6)] opacity-60 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-[var(--text-main,#E0E3E6)] mb-1">
@@ -185,7 +195,7 @@ export const FinancingView: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {financings.map((fin) => {
+          {accessibleFinancings.map((fin) => {
             const item = items.find(i => i.id === fin.item_id);
             const progressPercent = Math.min(100, Math.round((fin.paid_installments / fin.total_installments) * 100));
             const isCompleted = fin.remaining_installments === 0;
@@ -336,9 +346,11 @@ export const FinancingView: React.FC = () => {
                   className="w-full rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] p-2.5 focus:border-[var(--color-primary-blue,#2563EB)] outline-none font-medium transition-colors"
                 >
                   <option value="" className="bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? '-- Válassz tárgyat --' : '-- Select Item --'}</option>
-                  {items.map(i => (
-                    <option key={i.id} value={i.id} className="bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)]">{i.name}</option>
-                  ))}
+                  {items
+                    .filter(i => isHouseholdModuleAllowed('financing') || !user?.id || i.user_id === user.id)
+                    .map(i => (
+                      <option key={i.id} value={i.id} className="bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)]">{i.name}</option>
+                    ))}
                 </select>
               </div>
 

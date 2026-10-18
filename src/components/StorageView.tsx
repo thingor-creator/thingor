@@ -184,6 +184,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     adjustContainerItemQuantity,
     assignItemToContainer,
     setSelectedItemId,
+    user,
+    isHouseholdModuleAllowed,
   } = useApp();
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -261,10 +263,16 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     loadStorageData();
   }, [loadStorageData]);
 
+  // Scope storage containers by household permission
+  const accessibleContainers = useMemo(() => {
+    if (isHouseholdModuleAllowed('storage')) return storageContainers;
+    return storageContainers.filter(sc => !user?.id || sc.user_id === user.id);
+  }, [storageContainers, isHouseholdModuleAllowed, user?.id]);
+
   // Build unified display containers list
   const containers: StorageContainerDisplay[] = useMemo(() => {
     if (isRealDataActive) {
-      return storageContainers.map(sc => {
+      return accessibleContainers.map(sc => {
         const loc = locations.find(l => l.id === sc.location_id);
         const assignedItems: StorageItemDisplay[] = items
           .filter(it => it.container_id === sc.id)

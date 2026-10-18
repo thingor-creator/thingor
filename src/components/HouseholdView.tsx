@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp, useModalBack } from '../context/AppContext';
-import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Lock, Tag, FileText, Archive, HandCoins, Ban, Search } from 'lucide-react';
-import type { HouseholdRole, HouseholdMember } from '../types';
+import { Users, UserPlus, Shield, Crown, Eye, Trash2, Mail, Package, LogOut, MapPin, FolderCheck, Check, X, Clock, Edit2, SlidersHorizontal, Lock, Tag, FileText, Archive, HandCoins, Ban, Search, Wrench, CreditCard, Library, StickyNote, Boxes, ShieldCheck } from 'lucide-react';
+import type { HouseholdRole, HouseholdMember, HouseholdMemberAllowedModules } from '../types';
+import { DEFAULT_HOUSEHOLD_MODULES } from '../types';
 
 export const HouseholdView: React.FC = () => {
   const {
@@ -54,12 +55,7 @@ export const HouseholdView: React.FC = () => {
   const [memberAllowedLocs, setMemberAllowedLocs] = useState<string[]>([]);
   const [inheritCategories, setInheritCategories] = useState(true);
   const [memberAllowedCats, setMemberAllowedCats] = useState<string[]>([]);
-  const [allowedModules, setAllowedModules] = useState<{ inventory: boolean; documents: boolean; pantry: boolean; lending: boolean }>({
-    inventory: true,
-    documents: true,
-    pantry: true,
-    lending: true
-  });
+  const [allowedModules, setAllowedModules] = useState<Required<HouseholdMemberAllowedModules>>({ ...DEFAULT_HOUSEHOLD_MODULES });
   const [excludedItemIds, setExcludedItemIds] = useState<string[]>([]);
   const [itemSearchFilter, setItemSearchFilter] = useState('');
 
@@ -106,10 +102,16 @@ export const HouseholdView: React.FC = () => {
     }
 
     setAllowedModules({
-      inventory: m.allowed_modules?.inventory !== false,
-      documents: m.allowed_modules?.documents !== false,
+      repairs: m.allowed_modules?.repairs !== false,
+      financing: m.allowed_modules?.financing !== false,
+      lending: m.allowed_modules?.lending !== false,
+      collections: m.allowed_modules?.collections !== false,
       pantry: m.allowed_modules?.pantry !== false,
-      lending: m.allowed_modules?.lending !== false
+      vault: m.allowed_modules?.vault !== false,
+      notes: m.allowed_modules?.notes !== false,
+      inventory: m.allowed_modules?.inventory !== false,
+      storage: m.allowed_modules?.storage !== false,
+      documents: m.allowed_modules?.documents !== false,
     });
 
     setExcludedItemIds(m.excluded_item_ids || []);
@@ -121,9 +123,15 @@ export const HouseholdView: React.FC = () => {
     const catPayload = inheritCategories ? null : memberAllowedCats;
     await updateMemberAllowedLocations(sharingMember.id, locPayload);
     await updateMemberAllowedCategories(sharingMember.id, catPayload);
+
+    // Ha Teljes megosztás van bekapcsolva, az összes modul automatikusan engedélyezett
+    const finalAllowedModules = sharingMode === 'all'
+      ? { ...DEFAULT_HOUSEHOLD_MODULES }
+      : allowedModules;
+
     await updateHouseholdMember(sharingMember.id, {
       sharing_mode: sharingMode,
-      allowed_modules: allowedModules,
+      allowed_modules: finalAllowedModules,
       excluded_item_ids: excludedItemIds
     });
     setSharingMember(null);
@@ -603,6 +611,20 @@ export const HouseholdView: React.FC = () => {
                       <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-purple-950/50 text-purple-300 border border-purple-500/40 flex items-center gap-1">
                         <Tag className="w-3 h-3 text-purple-400" />
                         {language === 'hu' ? 'Egyedi kategóriák' : 'Custom categories'} ({member.allowed_category_ids.length})
+                      </span>
+                    )}
+                    {/* Modules status badge */}
+                    {member.sharing_mode === 'all' || !member.sharing_mode ? (
+                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        {language === 'hu' ? 'Minden modul (10/10)' : 'All modules (10/10)'}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-blue-950/50 text-blue-300 border border-[var(--color-primary-blue,#2563EB)]/40 flex items-center gap-1">
+                        <SlidersHorizontal className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
+                        {language === 'hu' ? 'Modulok' : 'Modules'}: {
+                          Object.values(member.allowed_modules || DEFAULT_HOUSEHOLD_MODULES).filter(v => v !== false).length
+                        }/10
                       </span>
                     )}
                   </div>
@@ -1124,18 +1146,180 @@ export const HouseholdView: React.FC = () => {
                 {/* TAB: MODULES */}
                 {sharingTab === 'modules' && (
                   <div className="space-y-3">
-                    <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
-                      {language === 'hu'
-                        ? 'Válaszd ki, mely modulokhoz és adatokhoz férhet hozzá a családtag:'
-                        : 'Select which functional modules this member is allowed to access:'}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
+                        {language === 'hu'
+                          ? 'Válaszd ki, mely modulokhoz férhet hozzá a családtag (mind a 10 modul egyenként kapcsolható):'
+                          : 'Select which functional modules this member is allowed to access:'}
+                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAllowedModules({
+                            repairs: true,
+                            financing: true,
+                            lending: true,
+                            collections: true,
+                            pantry: true,
+                            vault: true,
+                            notes: true,
+                            inventory: true,
+                            storage: true,
+                            documents: true
+                          })}
+                          className="px-2 py-1 text-[11px] font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-300 transition"
+                        >
+                          {language === 'hu' ? 'Mind engedélyezve' : 'Enable All'}
+                        </button>
+                        <span className="text-[var(--border-color,#56616D)]">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setAllowedModules({
+                            repairs: false,
+                            financing: false,
+                            lending: false,
+                            collections: false,
+                            pantry: false,
+                            vault: false,
+                            notes: false,
+                            inventory: false,
+                            storage: false,
+                            documents: false
+                          })}
+                          className="px-2 py-1 text-[11px] font-semibold text-rose-400 hover:text-rose-300 transition"
+                        >
+                          {language === 'hu' ? 'Mind tiltva' : 'Disable All'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[50vh] overflow-y-auto pr-1">
+                      {/* 1. Javítások */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition">
                         <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                          <Wrench className="w-4 h-4 text-amber-400 shrink-0" />
                           <div>
-                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Közös Leltár' : 'Inventory'}</p>
-                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Tárgyak megtekintése' : 'View shared items'}</p>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Javítások' : 'Repairs'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Szerviznapló és költségek' : 'Service logs & costs'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.repairs}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, repairs: e.target.checked }))}
+                          className="w-4 h-4 accent-amber-500 rounded"
+                        />
+                      </label>
+
+                      {/* 2. Finanszírozás */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-emerald-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Finanszírozás' : 'Financing'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Törlesztőrészletek és lízing' : 'Installments & leasing'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.financing}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, financing: e.target.checked }))}
+                          className="w-4 h-4 accent-emerald-500 rounded"
+                        />
+                      </label>
+
+                      {/* 3. Kölcsönadás */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-purple-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <HandCoins className="w-4 h-4 text-purple-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Kölcsönadás' : 'Lending'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Kölcsönzött tárgyak és partnerek' : 'Lent items & contacts'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.lending}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, lending: e.target.checked }))}
+                          className="w-4 h-4 accent-purple-500 rounded"
+                        />
+                      </label>
+
+                      {/* 4. Gyűjtemények */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-indigo-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <Library className="w-4 h-4 text-indigo-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Gyűjtemények' : 'Collections'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Tematikus szettek és sorozatok' : 'Thematic sets & series'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.collections}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, collections: e.target.checked }))}
+                          className="w-4 h-4 accent-indigo-500 rounded"
+                        />
+                      </label>
+
+                      {/* 5. Spájz & Készletek */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-orange-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <Archive className="w-4 h-4 text-orange-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Spájz & Készletek' : 'Pantry & Stock'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Élelmiszerek és fogyóeszközök' : 'Groceries & consumables'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.pantry}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, pantry: e.target.checked }))}
+                          className="w-4 h-4 accent-orange-500 rounded"
+                        />
+                      </label>
+
+                      {/* 6. Széf & Védett tárgyak */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-rose-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-rose-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Széf & Védett tárgyak' : 'Safe & Vault'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Trezorba zárt értékek' : 'Secured high-value items'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.vault}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, vault: e.target.checked }))}
+                          className="w-4 h-4 accent-rose-500 rounded"
+                        />
+                      </label>
+
+                      {/* 7. Jegyzetek */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-yellow-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <StickyNote className="w-4 h-4 text-yellow-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Jegyzetek' : 'Notes'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Gyors feljegyzések és ötletek' : 'Quick notes & ideas'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.notes}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, notes: e.target.checked }))}
+                          className="w-4 h-4 accent-yellow-500 rounded"
+                        />
+                      </label>
+
+                      {/* 8. Tárgyaim */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-blue-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Tárgyaim' : 'Inventory'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Közös leltár és tárgyak' : 'Shared inventory items'}</p>
                           </div>
                         </div>
                         <input
@@ -1146,51 +1330,37 @@ export const HouseholdView: React.FC = () => {
                         />
                       </label>
 
-                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer">
+                      {/* 9. Fizikai tárolók */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-cyan-500/40 transition">
                         <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-emerald-400" />
+                          <Boxes className="w-4 h-4 text-cyan-400 shrink-0" />
                           <div>
-                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Csatolt Fájlok' : 'Documents'}</p>
-                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Dokumentumok letöltése' : 'Download documents'}</p>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Fizikai tárolók' : 'Containers'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Dobozok, rekeszek és polcok' : 'Boxes, crates & shelves'}</p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={allowedModules.storage}
+                          onChange={(e) => setAllowedModules(prev => ({ ...prev, storage: e.target.checked }))}
+                          className="w-4 h-4 accent-cyan-500 rounded"
+                        />
+                      </label>
+
+                      {/* 10. Dokumentumok */}
+                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer hover:border-teal-500/40 transition">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-teal-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Dokumentumok' : 'Documents'}</p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Számlák, garancialevelek' : 'Invoices & warranties'}</p>
                           </div>
                         </div>
                         <input
                           type="checkbox"
                           checked={allowedModules.documents}
                           onChange={(e) => setAllowedModules(prev => ({ ...prev, documents: e.target.checked }))}
-                          className="w-4 h-4 accent-emerald-500 rounded"
-                        />
-                      </label>
-
-                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer">
-                        <div className="flex items-center gap-2">
-                          <Archive className="w-4 h-4 text-amber-400" />
-                          <div>
-                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Spájz / Éléskamra' : 'Pantry'}</p>
-                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Élelmiszer készlet' : 'Pantry inventory'}</p>
-                          </div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={allowedModules.pantry}
-                          onChange={(e) => setAllowedModules(prev => ({ ...prev, pantry: e.target.checked }))}
-                          className="w-4 h-4 accent-amber-500 rounded"
-                        />
-                      </label>
-
-                      <label className="p-3 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] flex items-center justify-between cursor-pointer">
-                        <div className="flex items-center gap-2">
-                          <HandCoins className="w-4 h-4 text-purple-400" />
-                          <div>
-                            <p className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{language === 'hu' ? 'Kölcsönzések' : 'Lending'}</p>
-                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{language === 'hu' ? 'Kölcsönadott tárgyak' : 'Lending tracker'}</p>
-                          </div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={allowedModules.lending}
-                          onChange={(e) => setAllowedModules(prev => ({ ...prev, lending: e.target.checked }))}
-                          className="w-4 h-4 accent-purple-500 rounded"
+                          className="w-4 h-4 accent-teal-500 rounded"
                         />
                       </label>
                     </div>

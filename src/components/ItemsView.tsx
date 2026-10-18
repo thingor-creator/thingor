@@ -53,6 +53,7 @@ export const ItemsView: React.FC = () => {
     user,
     isVaultUnlocked,
     dashboardMetrics,
+    isHouseholdModuleAllowed,
   } = useApp();
 
   const currentUserMember = householdMembers?.find(m => m.user_id === user?.id);
@@ -140,6 +141,11 @@ export const ItemsView: React.FC = () => {
             } else {
               query = query.eq('user_id', user.id);
             }
+          }
+
+          // If household inventory module is not allowed for current member, restrict query strictly to own items
+          if (!isHouseholdModuleAllowed('inventory') && user?.id) {
+            query = query.eq('user_id', user.id);
           }
 
           // Exclude vault-protected items when vault is locked

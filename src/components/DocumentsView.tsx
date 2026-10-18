@@ -4,7 +4,7 @@ import { openR2DocumentSecurely, downloadR2DocumentSecurely } from '../lib/r2';
 import { FileText, Search, ExternalLink, Download, Trash2, Boxes, Loader2 } from 'lucide-react';
 
 export const DocumentsView: React.FC = () => {
-  const { documents, items, deleteDocument, setSelectedItemId, language, isVaultUnlocked } = useApp();
+  const { documents, items, deleteDocument, setSelectedItemId, language, isVaultUnlocked, user, isHouseholdModuleAllowed } = useApp();
   const isHu = language === 'hu';
 
   const [search, setSearch] = useState('');
@@ -35,6 +35,13 @@ export const DocumentsView: React.FC = () => {
       if (doc.is_vault_protected) return false;
       const parentItem = items.find(i => i.id === doc.item_id);
       if (parentItem?.is_vault_protected) return false;
+    }
+
+    // Filter documents if household documents module is restricted for current member
+    if (!isHouseholdModuleAllowed('documents')) {
+      const parentItem = items.find(i => i.id === doc.item_id);
+      const isMine = (user?.id && doc.user_id === user.id) || (user?.id && parentItem?.user_id === user.id);
+      if (!isMine) return false;
     }
 
     if (search.trim()) {

@@ -41,7 +41,9 @@ import type {
   VaultSettings,
   StorageContainer,
   ContainerItem,
-  LendingContact
+  LendingContact,
+  HouseholdMemberAllowedModules,
+  DEFAULT_HOUSEHOLD_MODULES
 } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { generateSalt, hashPin, verifyPin } from '../lib/vault';
@@ -236,6 +238,7 @@ interface AppContextType {
   updateHouseholdSharedLocations: (locationIds: string[]) => Promise<void>;
   updateHouseholdSharedCategories: (categoryIds: string[]) => Promise<void>;
   updateHouseholdName: (newName: string) => Promise<boolean>;
+  isHouseholdModuleAllowed: (moduleKey: keyof HouseholdMemberAllowedModules) => boolean;
 
   // Item Relationships
   itemRelations: ItemRelation[];
@@ -3733,6 +3736,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       user_email: user?.email || '',
       user_name: user?.display_name || user?.email || 'Tulajdonos',
       role: 'owner',
+      sharing_mode: 'all',
+      allowed_modules: DEFAULT_HOUSEHOLD_MODULES,
       joined_at: new Date().toISOString(),
     };
 
@@ -3765,7 +3770,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           user_id: user.id,
           user_email: user.email,
           user_name: user.display_name,
-          role: 'owner'
+          role: 'owner',
+          sharing_mode: 'all',
+          allowed_modules: DEFAULT_HOUSEHOLD_MODULES
         }]).select().single();
 
         setHousehold(hhData as Household);
@@ -3956,6 +3963,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         user_name: memberUserName,
         title: invite.title || null,
         role: invite.role,
+        sharing_mode: 'all',
+        allowed_modules: DEFAULT_HOUSEHOLD_MODULES,
       }]).select().single();
 
       if (mErr && mErr.message && mErr.message.includes('title')) {
@@ -3965,6 +3974,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           user_email: user.email,
           user_name: memberUserName,
           role: invite.role,
+          sharing_mode: 'all',
+          allowed_modules: DEFAULT_HOUSEHOLD_MODULES,
         }]).select().single();
         mErr = retry.error;
       }
@@ -4003,6 +4014,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       user_name: memberName,
       title: invite.title,
       role: invite.role,
+      sharing_mode: 'all',
+      allowed_modules: DEFAULT_HOUSEHOLD_MODULES,
       joined_at: new Date().toISOString(),
     };
 
@@ -4149,6 +4162,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return true;
   };
+
+  const isHouseholdModuleAllowed = useCallback((moduleKey: keyof HouseholdMemberAllowedModules): boolean => {
+    // In personal / offline mode without household, everything is allowed
+    if (!household || !user) return true;
+    // Household owner always has full access to all household modules
+    if (household.owner_id === user.id) return true;
+    const currentMember = householdMembers.find(m => m.user_id === user.id);
+    if (!currentMember) return true;
+    if (currentMember.role === 'owner') return true;
+    // When sharing_mode is 'all' (or not explicitly 'custom'), full module access is granted
+    if (!currentMember.sharing_mode || currentMember.sharing_mode === 'all') return true;
+    // In custom mode, consult allowed_modules
+    if (currentMember.allowed_modules && currentMember.allowed_modules[moduleKey] !== undefined) {
+      return Boolean(currentMember.allowed_modules[moduleKey]);
+    }
+    return true;
+  }, [household, user, householdMembers]);
 
   // CRUD Item Relations
   const addItemRelation = async (sourceItemId: string, targetItemId: string, relationType: ItemRelationType): Promise<ItemRelation> => {
@@ -5028,6 +5058,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateHouseholdSharedLocations,
         updateHouseholdSharedCategories,
         updateHouseholdName,
+        isHouseholdModuleAllowed,
 
         itemRelations,
         addItemRelation,
