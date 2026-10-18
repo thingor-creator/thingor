@@ -2292,9 +2292,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     if (isSupabaseConfigured && supabase && user?.id) {
+      // Map client-only notification types (e.g. 'pantry', 'lending') to 'system'
+      // to avoid Postgres CHECK constraint violation: notifications_type_check
+      const dbType = (['warranty', 'financing', 'repair', 'system'].includes(noteData.type))
+        ? noteData.type
+        : 'system';
+
       const { data, error } = await supabase
         .from('notifications')
-        .insert([{ ...noteData, user_id: user.id }])
+        .insert([{ ...noteData, type: dbType, user_id: user.id }])
         .select()
         .single();
 
@@ -2307,6 +2313,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           localStorage.setItem('thingor_notifications', JSON.stringify(updated));
           return updated;
         });
+        return;
+      }
+
+      // If duplicate key error in Supabase (23505), the notification ALREADY EXISTS in database!
+      // Do NOT create an unread local duplicate.
+      if (error && (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint') || (error as any).details?.includes('already exists'))) {
         return;
       }
     }
@@ -2359,42 +2371,116 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           setUserNotificationSettings(settingsData as UserNotificationSettings);
           localStorage.setItem('thingor_notification_settings', JSON.stringify(settingsData));
         }
-      } catch {
-        notificationTablesAvailableRef.current = false;
+      } catch (err) {
+        console.warn('Temporary issue fetching notifications:', err);
       }
     }
   };
 
   const markNotificationAsRead = async (notificationId: string) => {
+    let previousNotifications: AppNotification[] = [];
     setNotifications(prev => {
+      previousNotifications = prev;
       const updated = prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n);
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
-    if (isSupabaseConfigured && supabase && isUUID(notificationId) && notificationTablesAvailableRef.current) {
-      await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId);
+
+    if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
+      try {
+        let query = supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id);
+
+        if (isUUID(notificationId)) {
+          query = query.eq('id', notificationId);
+        } else {
+          // If local ID, try matching by dedup_key from the notification object
+          const target = previousNotifications.find(n => n.id === notificationId);
+          if (target?.dedup_key) {
+            query = query.eq('dedup_key', target.dedup_key);
+          } else {
+            return;
+          }
+        }
+
+        const { error } = await query;
+        if (error) {
+          console.error('Failed to mark notification as read in Supabase:', error);
+          setNotifications(previousNotifications);
+          localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+        }
+      } catch (err) {
+        console.error('Exception marking notification as read in Supabase:', err);
+        setNotifications(previousNotifications);
+        localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+      }
     }
   };
 
   const markAllNotificationsAsRead = async () => {
+    let previousNotifications: AppNotification[] = [];
     setNotifications(prev => {
+      previousNotifications = prev;
       const updated = prev.map(n => ({ ...n, is_read: true }));
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
+
     if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
-      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Failed to mark all notifications as read in Supabase:', error);
+          setNotifications(previousNotifications);
+          localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+        }
+      } catch (err) {
+        console.error('Exception marking all notifications as read in Supabase:', err);
+        setNotifications(previousNotifications);
+        localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+      }
     }
   };
 
   const deleteNotification = async (notificationId: string) => {
+    let previousNotifications: AppNotification[] = [];
     setNotifications(prev => {
+      previousNotifications = prev;
       const updated = prev.filter(n => n.id !== notificationId);
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
-    if (isSupabaseConfigured && supabase && isUUID(notificationId) && notificationTablesAvailableRef.current) {
-      await supabase.from('notifications').delete().eq('id', notificationId);
+
+    if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
+      try {
+        let query = supabase.from('notifications').delete().eq('user_id', user.id);
+        if (isUUID(notificationId)) {
+          query = query.eq('id', notificationId);
+        } else {
+          const target = previousNotifications.find(n => n.id === notificationId);
+          if (target?.dedup_key) {
+            query = query.eq('dedup_key', target.dedup_key);
+          } else {
+            return;
+          }
+        }
+        const { error } = await query;
+        if (error) {
+          console.error('Failed to delete notification in Supabase:', error);
+          setNotifications(previousNotifications);
+          localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+        }
+      } catch (err) {
+        console.error('Exception deleting notification in Supabase:', err);
+        setNotifications(previousNotifications);
+        localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+      }
     }
   };
 
