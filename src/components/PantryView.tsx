@@ -19,6 +19,7 @@ import {
   Package
 } from 'lucide-react';
 import type { PantryItem } from '../types';
+import { DateSegmentInput } from './DateSegmentInput';
 
 export const PantryView: React.FC = () => {
   const {
@@ -952,12 +953,14 @@ export const PantryView: React.FC = () => {
                   <label className="block text-xs font-bold text-[var(--text-main,#E0E3E6)] mb-1">
                     {isHu ? 'Lejárati dátum' : 'Expiration Date'}
                   </label>
-                  <input
-                    type="date"
+                  <DateSegmentInput
                     value={formExpirationDate}
-                    onChange={e => setFormExpirationDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
+                    onChange={setFormExpirationDate}
+                    isHu={isHu}
                   />
+                  <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]/70 mt-1">
+                    {isHu ? 'Kattints az évre, hóra vagy napra a beíráshoz' : 'Click year, month, or day to type'}
+                  </p>
                 </div>
 
                 <div>
