@@ -28,6 +28,7 @@ import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { StorageView } from './components/StorageView';
+import { ImageViewerModal } from './components/ImageViewerModal';
 import { Wrench, ShieldCheck, ShieldAlert, LogOut } from 'lucide-react';
 import { applyTheme } from './lib/theme';
 
@@ -318,6 +319,7 @@ const AppContent: React.FC = () => {
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
       />
+      <ImageViewerModal />
 
       {/* Access Denied Alert Modal */}
       {accessDeniedMessage && (

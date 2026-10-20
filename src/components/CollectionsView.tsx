@@ -43,7 +43,8 @@ export const CollectionsView: React.FC = () => {
     setSelectedItemId,
     language,
     user,
-    isHouseholdModuleAllowed
+    isHouseholdModuleAllowed,
+    openImageViewer
   } = useApp();
 
   const isHu = language === 'hu';
@@ -93,45 +94,10 @@ export const CollectionsView: React.FC = () => {
   const [catalogNumber, setCatalogNumber] = useState('');
   const [estimatedCollectorValue, setEstimatedCollectorValue] = useState<number | ''>('');
 
-  // Fullscreen interactive gallery modal state
-  const [galleryModal, setGalleryModal] = useState<{
-    title: string;
-    photos: string[];
-    activeIndex: number;
-    subtitle?: string;
-  } | null>(null);
-
   // Mobile back button traps: closing panels / subviews on back button without changing route
-  useModalBack(galleryModal !== null, () => setGalleryModal(null), 'collections-gallery');
   useModalBack(isAddItemModalOpen, () => setIsAddItemModalOpen(false), 'collections-add-item');
   useModalBack(isColModalOpen, () => setIsColModalOpen(false), 'collections-folder-modal');
   useModalBack(selectedCollectionId !== null, () => setSelectedCollectionId(null), 'collections-detail-view');
-
-  // Keyboard navigation for fullscreen gallery
-  useEffect(() => {
-    if (!galleryModal) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setGalleryModal(null);
-      } else if (e.key === 'ArrowLeft') {
-        setGalleryModal(prev => {
-          if (!prev || prev.photos.length <= 1) return prev;
-          const nextIdx = (prev.activeIndex - 1 + prev.photos.length) % prev.photos.length;
-          return { ...prev, activeIndex: nextIdx };
-        });
-      } else if (e.key === 'ArrowRight') {
-        setGalleryModal(prev => {
-          if (!prev || prev.photos.length <= 1) return prev;
-          const nextIdx = (prev.activeIndex + 1) % prev.photos.length;
-          return { ...prev, activeIndex: nextIdx };
-        });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [galleryModal]);
 
   // Listen for FAB central "+" action
   useEffect(() => {
@@ -473,7 +439,7 @@ export const CollectionsView: React.FC = () => {
             )}
             {currentCollection?.cover_image_url ? (
               <div
-                onClick={() => setGalleryModal({
+                onClick={() => openImageViewer([currentCollection.cover_image_url!], {
                   title: currentCollection.name,
                   photos: [currentCollection.cover_image_url!],
                   activeIndex: 0,
@@ -684,9 +650,8 @@ export const CollectionsView: React.FC = () => {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setGalleryModal({
+                              openImageViewer([col.cover_image_url!], {
                                 title: col.name,
-                                photos: [col.cover_image_url!],
                                 activeIndex: 0,
                                 subtitle: isHu ? `${getCollectionTypeLabel(col.collection_type)} • Borítókép` : `${getCollectionTypeLabel(col.collection_type)} • Cover Image`
                               });
@@ -808,9 +773,8 @@ export const CollectionsView: React.FC = () => {
                           <div className="space-y-3">
                             {allItemPhotos.length > 0 ? (
                               <div
-                                onClick={() => setGalleryModal({
+                                onClick={() => openImageViewer(allItemPhotos, {
                                   title: item?.name || ci.name || (isHu ? 'Gyűjteményi tétel' : 'Collection Item'),
-                                  photos: allItemPhotos,
                                   activeIndex: 0,
                                   subtitle: ci.item_id ? (isHu ? 'Leltári tárgy' : 'Inventory Item') : (isHu ? 'Önálló gyűjteményi tétel' : 'Standalone Item')
                                 })}
@@ -1723,139 +1687,6 @@ export const CollectionsView: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
-      )}
-
-      {/* FULLSCREEN INTERACTIVE PHOTO GALLERY MODAL (Lightbox) */}
-      {galleryModal && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md animate-fade-in select-none"
-          onClick={() => setGalleryModal(null)}
-        >
-          {/* Top Bar: Title, Counter & Close Button */}
-          <div
-            className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0 bg-black/40 z-20"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2 rounded-xl bg-white/10 text-white">
-                <Images className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm sm:text-base font-bold text-white truncate">
-                  {galleryModal.title}
-                </h3>
-                {galleryModal.subtitle && (
-                  <p className="text-xs text-white/60 truncate">
-                    {galleryModal.subtitle}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 shrink-0">
-              {galleryModal.photos.length > 1 && (
-                <div className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-semibold tracking-wide">
-                  {galleryModal.activeIndex + 1} / {galleryModal.photos.length}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setGalleryModal(null)}
-                className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/15 transition-colors"
-                title={isHu ? 'Bezárás (ESC)' : 'Close (ESC)'}
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-
-          {/* Main Stage: Large Image + Next/Prev Navigation */}
-          <div
-            className="flex-1 relative flex items-center justify-center p-4 sm:p-8 overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Previous Button */}
-            {galleryModal.photos.length > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setGalleryModal(prev => {
-                    if (!prev) return prev;
-                    const nextIdx = (prev.activeIndex - 1 + prev.photos.length) % prev.photos.length;
-                    return { ...prev, activeIndex: nextIdx };
-                  });
-                }}
-                className="absolute left-4 z-20 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur border border-white/15 transition-all hover:scale-105 shadow-xl"
-                title={isHu ? 'Előző kép (Bal nyíl)' : 'Previous photo (Left arrow)'}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-            )}
-
-            {/* Current Active Image with ambient blur backing */}
-            <div className="relative max-w-full max-h-full flex items-center justify-center">
-              <img
-                src={galleryModal.photos[galleryModal.activeIndex]}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-contain blur-2xl opacity-20 scale-110 pointer-events-none"
-              />
-              <img
-                key={galleryModal.activeIndex}
-                src={galleryModal.photos[galleryModal.activeIndex]}
-                alt={`${galleryModal.title} (${galleryModal.activeIndex + 1})`}
-                className="relative z-10 max-w-[92vw] max-h-[72vh] sm:max-h-[78vh] object-contain rounded-xl shadow-2xl transition-all duration-300"
-              />
-            </div>
-
-            {/* Next Button */}
-            {galleryModal.photos.length > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setGalleryModal(prev => {
-                    if (!prev) return prev;
-                    const nextIdx = (prev.activeIndex + 1) % prev.photos.length;
-                    return { ...prev, activeIndex: nextIdx };
-                  });
-                }}
-                className="absolute right-4 z-20 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur border border-white/15 transition-all hover:scale-105 shadow-xl"
-                title={isHu ? 'Következő kép (Jobb nyíl)' : 'Next photo (Right arrow)'}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            )}
-          </div>
-
-          {/* Bottom Thumbnail Strip */}
-          {galleryModal.photos.length > 1 && (
-            <div
-              className="px-6 py-3 border-t border-white/10 bg-black/50 shrink-0 z-20 flex items-center justify-center gap-2 overflow-x-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              {galleryModal.photos.map((photo, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setGalleryModal(prev => prev ? { ...prev, activeIndex: idx } : null)}
-                  className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${
-                    idx === galleryModal.activeIndex
-                      ? 'border-[var(--color-primary-blue,#2563EB)] scale-105 shadow-lg'
-                      : 'border-white/20 opacity-50 hover:opacity-90'
-                  }`}
-                >
-                  <img
-                    src={photo}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>

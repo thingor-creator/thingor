@@ -42,7 +42,8 @@ import type {
   StorageContainer,
   ContainerItem,
   LendingContact,
-  HouseholdMemberAllowedModules
+  HouseholdMemberAllowedModules,
+  ImageViewerData
 } from '../types';
 import { DEFAULT_HOUSEHOLD_MODULES } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -316,6 +317,14 @@ interface AppContextType {
   deleteUserAccountByAdmin: (targetUserId: string) => Promise<{ success: boolean; error?: string }>;
   adminAuditLogs: AdminAuditLog[];
   logAdminAction: (action: string, target?: string, details?: any) => Promise<void>;
+
+  // Image Viewer Modal & Lightbox with Zoom
+  imageViewerData: ImageViewerData | null;
+  openImageViewer: (
+    photos: string | string[],
+    options?: { title?: string; subtitle?: string; activeIndex?: number }
+  ) => void;
+  closeImageViewer: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -354,6 +363,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const t = (key: keyof TranslationKeys): string => {
     return translations[language]?.[key] || translations['en']?.[key] || String(key);
   };
+
+  // Image Viewer Lightbox with Zoom
+  const [imageViewerData, setImageViewerData] = useState<ImageViewerData | null>(null);
+
+  const openImageViewer = useCallback((
+    photos: string | string[],
+    options?: { title?: string; subtitle?: string; activeIndex?: number }
+  ) => {
+    const photoList = (Array.isArray(photos) ? photos : [photos])
+      .filter((p): p is string => typeof p === 'string' && p.trim().length > 0);
+    if (photoList.length === 0) return;
+
+    const requestedIndex = options?.activeIndex ?? 0;
+    const clampedIndex = Math.max(0, Math.min(requestedIndex, photoList.length - 1));
+
+    setImageViewerData({
+      title: options?.title || '',
+      subtitle: options?.subtitle || '',
+      photos: photoList,
+      activeIndex: clampedIndex,
+    });
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setImageViewerData(null);
+  }, []);
 
   // Local storage persistence initialization
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -5200,6 +5235,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteContainerItem,
         adjustContainerItemQuantity,
         assignItemToContainer,
+
+        imageViewerData,
+        openImageViewer,
+        closeImageViewer,
       }}
     >
       {children}

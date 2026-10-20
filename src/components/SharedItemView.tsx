@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { SharedItemViewData } from '../types';
-import { ShieldCheck, Tag, Calendar, DollarSign, AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Tag, Calendar, DollarSign, AlertTriangle, ArrowLeft, CheckCircle2, ZoomIn } from 'lucide-react';
 
 interface SharedItemViewProps {
   token: string;
 }
 
 export const SharedItemView: React.FC<SharedItemViewProps> = ({ token }) => {
-  const { getSharedItemByToken, siteSettings } = useApp();
+  const { getSharedItemByToken, siteSettings, openImageViewer } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sharedItem, setSharedItem] = useState<SharedItemViewData | null>(null);
@@ -131,12 +131,27 @@ export const SharedItemView: React.FC<SharedItemViewProps> = ({ token }) => {
           {/* Photo Gallery Section */}
           {allPhotos.length > 0 && (
             <div className="bg-slate-950/60 p-4 border-b border-slate-800">
-              <div className="w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800/80 relative">
+              <div
+                onClick={() => {
+                  const currentImg = selectedPhoto || allPhotos[0];
+                  const activeIdx = Math.max(0, allPhotos.indexOf(currentImg));
+                  openImageViewer(allPhotos, {
+                    title: sharedItem.name,
+                    activeIndex: activeIdx,
+                  });
+                }}
+                className="w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800/80 relative cursor-pointer group"
+                title="Kattints a kép nagyításához / Click to zoom"
+              >
                 <img
                   src={selectedPhoto || allPhotos[0]}
                   alt={sharedItem.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                 />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[2px]">
+                  <ZoomIn className="h-5 w-5 text-emerald-400" />
+                  <span>Ráközelítés / Zoom in</span>
+                </div>
               </div>
 
               {allPhotos.length > 1 && (

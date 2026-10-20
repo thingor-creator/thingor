@@ -1,14 +1,14 @@
 import React from 'react';
 import type { Item } from '../types';
 import { useApp } from '../context/AppContext';
-import { MapPin, ShieldCheck, Tag, Edit3, Image as ImageIcon, QrCode } from 'lucide-react';
+import { MapPin, ShieldCheck, Tag, Edit3, Image as ImageIcon, QrCode, ZoomIn } from 'lucide-react';
 
 interface ItemCardProps {
   item: Item;
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
-  const { setSelectedItemId, setIsAddEditItemModalOpen, setEditingItem, getLocationPath, getCategoryName, t, language } = useApp();
+  const { setSelectedItemId, setIsAddEditItemModalOpen, setEditingItem, getLocationPath, getCategoryName, t, language, openImageViewer } = useApp();
 
   const locationPath = getLocationPath(item.location_id);
   const categoryName = getCategoryName(item.category_id);
@@ -83,8 +83,24 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
           </span>
         </div>
 
-        {/* Quick Actions (Edit & QR) */}
+        {/* Quick Actions (Zoom, QR & Edit) */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+          {item.photo_url && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openImageViewer([item.photo_url!, ...(item.additional_photos || [])], {
+                  title: item.name,
+                  subtitle: categoryName,
+                  activeIndex: 0,
+                });
+              }}
+              className="p-2 rounded-full bg-[var(--card-bg,#3A4551)]/95 text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-emerald-600 backdrop-blur border border-[var(--border-color,#56616D)] transition-all shadow"
+              title={language === 'hu' ? 'Kép nagyítása' : 'Zoom image'}
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();

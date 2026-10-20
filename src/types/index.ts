@@ -549,4 +549,12 @@ export interface ContainerItem {
   updated_at?: string;
 }
 
+export interface ImageViewerData {
+  title?: string;
+  subtitle?: string;
+  photos: string[];
+  activeIndex: number;
+}
+
+
 

@@ -28,7 +28,8 @@ import {
   QrCode,
   Handshake,
   Lock,
-  Download
+  Download,
+  ZoomIn
 } from 'lucide-react';
 import { uploadFileToStorage, openR2DocumentSecurely, downloadR2DocumentSecurely } from '../lib/storage';
 import { ShareModal } from './ShareModal';
@@ -60,7 +61,8 @@ export const ItemDetailModal: React.FC = () => {
     getItemRelations,
     user,
     language,
-    currentView
+    currentView,
+    openImageViewer
   } = useApp();
 
   const isHu = language === 'hu';
@@ -177,6 +179,19 @@ export const ItemDetailModal: React.FC = () => {
   const item = items.find(i => i.id === selectedItemId);
   if (!item) return null;
 
+  const itemAllPhotos = [
+    ...(item.photo_url ? [item.photo_url] : []),
+    ...(item.additional_photos || []),
+  ];
+
+  const isImageFile = (url?: string, fileName?: string) => {
+    if (!url && !fileName) return false;
+    const str = (fileName || url || '').toLowerCase();
+    return str.endsWith('.jpg') || str.endsWith('.jpeg') || str.endsWith('.png') ||
+           str.endsWith('.webp') || str.endsWith('.gif') || str.endsWith('.svg') ||
+           str.startsWith('data:image/');
+  };
+
   const itemDocs = documents.filter(d => d.item_id === item.id);
   const locationPath = getLocationPath(item.location_id);
   const categoryName = getCategoryName(item.category_id);
@@ -264,16 +279,36 @@ export const ItemDetailModal: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-6 p-6">
 
             {/* Main Photo */}
-            <div className="h-52 w-full md:w-64 rounded-2xl bg-[var(--card-bg,#3A4551)] overflow-hidden flex-shrink-0 border border-[var(--border-color,#56616D)] relative flex items-center justify-center p-3 shadow-lg">
+            <div
+              onClick={() => {
+                if (item.photo_url) {
+                  openImageViewer(itemAllPhotos, {
+                    title: item.name,
+                    subtitle: isHu ? 'Fő fénykép' : 'Primary photo',
+                    activeIndex: 0,
+                  });
+                }
+              }}
+              className={`h-52 w-full md:w-64 rounded-2xl bg-[var(--card-bg,#3A4551)] overflow-hidden flex-shrink-0 border border-[var(--border-color,#56616D)] relative flex items-center justify-center p-3 shadow-lg group ${
+                item.photo_url ? 'cursor-pointer hover:border-emerald-500/60' : ''
+              }`}
+              title={item.photo_url ? (isHu ? 'Kattints a nagyításhoz' : 'Click to zoom') : undefined}
+            >
               {item.photo_url ? (
-                <img
-                  src={item.photo_url}
-                  alt={item.name}
-                  className="h-full w-full object-contain object-center block"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';
-                  }}
-                />
+                <>
+                  <img
+                    src={item.photo_url}
+                    alt={item.name}
+                    className="h-full w-full object-contain object-center block group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[2px]">
+                    <ZoomIn className="h-4 w-4 text-emerald-400" />
+                    <span>{isHu ? 'Ráközelítés' : 'Zoom in'}</span>
+                  </div>
+                </>
               ) : (
                 <div className="h-full w-full flex flex-col items-center justify-center text-[var(--text-sub,#B5BDC6)]/60">
                   <ImageIcon className="h-8 w-8 mb-1" />
@@ -1367,11 +1402,25 @@ export const ItemDetailModal: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => openR2DocumentSecurely(doc.file_url)}
+                          onClick={() => {
+                            if (isImageFile(doc.file_url, doc.file_name)) {
+                              openImageViewer(doc.file_url, {
+                                title: doc.file_name,
+                                subtitle: item.name,
+                              });
+                            } else {
+                              openR2DocumentSecurely(doc.file_url);
+                            }
+                          }}
                           className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] text-xs flex items-center gap-1 cursor-pointer transition-colors"
                           title={isHu ? 'Megtekintés' : 'View'}
                         >
-                          <ExternalLink className="h-3.5 w-3.5" /> {isHu ? 'Megtekintés' : 'View'}
+                          {isImageFile(doc.file_url, doc.file_name) ? (
+                            <ZoomIn className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          )}
+                          <span>{isHu ? 'Megtekintés' : 'View'}</span>
                         </button>
                         <button
                           type="button"
@@ -1421,18 +1470,43 @@ export const ItemDetailModal: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {item.photo_url && (
-                    <div className="rounded-xl overflow-hidden border border-emerald-500/60 bg-[var(--card-bg,#3A4551)] aspect-video relative group shadow-md p-2 flex items-center justify-center">
+                    <div
+                      onClick={() => openImageViewer(itemAllPhotos, {
+                        title: item.name,
+                        subtitle: isHu ? 'Fő fénykép' : 'Primary photo',
+                        activeIndex: 0,
+                      })}
+                      className="rounded-xl overflow-hidden border border-emerald-500/60 bg-[var(--card-bg,#3A4551)] aspect-video relative group shadow-md p-2 flex items-center justify-center cursor-pointer hover:border-emerald-400"
+                      title={isHu ? 'Kattints a nagyításhoz' : 'Click to zoom'}
+                    >
                       <img src={item.photo_url} alt="Primary" className="w-full h-full object-contain object-center block group-hover:scale-105 transition-transform duration-300" />
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-emerald-950/90 text-[10px] font-bold text-emerald-400 border border-emerald-800/60">
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-xs font-semibold backdrop-blur-[2px]">
+                        <ZoomIn className="h-4 w-4 text-emerald-400" />
+                        <span>{isHu ? 'Ráközelítés' : 'Zoom in'}</span>
+                      </div>
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-emerald-950/90 text-[10px] font-bold text-emerald-400 border border-emerald-800/60 z-10">
                         {isHu ? 'Fő kép' : 'Primary Photo'}
                       </span>
                     </div>
                   )}
 
                   {item.additional_photos?.map((url, idx) => (
-                    <div key={idx} className="rounded-xl overflow-hidden border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] aspect-video relative group shadow-md p-2 flex items-center justify-center">
+                    <div
+                      key={idx}
+                      onClick={() => openImageViewer(itemAllPhotos, {
+                        title: item.name,
+                        subtitle: `${idx + 2}. ${isHu ? 'fénykép' : 'photo'}`,
+                        activeIndex: item.photo_url ? idx + 1 : idx,
+                      })}
+                      className="rounded-xl overflow-hidden border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] aspect-video relative group shadow-md p-2 flex items-center justify-center cursor-pointer hover:border-emerald-500/60"
+                      title={isHu ? 'Kattints a nagyításhoz' : 'Click to zoom'}
+                    >
                       <img src={url} alt={`Additional ${idx + 1}`} className="w-full h-full object-contain object-center block group-hover:scale-105 transition-transform duration-300" />
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-[var(--card-bg,#3A4551)]/90 text-[10px] font-bold text-[var(--text-main,#E0E3E6)]">
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-xs font-semibold backdrop-blur-[2px]">
+                        <ZoomIn className="h-4 w-4 text-emerald-400" />
+                        <span>{isHu ? 'Ráközelítés' : 'Zoom in'}</span>
+                      </div>
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-[var(--card-bg,#3A4551)]/90 text-[10px] font-bold text-[var(--text-main,#E0E3E6)] z-10">
                         {idx + 2}. {isHu ? 'kép' : 'photo'}
                       </span>
                     </div>
