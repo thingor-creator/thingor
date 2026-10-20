@@ -2339,6 +2339,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       created_at: new Date().toISOString(),
     };
 
+    // Client-side dedup check: if notification with dedup_key already exists in memory, do nothing
+    if (noteData.dedup_key && notifications.some(n => n.dedup_key === noteData.dedup_key)) {
+      return;
+    }
+
     if (isSupabaseConfigured && supabase && user?.id) {
       // Map client-only notification types (e.g. 'pantry', 'lending') to 'system'
       // to avoid Postgres CHECK constraint violation: notifications_type_check
@@ -2346,11 +2351,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ? noteData.type
         : 'system';
 
-      const { data, error } = await supabase
-        .from('notifications')
-        .insert([{ ...noteData, type: dbType, user_id: user.id }])
-        .select()
-        .single();
+      let query;
+      if (noteData.dedup_key) {
+        query = supabase
+          .from('notifications')
+          .upsert(
+            [{ ...noteData, type: dbType, user_id: user.id }],
+            { onConflict: 'user_id,dedup_key', ignoreDuplicates: true }
+          )
+          .select()
+          .maybeSingle();
+      } else {
+        query = supabase
+          .from('notifications')
+          .insert([{ ...noteData, type: dbType, user_id: user.id }])
+          .select()
+          .maybeSingle();
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         setNotifications(prev => {
@@ -2364,11 +2383,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return;
       }
 
+      // If no error but data is null, it was an existing duplicate cleanly ignored by ON CONFLICT DO NOTHING
+      if (!error && !data) {
+        return;
+      }
+
       // If duplicate key error in Supabase (23505), the notification ALREADY EXISTS in database!
       // Do NOT create an unread local duplicate.
       if (error && (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint') || (error as any).details?.includes('already exists'))) {
         return;
       }
+      return;
     }
 
     setNotifications(prev => {

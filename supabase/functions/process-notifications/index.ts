@@ -83,7 +83,7 @@ serve(async (req) => {
           // Insert notification safely with dedup_key
           const { error: insertError } = await supabase
             .from("notifications")
-            .insert(
+            .upsert(
               [
                 {
                   user_id: item.user_id,
@@ -95,7 +95,7 @@ serve(async (req) => {
                   is_read: false,
                 },
               ],
-              { ignoreDuplicates: true }
+              { onConflict: "user_id,dedup_key", ignoreDuplicates: true }
             );
 
           if (!insertError) {
@@ -137,7 +137,7 @@ serve(async (req) => {
 
           const { error: insertError } = await supabase
             .from("notifications")
-            .insert(
+            .upsert(
               [
                 {
                   user_id: fin.user_id,
@@ -149,7 +149,7 @@ serve(async (req) => {
                   is_read: false,
                 },
               ],
-              { ignoreDuplicates: true }
+              { onConflict: "user_id,dedup_key", ignoreDuplicates: true }
             );
 
           if (!insertError) {
