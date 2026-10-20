@@ -210,13 +210,21 @@ export const DateSegmentInput: React.FC<DateSegmentInputProps> = ({
     }
   };
 
-  const openNativePicker = () => {
+  const triggerPicker = () => {
     if (hiddenDateInputRef.current) {
       if (typeof hiddenDateInputRef.current.showPicker === 'function') {
-        hiddenDateInputRef.current.showPicker();
-      } else {
+        try {
+          hiddenDateInputRef.current.showPicker();
+          return;
+        } catch {
+          // ignore error
+        }
+      }
+      try {
         hiddenDateInputRef.current.focus();
         hiddenDateInputRef.current.click();
+      } catch {
+        // ignore error
       }
     }
   };
@@ -226,10 +234,10 @@ export const DateSegmentInput: React.FC<DateSegmentInputProps> = ({
   return (
     <div
       id={id}
-      className={`relative flex items-center justify-between w-full min-w-0 px-2 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] focus-within:border-[var(--color-primary-blue,#2563EB)] focus-within:ring-1 focus-within:ring-[var(--color-primary-blue,#2563EB)] transition-all box-border overflow-hidden ${className}`}
+      className={`relative flex items-center justify-between w-full min-w-0 px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] focus-within:border-[var(--color-primary-blue,#2563EB)] focus-within:ring-1 focus-within:ring-[var(--color-primary-blue,#2563EB)] transition-all box-border min-h-[38px] overflow-hidden ${className}`}
     >
       {/* Segmented Inputs: Year . Month . Day */}
-      <div className="flex items-center gap-0.5 sm:gap-1 text-xs text-[var(--text-main,#E0E3E6)] font-mono min-w-0 flex-1 overflow-hidden">
+      <div className="flex items-center gap-1 text-xs text-[var(--text-main,#E0E3E6)] font-mono min-w-0">
         {/* YEAR (ÉV) */}
         <input
           ref={yearRef}
@@ -284,7 +292,7 @@ export const DateSegmentInput: React.FC<DateSegmentInputProps> = ({
       </div>
 
       {/* Right side controls: Clear (X) + Calendar Picker Icon */}
-      <div className="flex items-center gap-0.5 shrink-0 ml-1">
+      <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
         {hasAnyValue && (
           <button
             type="button"
@@ -296,26 +304,41 @@ export const DateSegmentInput: React.FC<DateSegmentInputProps> = ({
           </button>
         )}
 
-        {/* Calendar Picker Icon Button */}
-        <button
-          type="button"
-          onClick={openNativePicker}
-          className="p-1 rounded-md text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--border-color,#56616D)]/50 transition-colors"
+        {/* Calendar Picker Trigger with invisible native date input perfectly overlaid */}
+        <div
+          onClick={triggerPicker}
+          className="relative flex items-center justify-center p-1 rounded-md text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--border-color,#56616D)]/50 transition-colors cursor-pointer shrink-0"
           title={isHu ? 'Dátumválasztó naptár megnyitása' : 'Open calendar picker'}
         >
-          <Calendar className="h-3.5 w-3.5 text-emerald-400" />
-        </button>
-
-        {/* Hidden native date input for the calendar popup */}
-        <input
-          ref={hiddenDateInputRef}
-          type="date"
-          value={value || ''}
-          onChange={handleCalendarPick}
-          tabIndex={-1}
-          aria-hidden="true"
-          className="sr-only"
-        />
+          <Calendar className="h-4 w-4 text-emerald-400 pointer-events-none" />
+          <input
+            ref={hiddenDateInputRef}
+            type="date"
+            value={value || ''}
+            onChange={handleCalendarPick}
+            onClick={e => {
+              e.stopPropagation();
+              try {
+                (e.currentTarget as any).showPicker?.();
+              } catch {}
+            }}
+            tabIndex={-1}
+            aria-label={isHu ? 'Dátumválasztó naptár' : 'Calendar picker'}
+            className="hidden-native-date-input"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer',
+              zIndex: 1,
+              border: 'none',
+              padding: 0,
+              margin: 0,
+            }}
+          />
+        </div>
       </div>
     </div>
   );
