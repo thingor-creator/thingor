@@ -226,76 +226,70 @@ export const DateSegmentInput: React.FC<DateSegmentInputProps> = ({
   return (
     <div
       id={id}
-      className={`relative flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] focus-within:border-[var(--color-primary-blue,#2563EB)] focus-within:ring-1 focus-within:ring-[var(--color-primary-blue,#2563EB)] transition-all ${className}`}
+      className={`relative flex items-center justify-between w-full min-w-0 px-2 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] focus-within:border-[var(--color-primary-blue,#2563EB)] focus-within:ring-1 focus-within:ring-[var(--color-primary-blue,#2563EB)] transition-all box-border overflow-hidden ${className}`}
     >
       {/* Segmented Inputs: Year . Month . Day */}
-      <div className="flex items-center gap-1 text-xs text-[var(--text-main,#E0E3E6)] font-mono flex-1">
+      <div className="flex items-center gap-0.5 sm:gap-1 text-xs text-[var(--text-main,#E0E3E6)] font-mono min-w-0 flex-1 overflow-hidden">
         {/* YEAR (ÉV) */}
-        <div className="relative flex flex-col items-center">
-          <input
-            ref={yearRef}
-            type="text"
-            inputMode="numeric"
-            placeholder={isHu ? 'ÉÉÉÉ' : 'YYYY'}
-            value={year}
-            onChange={handleYearChange}
-            onKeyDown={e => handleKeyDown(e, 'year')}
-            onPaste={handlePaste}
-            onFocus={e => e.target.select()}
-            className="w-12 sm:w-14 text-center bg-transparent text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/40 focus:outline-none focus:text-white font-bold"
-            title={isHu ? 'Év (4 számjegy)' : 'Year (4 digits)'}
-            maxLength={4}
-          />
-        </div>
+        <input
+          ref={yearRef}
+          type="text"
+          inputMode="numeric"
+          placeholder={isHu ? 'ÉÉÉÉ' : 'YYYY'}
+          value={year}
+          onChange={handleYearChange}
+          onKeyDown={e => handleKeyDown(e, 'year')}
+          onPaste={handlePaste}
+          onFocus={e => e.target.select()}
+          className="w-10 sm:w-12 min-w-0 text-center bg-transparent text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/40 focus:outline-none focus:text-white font-bold tracking-tight shrink-0"
+          title={isHu ? 'Év (4 számjegy)' : 'Year (4 digits)'}
+          maxLength={4}
+        />
 
-        <span className="text-[var(--text-sub,#B5BDC6)]/50 select-none font-bold">.</span>
+        <span className="text-[var(--text-sub,#B5BDC6)]/50 select-none font-bold shrink-0">.</span>
 
         {/* MONTH (HÓNAP) */}
-        <div className="relative flex flex-col items-center">
-          <input
-            ref={monthRef}
-            type="text"
-            inputMode="numeric"
-            placeholder={isHu ? 'HH' : 'MM'}
-            value={month}
-            onChange={handleMonthChange}
-            onKeyDown={e => handleKeyDown(e, 'month')}
-            onPaste={handlePaste}
-            onFocus={e => e.target.select()}
-            className="w-8 sm:w-9 text-center bg-transparent text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/40 focus:outline-none focus:text-white font-bold"
-            title={isHu ? 'Hónap (1-12)' : 'Month (1-12)'}
-            maxLength={2}
-          />
-        </div>
+        <input
+          ref={monthRef}
+          type="text"
+          inputMode="numeric"
+          placeholder={isHu ? 'HH' : 'MM'}
+          value={month}
+          onChange={handleMonthChange}
+          onKeyDown={e => handleKeyDown(e, 'month')}
+          onPaste={handlePaste}
+          onFocus={e => e.target.select()}
+          className="w-6 sm:w-8 min-w-0 text-center bg-transparent text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/40 focus:outline-none focus:text-white font-bold tracking-tight shrink-0"
+          title={isHu ? 'Hónap (1-12)' : 'Month (1-12)'}
+          maxLength={2}
+        />
 
-        <span className="text-[var(--text-sub,#B5BDC6)]/50 select-none font-bold">.</span>
+        <span className="text-[var(--text-sub,#B5BDC6)]/50 select-none font-bold shrink-0">.</span>
 
         {/* DAY (NAP) */}
-        <div className="relative flex flex-col items-center">
-          <input
-            ref={dayRef}
-            type="text"
-            inputMode="numeric"
-            placeholder={isHu ? 'NN' : 'DD'}
-            value={day}
-            onChange={handleDayChange}
-            onKeyDown={e => handleKeyDown(e, 'day')}
-            onPaste={handlePaste}
-            onFocus={e => e.target.select()}
-            className="w-8 sm:w-9 text-center bg-transparent text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/40 focus:outline-none focus:text-white font-bold"
-            title={isHu ? 'Nap (1-31)' : 'Day (1-31)'}
-            maxLength={2}
-          />
-        </div>
+        <input
+          ref={dayRef}
+          type="text"
+          inputMode="numeric"
+          placeholder={isHu ? 'NN' : 'DD'}
+          value={day}
+          onChange={handleDayChange}
+          onKeyDown={e => handleKeyDown(e, 'day')}
+          onPaste={handlePaste}
+          onFocus={e => e.target.select()}
+          className="w-6 sm:w-8 min-w-0 text-center bg-transparent text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)]/40 focus:outline-none focus:text-white font-bold tracking-tight shrink-0"
+          title={isHu ? 'Nap (1-31)' : 'Day (1-31)'}
+          maxLength={2}
+        />
       </div>
 
       {/* Right side controls: Clear (X) + Calendar Picker Icon */}
-      <div className="flex items-center gap-1 shrink-0 ml-1">
+      <div className="flex items-center gap-0.5 shrink-0 ml-1">
         {hasAnyValue && (
           <button
             type="button"
             onClick={handleClear}
-            className="p-1 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--border-color,#56616D)]/50 transition-colors"
+            className="p-1 rounded-md text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--border-color,#56616D)]/50 transition-colors"
             title={isHu ? 'Dátum törlése' : 'Clear date'}
           >
             <X className="h-3.5 w-3.5" />
@@ -306,7 +300,7 @@ export const DateSegmentInput: React.FC<DateSegmentInputProps> = ({
         <button
           type="button"
           onClick={openNativePicker}
-          className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--border-color,#56616D)]/50 transition-colors"
+          className="p-1 rounded-md text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--border-color,#56616D)]/50 transition-colors"
           title={isHu ? 'Dátumválasztó naptár megnyitása' : 'Open calendar picker'}
         >
           <Calendar className="h-3.5 w-3.5 text-emerald-400" />
