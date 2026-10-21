@@ -33,6 +33,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
     userNotificationSettings,
     updateNotificationSettings,
     language,
+    items,
     setSelectedItemId,
     setCurrentView,
   } = useApp();
@@ -47,8 +48,20 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
     return true;
   });
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIcon = (typeOrNotification: string | AppNotification) => {
+    if (typeof typeOrNotification !== 'string') {
+      const n = typeOrNotification;
+      if (
+        n.type === 'pantry' ||
+        n.dedup_key?.startsWith('shopping_cart:') ||
+        n.title?.includes('Bevásárlólista') ||
+        n.title?.includes('Shopping List')
+      ) {
+        return <ShoppingCart className="h-5 w-5 text-emerald-400 shrink-0" />;
+      }
+      return getNotificationIcon(n.type);
+    }
+    switch (typeOrNotification) {
       case 'warranty':
         return <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />;
       case 'financing':
@@ -62,21 +75,68 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
   const handleNotificationClick = (notification: AppNotification) => {
     if (!notification.is_read) {
-      markNotificationAsRead(notification.id);
+      markNotificationAsRead(notification.id).catch(err => {
+        console.warn('Failed to mark notification as read on click:', err);
+      });
     }
-    if (notification.reference_id) {
-      if (notification.type === 'warranty' || notification.type === 'system') {
+
+    const isPantry =
+      notification.type === 'pantry' ||
+      Boolean(notification.dedup_key && notification.dedup_key.startsWith('shopping_cart:')) ||
+      notification.title?.includes('Bevásárlólista') ||
+      notification.title?.includes('Shopping List');
+
+    if (isPantry) {
+      setSelectedItemId(null);
+      setCurrentView('pantry');
+      onClose();
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('thingor-open-shopping-list'));
+      }, 100);
+      return;
+    }
+
+    if (notification.type === 'warranty') {
+      const targetItem = notification.reference_id
+        ? items.find(i => i.id === notification.reference_id)
+        : null;
+      if (targetItem) {
+        setSelectedItemId(targetItem.id);
+      } else {
+        setSelectedItemId(null);
+      }
+      setCurrentView('items');
+      onClose();
+      return;
+    }
+
+    if (notification.type === 'repair') {
+      setSelectedItemId(null);
+      setCurrentView('repairs');
+      onClose();
+      return;
+    }
+
+    if (notification.type === 'financing') {
+      setSelectedItemId(null);
+      setCurrentView('financing');
+      onClose();
+      return;
+    }
+
+    if (notification.type === 'system') {
+      if (notification.reference_id && items.some(i => i.id === notification.reference_id)) {
         setSelectedItemId(notification.reference_id);
         setCurrentView('items');
-        onClose();
-      } else if (notification.type === 'repair') {
-        setCurrentView('repairs');
-        onClose();
-      } else if (notification.type === 'financing') {
-        setCurrentView('financing');
-        onClose();
+      } else {
+        setSelectedItemId(null);
       }
+      onClose();
+      return;
     }
+
+    setSelectedItemId(null);
+    onClose();
   };
 
   return (
@@ -347,7 +407,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
 
                 <div className="flex items-start gap-3.5 min-w-0 flex-1">
                   <div className="p-2 rounded-lg bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] mt-0.5">
-                    {getNotificationIcon(notification.type)}
+                    {getNotificationIcon(notification)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">

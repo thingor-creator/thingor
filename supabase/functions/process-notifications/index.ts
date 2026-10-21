@@ -7,8 +7,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
+
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -16,6 +28,23 @@ serve(async (req) => {
   }
 
   try {
+    // 0. Mandatory server-side cron secret authentication
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (!cronSecret) {
+      return new Response(
+        JSON.stringify({ error: "CRON_SECRET is not configured on the server" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 503 }
+      );
+    }
+
+    const providedSecret = req.headers.get("x-cron-secret");
+    if (!providedSecret || !timingSafeEqual(providedSecret, cronSecret)) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid or missing x-cron-secret" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";

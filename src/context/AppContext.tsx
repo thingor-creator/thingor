@@ -775,6 +775,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const prevModalRef = useRef(false);
   const viewHistoryRef = useRef<ViewMode[]>([]);
   const notificationTablesAvailableRef = useRef<boolean>(true);
+  const isCheckingNotificationsRef = useRef<boolean>(false);
 
   // Registered active modals stack (for local and subview modals like shopping list, lightbox, item form)
   const activeModalsRef = useRef<Array<{ id: string; onClose: () => void }>>([]);
@@ -2445,11 +2446,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!notificationTablesAvailableRef.current) return;
     if (isSupabaseConfigured && supabase && user?.id) {
       try {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+        const [notificationsRes, settingsRes] = await Promise.all([
+          supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('user_notification_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+        ]);
+
+        const { data, error } = notificationsRes;
+        const { data: settingsData, error: settingsError } = settingsRes;
 
         if (error) {
           if (error.code === 'PGRST301' || error.code === '42P01' || (error as any).status === 404 || error.message?.includes('404') || error.message?.includes('does not exist')) {
@@ -2462,12 +2473,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           setNotifications(data as AppNotification[]);
           localStorage.setItem('thingor_notifications', JSON.stringify(data));
         }
-
-        const { data: settingsData, error: settingsError } = await supabase
-          .from('user_notification_settings')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
 
         if (settingsError) {
           if (settingsError.code === 'PGRST301' || settingsError.code === '42P01' || (settingsError as any).status === 404 || settingsError.message?.includes('404') || settingsError.message?.includes('does not exist')) {
@@ -2486,14 +2491,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const markNotificationAsRead = async (notificationId: string) => {
-    let previousNotifications: AppNotification[] = [];
+    const target = notifications.find(n => n.id === notificationId);
+    if (!target) return;
+    if (target.is_read) return;
+
+    // 1. Optimistic local update
     setNotifications(prev => {
-      previousNotifications = prev;
       const updated = prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n);
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
 
+    // 2. Persist to Supabase if available
     if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
       try {
         let query = supabase
@@ -2503,39 +2512,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         if (isUUID(notificationId)) {
           query = query.eq('id', notificationId);
+        } else if (target.dedup_key) {
+          query = query.eq('dedup_key', target.dedup_key);
         } else {
-          // If local ID, try matching by dedup_key from the notification object
-          const target = previousNotifications.find(n => n.id === notificationId);
-          if (target?.dedup_key) {
-            query = query.eq('dedup_key', target.dedup_key);
-          } else {
-            return;
-          }
+          return;
         }
 
         const { error } = await query;
         if (error) {
           console.error('Failed to mark notification as read in Supabase:', error);
-          setNotifications(previousNotifications);
-          localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+          setNotifications(prev => {
+            const reverted = prev.map(n => n.id === notificationId ? { ...n, is_read: false } : n);
+            localStorage.setItem('thingor_notifications', JSON.stringify(reverted));
+            return reverted;
+          });
         }
       } catch (err) {
         console.error('Exception marking notification as read in Supabase:', err);
-        setNotifications(previousNotifications);
-        localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+        setNotifications(prev => {
+          const reverted = prev.map(n => n.id === notificationId ? { ...n, is_read: false } : n);
+          localStorage.setItem('thingor_notifications', JSON.stringify(reverted));
+          return reverted;
+        });
       }
     }
   };
 
   const markAllNotificationsAsRead = async () => {
-    let previousNotifications: AppNotification[] = [];
+    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+
+    // 1. Optimistic local update
     setNotifications(prev => {
-      previousNotifications = prev;
       const updated = prev.map(n => ({ ...n, is_read: true }));
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
 
+    // 2. Persist to Supabase if available
     if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
       try {
         const { error } = await supabase
@@ -2545,49 +2559,64 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         if (error) {
           console.error('Failed to mark all notifications as read in Supabase:', error);
-          setNotifications(previousNotifications);
-          localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+          setNotifications(prev => {
+            const reverted = prev.map(n => unreadIds.includes(n.id) ? { ...n, is_read: false } : n);
+            localStorage.setItem('thingor_notifications', JSON.stringify(reverted));
+            return reverted;
+          });
         }
       } catch (err) {
         console.error('Exception marking all notifications as read in Supabase:', err);
-        setNotifications(previousNotifications);
-        localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+        setNotifications(prev => {
+          const reverted = prev.map(n => unreadIds.includes(n.id) ? { ...n, is_read: false } : n);
+          localStorage.setItem('thingor_notifications', JSON.stringify(reverted));
+          return reverted;
+        });
       }
     }
   };
 
   const deleteNotification = async (notificationId: string) => {
-    let previousNotifications: AppNotification[] = [];
+    const target = notifications.find(n => n.id === notificationId);
+    if (!target) return;
+
+    // 1. Optimistic local update
     setNotifications(prev => {
-      previousNotifications = prev;
       const updated = prev.filter(n => n.id !== notificationId);
       localStorage.setItem('thingor_notifications', JSON.stringify(updated));
       return updated;
     });
 
+    // 2. Persist to Supabase if available
     if (isSupabaseConfigured && supabase && user?.id && notificationTablesAvailableRef.current) {
       try {
         let query = supabase.from('notifications').delete().eq('user_id', user.id);
         if (isUUID(notificationId)) {
           query = query.eq('id', notificationId);
+        } else if (target.dedup_key) {
+          query = query.eq('dedup_key', target.dedup_key);
         } else {
-          const target = previousNotifications.find(n => n.id === notificationId);
-          if (target?.dedup_key) {
-            query = query.eq('dedup_key', target.dedup_key);
-          } else {
-            return;
-          }
+          return;
         }
+
         const { error } = await query;
         if (error) {
           console.error('Failed to delete notification in Supabase:', error);
-          setNotifications(previousNotifications);
-          localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+          setNotifications(prev => {
+            if (prev.some(n => n.id === target.id)) return prev;
+            const restored = [target, ...prev];
+            localStorage.setItem('thingor_notifications', JSON.stringify(restored));
+            return restored;
+          });
         }
       } catch (err) {
         console.error('Exception deleting notification in Supabase:', err);
-        setNotifications(previousNotifications);
-        localStorage.setItem('thingor_notifications', JSON.stringify(previousNotifications));
+        setNotifications(prev => {
+          if (prev.some(n => n.id === target.id)) return prev;
+          const restored = [target, ...prev];
+          localStorage.setItem('thingor_notifications', JSON.stringify(restored));
+          return restored;
+        });
       }
     }
   };
@@ -2617,116 +2646,128 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Background evaluator for warranty & financing notifications
-  const checkAndGenerateNotifications = () => {
+  const checkAndGenerateNotifications = async () => {
     if (siteSettings.notifications_enabled === false) return;
     if (userNotificationSettings?.inapp_enabled === false) return;
     if (!user?.id) return;
+    if (isCheckingNotificationsRef.current) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const today = new Date(todayStr);
+    isCheckingNotificationsRef.current = true;
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const today = new Date(todayStr);
 
-    // 1. Warranty Checks (30, 14, 3, 0 days)
-    if (userNotificationSettings?.warranty_enabled !== false) {
-      for (const item of items) {
-        if (!item.warranty_end) continue;
-        const warrantyDate = new Date(item.warranty_end);
-        const diffMs = warrantyDate.getTime() - today.getTime();
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      // 1. Warranty Checks (30, 14, 3, 0 days)
+      if (userNotificationSettings?.warranty_enabled !== false) {
+        for (const item of items) {
+          if (!item.warranty_end) continue;
+          const warrantyDate = new Date(item.warranty_end);
+          const diffMs = warrantyDate.getTime() - today.getTime();
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-        let alertThreshold: number | null = null;
-        if (diffDays === 30) alertThreshold = 30;
-        else if (diffDays === 14) alertThreshold = 14;
-        else if (diffDays === 3) alertThreshold = 3;
-        else if (diffDays === 0) alertThreshold = 0;
+          let alertThreshold: number | null = null;
+          if (diffDays === 30) alertThreshold = 30;
+          else if (diffDays === 14) alertThreshold = 14;
+          else if (diffDays === 3) alertThreshold = 3;
+          else if (diffDays === 0) alertThreshold = 0;
 
-        if (alertThreshold !== null) {
-          const dedupKey = `warranty:${item.id}:${alertThreshold}d`;
-          const title = alertThreshold === 0
-            ? (language === 'hu' ? 'A garancia ma lejár!' : 'Warranty expires today!')
-            : (language === 'hu' ? `Garancia lejárati figyelmeztetés (${alertThreshold} nap)` : `Warranty Expiry Alert (${alertThreshold} days)`);
-          const description = alertThreshold === 0
-            ? (language === 'hu' ? `A(z) "${item.name}" tárgy garanciája a mai napon (${item.warranty_end}) lejár.` : `The warranty for "${item.name}" expires today (${item.warranty_end}).`)
-            : (language === 'hu' ? `A(z) "${item.name}" tárgy garanciája ${alertThreshold} nap múlva lejár (${item.warranty_end}).` : `The warranty for "${item.name}" expires in ${alertThreshold} days (${item.warranty_end}).`);
+          if (alertThreshold !== null) {
+            const dedupKey = `warranty:${item.id}:${alertThreshold}d`;
+            if (notifications.some(n => n.dedup_key === dedupKey)) continue;
 
-          createNotification({
-            user_id: user.id,
-            title,
-            description,
-            type: 'warranty',
-            reference_id: item.id,
-            dedup_key: dedupKey,
-          });
+            const title = alertThreshold === 0
+              ? (language === 'hu' ? 'A garancia ma lejár!' : 'Warranty expires today!')
+              : (language === 'hu' ? `Garancia lejárati figyelmeztetés (${alertThreshold} nap)` : `Warranty Expiry Alert (${alertThreshold} days)`);
+            const description = alertThreshold === 0
+              ? (language === 'hu' ? `A(z) "${item.name}" tárgy garanciája a mai napon (${item.warranty_end}) lejár.` : `The warranty for "${item.name}" expires today (${item.warranty_end}).`)
+              : (language === 'hu' ? `A(z) "${item.name}" tárgy garanciája ${alertThreshold} nap múlva lejár (${item.warranty_end}).` : `The warranty for "${item.name}" expires in ${alertThreshold} days (${item.warranty_end}).`);
+
+            await createNotification({
+              user_id: user.id,
+              title,
+              description,
+              type: 'warranty',
+              reference_id: item.id,
+              dedup_key: dedupKey,
+            });
+          }
         }
       }
-    }
 
-    // 2. Financing Checks (7, 3, 0 days)
-    if (userNotificationSettings?.financing_enabled !== false) {
-      for (const fin of financings) {
-        if (!fin.next_payment_date) continue;
-        const item = items.find(i => i.id === fin.item_id);
-        const itemName = item?.name || 'Finanszírozott tárgy';
+      // 2. Financing Checks (7, 3, 0 days)
+      if (userNotificationSettings?.financing_enabled !== false) {
+        for (const fin of financings) {
+          if (!fin.next_payment_date) continue;
+          const item = items.find(i => i.id === fin.item_id);
+          const itemName = item?.name || 'Finanszírozott tárgy';
 
-        const paymentDate = new Date(fin.next_payment_date);
-        const diffMs = paymentDate.getTime() - today.getTime();
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+          const paymentDate = new Date(fin.next_payment_date);
+          const diffMs = paymentDate.getTime() - today.getTime();
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-        let alertThreshold: number | null = null;
-        if (diffDays === 7) alertThreshold = 7;
-        else if (diffDays === 3) alertThreshold = 3;
-        else if (diffDays === 0) alertThreshold = 0;
+          let alertThreshold: number | null = null;
+          if (diffDays === 7) alertThreshold = 7;
+          else if (diffDays === 3) alertThreshold = 3;
+          else if (diffDays === 0) alertThreshold = 0;
 
-        if (alertThreshold !== null) {
-          const dedupKey = `financing:${fin.id}:${fin.next_payment_date}:${alertThreshold}d`;
-          const title = alertThreshold === 0
-            ? (language === 'hu' ? 'Részletfizetés esedékes a mai napon!' : 'Financing payment due today!')
-            : (language === 'hu' ? `Közelgő részletfizetés (${alertThreshold} nap)` : `Upcoming payment (${alertThreshold} days)`);
-          const description = alertThreshold === 0
-            ? (language === 'hu' ? `A(z) "${itemName}" mai napon fizetendő részlete: ${fin.monthly_installment} Ft (${fin.provider || 'Finanszírozás'}).` : `Payment due today for "${itemName}": ${fin.monthly_installment} (${fin.provider}).`)
-            : (language === 'hu' ? `A(z) "${itemName}" esedékes havi részlete: ${fin.monthly_installment} Ft (${fin.next_payment_date} - ${fin.provider || 'Finanszírozás'}).` : `Monthly installment for "${itemName}": ${fin.monthly_installment} due on ${fin.next_payment_date}.`);
+          if (alertThreshold !== null) {
+            const dedupKey = `financing:${fin.id}:${fin.next_payment_date}:${alertThreshold}d`;
+            if (notifications.some(n => n.dedup_key === dedupKey)) continue;
 
-          createNotification({
-            user_id: user.id,
-            title,
-            description,
-            type: 'financing',
-            reference_id: fin.id,
-            dedup_key: dedupKey,
-          });
+            const title = alertThreshold === 0
+              ? (language === 'hu' ? 'Részletfizetés esedékes a mai napon!' : 'Financing payment due today!')
+              : (language === 'hu' ? `Közelgő részletfizetés (${alertThreshold} nap)` : `Upcoming payment (${alertThreshold} days)`);
+            const description = alertThreshold === 0
+              ? (language === 'hu' ? `A(z) "${itemName}" mai napon fizetendő részlete: ${fin.monthly_installment} Ft (${fin.provider || 'Finanszírozás'}).` : `Payment due today for "${itemName}": ${fin.monthly_installment} (${fin.provider}).`)
+              : (language === 'hu' ? `A(z) "${itemName}" esedékes havi részlete: ${fin.monthly_installment} Ft (${fin.next_payment_date} - ${fin.provider || 'Finanszírozás'}).` : `Monthly installment for "${itemName}": ${fin.monthly_installment} due on ${fin.next_payment_date}.`);
+
+            await createNotification({
+              user_id: user.id,
+              title,
+              description,
+              type: 'financing',
+              reference_id: fin.id,
+              dedup_key: dedupKey,
+            });
+          }
         }
       }
-    }
 
-    // 3. Shopping Cart / Pantry Low Stock Checks
-    if (userNotificationSettings?.shopping_cart_enabled !== false) {
-      for (const pItem of pantryItems) {
-        if (!pItem.is_staple) continue;
-        const currentQty = Number(pItem.current_quantity);
-        const minThreshold = Number(pItem.min_threshold);
-        if (currentQty <= minThreshold) {
-          const isOut = currentQty <= 0;
-          const dedupKey = `shopping_cart:${pItem.id}:${todayStr}`;
-          const title = isOut
-            ? (language === 'hu' ? 'Elfogyott a készlet: Bevásárlólista!' : 'Out of stock: Shopping List!')
-            : (language === 'hu' ? 'Fogyóban lévő készlet: Bevásárlólista!' : 'Low stock: Shopping List!');
-          const description = isOut
-            ? (language === 'hu'
-                ? `A(z) "${pItem.name}" alapvető cikk elfogyott a spájzból (0 ${pItem.unit}). Ideje beszerezni!`
-                : `Staple item "${pItem.name}" is completely out of stock (0 ${pItem.unit}). Time to restock!`)
-            : (language === 'hu'
-                ? `A(z) "${pItem.name}" elérte a minimális szintet (${currentQty} ${pItem.unit} maradt, minimum: ${minThreshold} ${pItem.unit}).`
-                : `"${pItem.name}" is running low (${currentQty} ${pItem.unit} left, min: ${minThreshold} ${pItem.unit}).`);
+      // 3. Shopping Cart / Pantry Low Stock Checks
+      if (userNotificationSettings?.shopping_cart_enabled !== false) {
+        for (const pItem of pantryItems) {
+          if (!pItem.is_staple) continue;
+          const currentQty = Number(pItem.current_quantity);
+          const minThreshold = Number(pItem.min_threshold);
+          if (currentQty <= minThreshold) {
+            const isOut = currentQty <= 0;
+            const dedupKey = `shopping_cart:${pItem.id}:active`;
+            if (notifications.some(n => n.dedup_key === dedupKey)) continue;
 
-          createNotification({
-            user_id: user.id,
-            title,
-            description,
-            type: 'pantry',
-            reference_id: pItem.id,
-            dedup_key: dedupKey,
-          });
+            const title = isOut
+              ? (language === 'hu' ? 'Elfogyott a készlet: Bevásárlólista!' : 'Out of stock: Shopping List!')
+              : (language === 'hu' ? 'Fogyóban lévő készlet: Bevásárlólista!' : 'Low stock: Shopping List!');
+            const description = isOut
+              ? (language === 'hu'
+                  ? `A(z) "${pItem.name}" alapvető cikk elfogyott a spájzból (0 ${pItem.unit}). Ideje beszerezni!`
+                  : `Staple item "${pItem.name}" is completely out of stock (0 ${pItem.unit}). Time to restock!`)
+              : (language === 'hu'
+                  ? `A(z) "${pItem.name}" elérte a minimális szintet (${currentQty} ${pItem.unit} maradt, minimum: ${minThreshold} ${pItem.unit}).`
+                  : `"${pItem.name}" is running low (${currentQty} ${pItem.unit} left, min: ${minThreshold} ${pItem.unit}).`);
+
+            await createNotification({
+              user_id: user.id,
+              title,
+              description,
+              type: 'pantry',
+              reference_id: pItem.id,
+              dedup_key: dedupKey,
+            });
+          }
         }
       }
+    } finally {
+      isCheckingNotificationsRef.current = false;
     }
   };
 
@@ -2738,7 +2779,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     if (user?.id && (items.length > 0 || financings.length > 0 || pantryItems.length > 0)) {
-      checkAndGenerateNotifications();
+      const timer = setTimeout(() => {
+        checkAndGenerateNotifications();
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [items, financings, pantryItems, user?.id]);
 
