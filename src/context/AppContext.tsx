@@ -396,6 +396,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
+  const userRef = useRef<UserProfile | null>(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   const [items, setItems] = useState<Item[]>(() => {
     const saved = localStorage.getItem('thingor_items') || localStorage.getItem('thingor_items_backup');
     if (saved) {
@@ -911,7 +916,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (typeof window !== 'undefined' && (currentView === 'storage' || window.location.hash.includes('storage'))) {
         window.location.hash = '';
         if (currentView === 'storage') {
-          const prev = viewHistoryRef.current.pop() || (user ? 'dashboard' : 'landing');
+          const prev = viewHistoryRef.current.pop() || (userRef.current ? 'dashboard' : 'landing');
           setCurrentView(prev);
         }
         return;
@@ -927,20 +932,65 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (viewHistoryRef.current.length > 0) {
         const prev = viewHistoryRef.current.pop();
         if (prev && prev !== currentView) {
-          setCurrentView(prev);
-          return;
+          // AUTH GUARD: If unauthenticated, do not navigate to protected view
+          if (!userRef.current && prev !== 'landing') {
+            if (currentView !== 'landing') {
+              setCurrentView('landing');
+            }
+            if (typeof window !== 'undefined') {
+              window.history.replaceState({ view: 'landing', selectedItemId: null, isModal: false }, '', '');
+            }
+            return;
+          }
+          // AUTH GUARD: If authenticated, do not navigate back to landing
+          if (userRef.current && prev === 'landing') {
+            if (currentView !== 'dashboard') {
+              setCurrentView('dashboard');
+              if (typeof window !== 'undefined') {
+                window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+              }
+              return;
+            }
+            // If already on dashboard, continue to step 7 (double-back to exit)
+          } else {
+            setCurrentView(prev);
+            return;
+          }
         }
       }
 
       // 6. History state view change
       if (state && state.view && state.view !== currentView) {
-        if (state.selectedItemId !== undefined) {
-          setSelectedItemId(state.selectedItemId);
-        } else {
-          setSelectedItemId(null);
+        // AUTH GUARD: If unauthenticated, block all protected views
+        if (!userRef.current && state.view !== 'landing') {
+          if (currentView !== 'landing') {
+            setCurrentView('landing');
+          }
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({ view: 'landing', selectedItemId: null, isModal: false }, '', '');
+          }
+          return;
         }
-        setCurrentView(state.view);
-        return;
+
+        // AUTH GUARD: If authenticated, block navigation to landing
+        if (userRef.current && state.view === 'landing') {
+          if (currentView !== 'dashboard') {
+            setCurrentView('dashboard');
+            if (typeof window !== 'undefined') {
+              window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+            }
+            return;
+          }
+          // If already on dashboard, continue to step 7 (double-back to exit)
+        } else {
+          if (state.selectedItemId !== undefined) {
+            setSelectedItemId(state.selectedItemId);
+          } else {
+            setSelectedItemId(null);
+          }
+          setCurrentView(state.view);
+          return;
+        }
       }
 
       if (selectedItemId) {
@@ -984,7 +1034,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const handleSetCurrentView = (view: ViewMode) => {
     if (view !== currentView || selectedItemId !== null) {
       if (currentView && currentView !== view) {
-        viewHistoryRef.current.push(currentView);
+        // Do not store 'landing' in history for authenticated users
+        if (!userRef.current || currentView !== 'landing') {
+          viewHistoryRef.current.push(currentView);
+        }
       }
       setSelectedItemId(null);
       setIsAddEditItemModalOpen(false);
@@ -995,7 +1048,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsQRScannerOpen(false);
       setIsSupabaseInfoOpen(false);
 
-      window.history.pushState({ view, selectedItemId: null, isModal: false }, '', '#' + view);
+      if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
+        window.history.replaceState({ view, selectedItemId: null, isModal: false }, '', '#' + view);
+      } else if (typeof window !== 'undefined') {
+        window.history.pushState({ view, selectedItemId: null, isModal: false }, '', '#' + view);
+      }
       setCurrentView(view);
     }
   };
@@ -1023,7 +1080,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (typeof window !== 'undefined' && (currentView === 'storage' || window.location.hash.includes('storage'))) {
       window.location.hash = '';
       if (currentView === 'storage') {
-        const prev = viewHistoryRef.current.pop() || (user ? 'dashboard' : 'landing');
+        const prev = viewHistoryRef.current.pop() || (userRef.current ? 'dashboard' : 'landing');
         setCurrentView(prev);
       }
       return;
@@ -1039,6 +1096,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (viewHistoryRef.current.length > 0) {
       const prev = viewHistoryRef.current.pop();
       if (prev && prev !== currentView) {
+        if (!userRef.current && prev !== 'landing') {
+          if (currentView !== 'landing') {
+            setCurrentView('landing');
+          }
+          return;
+        }
+        if (userRef.current && prev === 'landing') {
+          if (currentView !== 'dashboard') {
+            window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+            setCurrentView('dashboard');
+          }
+          return;
+        }
         window.history.replaceState({ view: prev, selectedItemId: null, isModal: false }, '', '#' + prev);
         setCurrentView(prev);
         return;
@@ -1339,6 +1409,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setIsAuthModalOpen(true);
       } else if (event === 'SIGNED_IN' && session?.user) {
         setIsAuthModalOpen(false);
+        if (currentViewRef.current === 'landing') {
+          if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
+            window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+          }
+          setCurrentView('dashboard');
+        }
       }
 
       if (session?.user) {
@@ -1350,14 +1426,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (isSuspended(profile)) {
           await supabase.auth.signOut();
           setUser(null);
+          userRef.current = null;
           localStorage.removeItem('thingor_user');
           alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
           return;
         }
         setUser(profile);
+        userRef.current = profile;
       } else if (event === 'SIGNED_OUT') {
         // Explicit sign out: clear local state without recursively calling signOut()
         setUser(null);
+        userRef.current = null;
+        viewHistoryRef.current = [];
         setItems([]);
         setDocuments([]);
         setLocations([]);
@@ -1377,6 +1457,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         localStorage.removeItem('thingor_storage_containers');
         localStorage.removeItem('thingor_container_items');
         localStorage.removeItem('thingor_current_view');
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({ view: 'landing', selectedItemId: null, isModal: false }, '', '');
+        }
         setCurrentView('landing');
       }
     });
@@ -1802,7 +1885,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           };
         }
         setUser(profile);
+        userRef.current = profile;
       }
+      if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
+        window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+      }
+      setCurrentView('dashboard');
       setIsAuthModalOpen(false);
       return { success: true };
     }
@@ -1821,7 +1909,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     const isMatchedAdmin = matched.role === 'admin' || cleanEmail === 'mythingor@gmail.com';
-    setUser({
+    const localUser: UserProfile = {
       id: matched.id,
       user_id: matched.id,
       display_name: matched.name,
@@ -1829,7 +1917,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       role: isMatchedAdmin ? 'admin' : 'user',
       status: 'active',
       is_admin: isMatchedAdmin,
-    });
+    };
+    setUser(localUser);
+    userRef.current = localUser;
+    if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
+      window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+    }
+    setCurrentView('dashboard');
     setIsAuthModalOpen(false);
     return { success: true };
   };
@@ -1894,6 +1988,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           name || data.user.user_metadata?.display_name
         );
         setUser(profile);
+        userRef.current = profile;
+        if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
+          window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+        }
+        setCurrentView('dashboard');
         setIsAuthModalOpen(false);
       }
       return { success: true, emailConfirmationRequired: false };
@@ -1918,7 +2017,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     registeredUsers.push(newUser);
     localStorage.setItem('thingor_registered_users', JSON.stringify(registeredUsers));
 
-    setUser({
+    const localUser: UserProfile = {
       id: newUser.id,
       user_id: newUser.id,
       display_name: newUser.name,
@@ -1926,7 +2025,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       role: 'user',
       status: 'active',
       is_admin: false,
-    });
+    };
+    setUser(localUser);
+    userRef.current = localUser;
+    if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
+      window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
+    }
+    setCurrentView('dashboard');
     setIsAuthModalOpen(false);
     return { success: true, emailConfirmationRequired: false };
   };
@@ -1976,6 +2081,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       supabase.auth.signOut().catch(console.error);
     }
     setUser(null);
+    userRef.current = null;
+    viewHistoryRef.current = [];
     setItems([]);
     setDocuments([]);
     setLocations([]);
@@ -2007,6 +2114,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setContainerItems([]);
     localStorage.removeItem('thingor_current_view');
     setIsAuthModalOpen(false);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({ view: 'landing', selectedItemId: null, isModal: false }, '', '');
+    }
     setCurrentView('landing');
   };
 
