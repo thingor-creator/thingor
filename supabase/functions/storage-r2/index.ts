@@ -271,21 +271,21 @@ serve(async (req) => {
       );
     }
 
-    // 2. Read R2 Credentials securely on the server with fail-safe defaults
+    // 2. Read R2 Credentials securely on the server (environment variables only)
     const accountId = (
       Deno.env.get("R2_ACCOUNT_ID") ||
       Deno.env.get("VITE_R2_ACCOUNT_ID") ||
-      "d6da132f6857be3d32ac8e208ed184db"
+      ""
     ).trim();
     const accessKeyId = (
       Deno.env.get("R2_ACCESS_KEY_ID") ||
       Deno.env.get("VITE_R2_ACCESS_KEY_ID") ||
-      "688440145d3f8d31279b5f04ee9b43f6"
+      ""
     ).trim();
     const secretAccessKey = (
       Deno.env.get("R2_SECRET_ACCESS_KEY") ||
       Deno.env.get("VITE_R2_SECRET_ACCESS_KEY") ||
-      "2f8b7a18e29200c5abbf82fff0b0f02645d305a4eba71d180c08a79921be9c79"
+      ""
     ).trim();
     const r2PhotosBucket = (
       Deno.env.get("R2_PHOTOS_BUCKET") ||
@@ -311,6 +311,7 @@ serve(async (req) => {
       .replace(/\/$/, "");
 
     if (!accountId || !accessKeyId || !secretAccessKey) {
+      console.error("Storage R2 initialization failed: Missing server-side R2 credentials in environment");
       return new Response(
         JSON.stringify({ error: "Cloudflare R2 is not configured on the server" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

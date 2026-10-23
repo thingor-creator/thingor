@@ -32,6 +32,7 @@ import {
   ZoomIn
 } from 'lucide-react';
 import { uploadFileToStorage, openR2DocumentSecurely, downloadR2DocumentSecurely } from '../lib/storage';
+import { getR2FileSignedUrl } from '../lib/r2';
 import { ShareModal } from './ShareModal';
 import { QRCodeModal } from './QRCodeModal';
 
@@ -1402,15 +1403,22 @@ export const ItemDetailModal: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             if (isImageFile(doc.file_url, doc.file_name)) {
-                              openImageViewer(doc.file_url, {
-                                title: doc.file_name,
-                                subtitle: item.name,
-                              });
-                            } else {
-                              openR2DocumentSecurely(doc.file_url);
+                              try {
+                                const signedUrl = await getR2FileSignedUrl(doc.file_url);
+                                if (signedUrl) {
+                                  openImageViewer(signedUrl, {
+                                    title: doc.file_name,
+                                    subtitle: item.name,
+                                  });
+                                  return;
+                                }
+                              } catch (err) {
+                                console.warn('Failed to resolve signed URL for document image viewer:', err);
+                              }
                             }
+                            openR2DocumentSecurely(doc.file_url);
                           }}
                           className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] text-xs flex items-center gap-1 cursor-pointer transition-colors"
                           title={isHu ? 'Megtekintés' : 'View'}

@@ -273,21 +273,61 @@ export async function openR2DocumentSecurely(pathOrUrl: string): Promise<boolean
     return true;
   }
 
-  // Avoid popup blocker by creating window handle before await
-  const newTab = window.open('about:blank', '_blank', 'noopener,noreferrer');
+  // Pre-open blank tab during the user-initiated click gesture to avoid popup blockers.
+  // CRITICAL: Do NOT pass 'noopener' or 'noreferrer' in the 3rd argument (windowFeatures),
+  // because per the WHATWG HTML spec, 'noopener' forces window.open() to return null.
+  // When null is returned, the tab cannot be navigated or closed asynchronously, leaving
+  // about:blank stuck on the user's screen.
+  let newTab: Window | null = null;
+  try {
+    newTab = window.open('about:blank', '_blank');
+  } catch {
+    newTab = null;
+  }
+
   try {
     const signedUrl = await getR2FileSignedUrl(pathOrUrl, { isDownload: false });
-    if (signedUrl && newTab) {
-      newTab.location.href = signedUrl;
+    if (signedUrl) {
+      if (newTab && !newTab.closed) {
+        // Use location.replace so about:blank is replaced in history
+        if (typeof newTab.location?.replace === 'function') {
+          newTab.location.replace(signedUrl);
+        } else {
+          newTab.location.href = signedUrl;
+        }
+
+        // Sever opener reference after setting target to prevent reverse tabnabbing
+        try {
+          newTab.opener = null;
+        } catch {
+          // ignore in environments where opener is read-only
+        }
+        return true;
+      }
+
+      // Fallback: If newTab was blocked by popup blocker or closed by user
+      const anchor = document.createElement('a');
+      anchor.href = signedUrl;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
       return true;
     }
   } catch (err) {
     console.error('Error opening secure document:', err);
   }
 
-  if (newTab) {
-    newTab.close();
+  // If signedUrl resolution failed or was rejected, close the opened blank tab so it does not linger
+  if (newTab && !newTab.closed) {
+    try {
+      newTab.close();
+    } catch {
+      // ignore
+    }
   }
+
   return false;
 }
 
