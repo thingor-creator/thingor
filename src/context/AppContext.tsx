@@ -345,6 +345,52 @@ const DEFAULT_USER_PREFERENCES: UserPreferences = {
   compact_mode: false,
 };
 
+const isAuthTokenInvalidError = (error: any): boolean => {
+  if (!error) return false;
+  const msg = typeof error === 'string' ? error : String(error.message || '');
+  const code = String(error.code || '');
+  const name = String(error.name || '');
+  const status = typeof error.status === 'number' ? error.status : 0;
+
+  const lowerMsg = msg.toLowerCase();
+  const lowerCode = code.toLowerCase();
+  const lowerName = name.toLowerCase();
+
+  // 1. Explicitly ignore transient, abort, or network errors
+  if (
+    lowerName.includes('network') ||
+    lowerName.includes('retryable') ||
+    lowerName.includes('abort') ||
+    lowerMsg.includes('failed to fetch') ||
+    lowerMsg.includes('network') ||
+    lowerMsg.includes('timeout') ||
+    lowerMsg.includes('offline') ||
+    status === 0 ||
+    status >= 500
+  ) {
+    return false;
+  }
+
+  // 2. Verified authentication invalidity (known codes and message patterns).
+  // HTTP 400/401 alone does not trigger local session purge unless verified as an invalid auth token.
+  const isExplicitTokenError =
+    lowerCode === 'refresh_token_not_found' ||
+    lowerCode === 'session_not_found' ||
+    lowerCode === 'invalid_jwt' ||
+    lowerCode === 'bad_jwt' ||
+    lowerCode === 'user_not_found' ||
+    lowerMsg.includes('invalid_grant') ||
+    lowerMsg.includes('refresh_token_not_found') ||
+    lowerMsg.includes('invalid refresh token') ||
+    lowerMsg.includes('token is expired') ||
+    lowerMsg.includes('jwt expired') ||
+    lowerMsg.includes('user not found') ||
+    lowerMsg.includes('session missing') ||
+    lowerMsg.includes('session not found');
+
+  return isExplicitTokenError;
+};
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Default language is 'hu' (Hungarian) as requested by user
   const [language, setLanguageState] = useState<Language>(() => {
@@ -404,6 +450,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const userRef = useRef<UserProfile | null>(user);
+  const authSeqRef = useRef<number>(0);
+  const fetchingUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     userRef.current = user;
   }, [user]);
@@ -854,6 +902,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Centralized, exhaustive user session data cleanup for logout, user switch, and suspended accounts
   const clearUserSessionData = useCallback((options?: { preserveAuthModal?: boolean }) => {
+    authSeqRef.current += 1;
+    fetchingUserIdRef.current = null;
     const preserveAuth = options?.preserveAuthModal ?? false;
 
     // 1. Reset user reference and in-memory history
@@ -1427,7 +1477,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
 
   // Helper to fetch profile with role and status from Supabase
-  const fetchUserProfile = async (userId: string, email: string, metadataDisplayName?: string): Promise<UserProfile> => {
+  const fetchUserProfile = async (
+    userId: string,
+    email: string,
+    metadataDisplayName?: string,
+    _seq?: number
+  ): Promise<UserProfile | null> => {
     const cleanEmail = email.toLowerCase();
     const fallbackDisplayName = metadataDisplayName || cleanEmail.split('@')[0] || 'User';
 
@@ -1444,20 +1499,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     try {
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role, status, display_name, preferences')
         .eq('user_id', userId)
         .maybeSingle();
 
+      if (profileError) {
+        console.warn('Supabase profile fetch error:', profileError.message);
+        // Explicit query/network/RLS error: return null instead of a synthetic active or suspended profile
+        return null;
+      }
+
+      // Valid response with maybeSingle(): null profileData means record is genuinely missing (new account)
       const role: UserRole = profileData?.role === 'admin' ? 'admin' : 'user';
       const status: UserStatus = (profileData?.status as UserStatus) || 'active';
       const displayName = profileData?.display_name || fallbackDisplayName;
       const preferences = (profileData as any)?.preferences as UserPreferences | undefined;
-      if (preferences) {
-        setUserPreferences(preferences);
-        localStorage.setItem('thingor_user_preferences', JSON.stringify(preferences));
-      }
 
       return {
         id: userId,
@@ -1470,15 +1528,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         preferences,
       };
     } catch (e) {
-      return {
-        id: userId,
-        user_id: userId,
-        display_name: fallbackDisplayName,
-        email: cleanEmail,
-        role: 'user',
-        status: 'active',
-        is_admin: false,
-      };
+      console.warn('Supabase profile fetch exception:', e);
+      return null;
     }
   };
 
@@ -1565,40 +1616,65 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (error) {
-        console.warn('Supabase auth session invalid or expired:', error.message);
-        // Only purge local auth storage if an actual invalid token error was received
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        setUser(null);
-        localStorage.removeItem('thingor_user');
+        console.warn('Supabase auth session check:', error.message);
+        if (isAuthTokenInvalidError(error)) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          clearUserSessionData();
+        }
         return;
       }
 
       if (!session) {
-        // Normal anonymous visitor state (no session) - do NOT invoke signOut
-        setUser(null);
+        // Confirmed missing server-side session (not an error or network drop)
+        if (userRef.current) {
+          clearUserSessionData();
+        } else {
+          setUser(null);
+        }
         return;
       }
 
       if (session?.user) {
-        const profile = await fetchUserProfile(
-          session.user.id,
-          session.user.email || '',
-          session.user.user_metadata?.display_name
-        );
-        if (isSuspended(profile)) {
-          await supabase.auth.signOut();
-          setUser(null);
-          localStorage.removeItem('thingor_user');
-          alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
+        if (userRef.current?.id === session.user.id && userRef.current?.role) {
           return;
         }
-        setUser(profile);
+        if (fetchingUserIdRef.current === session.user.id) {
+          return;
+        }
+        fetchingUserIdRef.current = session.user.id;
+        const currentSeq = ++authSeqRef.current;
+        try {
+          const profile = await fetchUserProfile(
+            session.user.id,
+            session.user.email || '',
+            session.user.user_metadata?.display_name,
+            currentSeq
+          );
+          if (authSeqRef.current !== currentSeq) return;
+          if (!profile) {
+            console.warn('Could not fetch user profile on session init; preserving session without updating profile.');
+            return;
+          }
+          if (isSuspended(profile)) {
+            await supabase.auth.signOut();
+            clearUserSessionData();
+            alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
+            return;
+          }
+          setUser(profile);
+          userRef.current = profile;
+          if (profile.preferences) {
+            setUserPreferences(profile.preferences);
+            localStorage.setItem('thingor_user_preferences', JSON.stringify(profile.preferences));
+          }
+        } finally {
+          if (fetchingUserIdRef.current === session.user.id) {
+            fetchingUserIdRef.current = null;
+          }
+        }
       }
-    }).catch(async (err) => {
-      console.warn('Supabase getSession exception:', err);
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-      setUser(null);
-      localStorage.removeItem('thingor_user');
+    }).catch((err) => {
+      console.warn('Supabase getSession network exception (preserving local session cache):', err);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -1616,19 +1692,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       if (session?.user) {
-        const profile = await fetchUserProfile(
-          session.user.id,
-          session.user.email || '',
-          session.user.user_metadata?.display_name
-        );
-        if (isSuspended(profile)) {
-          await supabase.auth.signOut();
-          clearUserSessionData();
-          alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
+        if (userRef.current?.id === session.user.id && userRef.current?.role) {
           return;
         }
-        setUser(profile);
-        userRef.current = profile;
+        if (fetchingUserIdRef.current === session.user.id) {
+          return;
+        }
+        fetchingUserIdRef.current = session.user.id;
+        const currentSeq = ++authSeqRef.current;
+        try {
+          const profile = await fetchUserProfile(
+            session.user.id,
+            session.user.email || '',
+            session.user.user_metadata?.display_name,
+            currentSeq
+          );
+          if (authSeqRef.current !== currentSeq) return;
+          if (!profile) {
+            console.warn('Could not fetch user profile on auth state change; preserving current state.');
+            return;
+          }
+          if (isSuspended(profile)) {
+            await supabase.auth.signOut();
+            clearUserSessionData();
+            alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
+            return;
+          }
+          setUser(profile);
+          userRef.current = profile;
+          if (profile.preferences) {
+            setUserPreferences(profile.preferences);
+            localStorage.setItem('thingor_user_preferences', JSON.stringify(profile.preferences));
+          }
+        } finally {
+          if (fetchingUserIdRef.current === session.user.id) {
+            fetchingUserIdRef.current = null;
+          }
+        }
       } else if (event === 'SIGNED_OUT') {
         // Explicit sign out: clear local state without recursively calling signOut()
         clearUserSessionData();
@@ -2020,11 +2120,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (error) return { success: false, error: formatAuthError(error.message) };
 
       if (data.user) {
+        const currentSeq = ++authSeqRef.current;
         const profile = await fetchUserProfile(
           data.user.id,
           cleanEmail,
-          data.user.user_metadata?.display_name
+          data.user.user_metadata?.display_name,
+          currentSeq
         );
+        if (authSeqRef.current !== currentSeq) return { success: false };
+        if (!profile) {
+          return {
+            success: false,
+            error: language === 'hu'
+              ? 'A profil betöltése sikertelen hálózati vagy adatbázishiba miatt. Kérjük, próbáld újra!'
+              : 'Failed to load user profile due to a network or database error. Please try again.'
+          };
+        }
         if (isSuspended(profile)) {
           await supabase.auth.signOut();
           clearUserSessionData();
@@ -2037,6 +2148,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         setUser(profile);
         userRef.current = profile;
+        if (profile.preferences) {
+          setUserPreferences(profile.preferences);
+          localStorage.setItem('thingor_user_preferences', JSON.stringify(profile.preferences));
+        }
       }
       if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
         window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
@@ -2118,13 +2233,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       if (data.user && data.session) {
+        const currentSeq = ++authSeqRef.current;
         const profile = await fetchUserProfile(
           data.user.id,
           cleanEmail,
-          name || data.user.user_metadata?.display_name
+          name || data.user.user_metadata?.display_name,
+          currentSeq
         );
+        if (authSeqRef.current !== currentSeq) return { success: false, emailConfirmationRequired: false };
+        if (!profile) {
+          return {
+            success: false,
+            emailConfirmationRequired: false,
+            error: language === 'hu'
+              ? 'A fiók létrejött, de a profil betöltése nem sikerült. Kérjük, próbálj meg bejelentkezni!'
+              : 'Account created, but profile loading failed. Please try logging in.'
+          };
+        }
         setUser(profile);
         userRef.current = profile;
+        if (profile.preferences) {
+          setUserPreferences(profile.preferences);
+          localStorage.setItem('thingor_user_preferences', JSON.stringify(profile.preferences));
+        }
         if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
           window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
         }
@@ -2222,7 +2353,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const resetFilters = () => setFilters(INITIAL_FILTERS);
 
   // Helper location path builder
-  const getLocationPath = (locationId: string): string => {
+  const getLocationPath = useCallback((locationId: string): string => {
     const locMap = new Map(locations.map(l => [l.id, l]));
     const parts: string[] = [];
     const visited = new Set<string>();
@@ -2236,9 +2367,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     return parts.length > 0 ? parts.join(' → ') : (language === 'hu' ? 'Nincs megadva' : 'Unspecified');
-  };
+  }, [locations, language]);
 
-  const getCategoryName = (categoryId: string): string => {
+  const getCategoryName = useCallback((categoryId: string): string => {
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return language === 'hu' ? 'Kategorizálatlan' : 'Uncategorized';
 
@@ -2275,7 +2406,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     return cat.name;
-  };
+  }, [categories, language]);
 
   // CRUD Items (M8 Cloud Integration)
   const addItem = async (itemData: Omit<Item, 'id' | 'created_at'>): Promise<Item> => {
