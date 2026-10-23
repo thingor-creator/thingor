@@ -338,6 +338,13 @@ const INITIAL_FILTERS: FilterState = {
   sortOrder: 'desc',
 };
 
+const DEFAULT_USER_PREFERENCES: UserPreferences = {
+  pinned_modules: ['dashboard', 'items', 'lending', 'locations'],
+  module_order: [],
+  hidden_modules: [],
+  compact_mode: false,
+};
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Default language is 'hu' (Hungarian) as requested by user
   const [language, setLanguageState] = useState<Language>(() => {
@@ -428,26 +435,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
-    return {
-      pinned_modules: ['dashboard', 'items', 'lending', 'locations'],
-      module_order: [],
-      hidden_modules: [],
-      compact_mode: false,
-    };
+    return DEFAULT_USER_PREFERENCES;
   });
 
   const refreshDashboardMetrics = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase || !user) return;
+    if (!isSupabaseConfigured || !supabase || !user?.id) return;
+    const activeUserId = user.id;
     try {
       const { data, error } = await supabase.rpc('get_dashboard_metrics');
-      if (!error && data) {
+      if (!error && data && userRef.current?.id === activeUserId) {
         setDashboardMetrics(data as DashboardMetrics);
         localStorage.setItem('thingor_dashboard_metrics', JSON.stringify(data));
       }
     } catch (err) {
       console.warn('Failed to load dashboard metrics RPC:', err);
     }
-  }, [user]);
+  }, [user?.id]);
 
   const updateUserPreferences = async (newPrefs: Partial<UserPreferences>): Promise<boolean> => {
     const updated: UserPreferences = { ...userPreferences, ...newPrefs };
@@ -544,8 +547,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   useEffect(() => {
-    localStorage.setItem('thingor_loans', JSON.stringify(loans));
-  }, [loans]);
+    if (user) {
+      localStorage.setItem('thingor_loans', JSON.stringify(loans));
+    } else {
+      localStorage.removeItem('thingor_loans');
+    }
+  }, [loans, user]);
 
   const [lendingContacts, setLendingContacts] = useState<LendingContact[]>(() => {
     const saved = localStorage.getItem('thingor_lending_contacts');
@@ -559,8 +566,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   useEffect(() => {
-    localStorage.setItem('thingor_lending_contacts', JSON.stringify(lendingContacts));
-  }, [lendingContacts]);
+    if (user) {
+      localStorage.setItem('thingor_lending_contacts', JSON.stringify(lendingContacts));
+    } else {
+      localStorage.removeItem('thingor_lending_contacts');
+    }
+  }, [lendingContacts, user]);
 
   const [collections, setCollections] = useState<Collection[]>(() => {
     const saved = localStorage.getItem('thingor_collections');
@@ -585,12 +596,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   useEffect(() => {
-    localStorage.setItem('thingor_collections', JSON.stringify(collections));
-  }, [collections]);
+    if (user) {
+      localStorage.setItem('thingor_collections', JSON.stringify(collections));
+    } else {
+      localStorage.removeItem('thingor_collections');
+    }
+  }, [collections, user]);
 
   useEffect(() => {
-    localStorage.setItem('thingor_collection_items', JSON.stringify(collectionItems));
-  }, [collectionItems]);
+    if (user) {
+      localStorage.setItem('thingor_collection_items', JSON.stringify(collectionItems));
+    } else {
+      localStorage.removeItem('thingor_collection_items');
+    }
+  }, [collectionItems, user]);
 
   const [pantryItems, setPantryItems] = useState<PantryItem[]>(() => {
     const saved = localStorage.getItem('thingor_pantry_items');
@@ -604,8 +623,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   useEffect(() => {
-    localStorage.setItem('thingor_pantry_items', JSON.stringify(pantryItems));
-  }, [pantryItems]);
+    if (user) {
+      localStorage.setItem('thingor_pantry_items', JSON.stringify(pantryItems));
+    } else {
+      localStorage.removeItem('thingor_pantry_items');
+    }
+  }, [pantryItems, user]);
 
   // Vault & Secure Storage State
   const [vaultSettings, setVaultSettings] = useState<VaultSettings | null>(() => {
@@ -705,14 +728,42 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [receivedInvites, setReceivedInvites] = useState<HouseholdInvite[]>([]);
 
   // LocalStorage Sync Effects for new modules
-  useEffect(() => { localStorage.setItem('thingor_repairs', JSON.stringify(repairs)); }, [repairs]);
-  useEffect(() => { localStorage.setItem('thingor_financings', JSON.stringify(financings)); }, [financings]);
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_repairs', JSON.stringify(repairs));
+    } else {
+      localStorage.removeItem('thingor_repairs');
+    }
+  }, [repairs, user]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_financings', JSON.stringify(financings));
+    } else {
+      localStorage.removeItem('thingor_financings');
+    }
+  }, [financings, user]);
+
   useEffect(() => {
     if (household) localStorage.setItem('thingor_household', JSON.stringify(household));
     else localStorage.removeItem('thingor_household');
   }, [household]);
-  useEffect(() => { localStorage.setItem('thingor_household_members', JSON.stringify(householdMembers)); }, [householdMembers]);
-  useEffect(() => { localStorage.setItem('thingor_household_invites', JSON.stringify(householdInvites)); }, [householdInvites]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_household_members', JSON.stringify(householdMembers));
+    } else {
+      localStorage.removeItem('thingor_household_members');
+    }
+  }, [householdMembers, user]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_household_invites', JSON.stringify(householdInvites));
+    } else {
+      localStorage.removeItem('thingor_household_invites');
+    }
+  }, [householdInvites, user]);
 
   // Item Relations & Quick Notes State
   const [itemRelations, setItemRelations] = useState<ItemRelation[]>(() => {
@@ -731,8 +782,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return [];
   });
 
-  useEffect(() => { localStorage.setItem('thingor_item_relations', JSON.stringify(itemRelations)); }, [itemRelations]);
-  useEffect(() => { localStorage.setItem('thingor_quick_notes', JSON.stringify(quickNotes)); }, [quickNotes]);
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_item_relations', JSON.stringify(itemRelations));
+    } else {
+      localStorage.removeItem('thingor_item_relations');
+    }
+  }, [itemRelations, user]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_quick_notes', JSON.stringify(quickNotes));
+    } else {
+      localStorage.removeItem('thingor_quick_notes');
+    }
+  }, [quickNotes, user]);
 
   // Physical Storage Containers State
   const [storageContainers, setStorageContainers] = useState<StorageContainer[]>(() => {
@@ -751,8 +815,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return [];
   });
 
-  useEffect(() => { localStorage.setItem('thingor_storage_containers', JSON.stringify(storageContainers)); }, [storageContainers]);
-  useEffect(() => { localStorage.setItem('thingor_container_items', JSON.stringify(containerItems)); }, [containerItems]);
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_storage_containers', JSON.stringify(storageContainers));
+    } else {
+      localStorage.removeItem('thingor_storage_containers');
+    }
+  }, [storageContainers, user]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('thingor_container_items', JSON.stringify(containerItems));
+    } else {
+      localStorage.removeItem('thingor_container_items');
+    }
+  }, [containerItems, user]);
 
   // UI state
   const [currentView, setCurrentView] = useState<ViewMode>(() => {
@@ -774,6 +851,104 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isSupabaseInfoOpen, setIsSupabaseInfoOpen] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+
+  // Centralized, exhaustive user session data cleanup for logout, user switch, and suspended accounts
+  const clearUserSessionData = useCallback((options?: { preserveAuthModal?: boolean }) => {
+    const preserveAuth = options?.preserveAuthModal ?? false;
+
+    // 1. Reset user reference and in-memory history
+    setUser(null);
+    userRef.current = null;
+    viewHistoryRef.current = [];
+    if (!preserveAuth) {
+      activeModalsRef.current = [];
+    }
+
+    // 2. Reset all user-specific data states
+    setItems([]);
+    setDocuments([]);
+    setLocations([]);
+    setCategories(DEFAULT_CATEGORIES);
+    setHousehold(null);
+    setHouseholdMembers([]);
+    setHouseholdInvites([]);
+    setReceivedInvites([]);
+    setRepairs([]);
+    setFinancings([]);
+    setLoans([]);
+    setLendingContacts([]);
+    setCollections([]);
+    setCollectionItems([]);
+    setPantryItems([]);
+    setQuickNotes([]);
+    setItemRelations([]);
+    setStorageContainers([]);
+    setContainerItems([]);
+    setDashboardMetrics(null);
+    setUserPreferences(DEFAULT_USER_PREFERENCES);
+    setVaultSettings(null);
+    setIsVaultUnlocked(false);
+    setVaultFailedAttempts(0);
+    setVaultLockoutUntil(0);
+    setNotifications([]);
+    setUserNotificationSettings(null);
+    setItemShares([]);
+    setActiveShareToken(null);
+    setSharedItemData(null);
+
+    // 3. Reset UI overlay states
+    setSelectedItemId(null);
+    setEditingItem(null);
+    setFilters(INITIAL_FILTERS);
+    setIsAddEditItemModalOpen(false);
+    setIsLocationModalOpen(false);
+    setIsCategoryModalOpen(false);
+    if (!preserveAuth) {
+      setIsAuthModalOpen(false);
+    }
+    setIsNotificationModalOpen(false);
+    setIsQRScannerOpen(false);
+    setIsSupabaseInfoOpen(false);
+
+    // 4. Purge all user-specific storage keys
+    localStorage.removeItem('thingor_user');
+    localStorage.removeItem('thingor_items');
+    localStorage.removeItem('thingor_items_backup');
+    localStorage.removeItem('thingor_dashboard_metrics');
+    localStorage.removeItem('thingor_user_preferences');
+    localStorage.removeItem('thingor_categories');
+    localStorage.removeItem('thingor_locations');
+    localStorage.removeItem('thingor_documents');
+    localStorage.removeItem('thingor_repairs');
+    localStorage.removeItem('thingor_financings');
+    localStorage.removeItem('thingor_loans');
+    localStorage.removeItem('thingor_lending_contacts');
+    localStorage.removeItem('thingor_collections');
+    localStorage.removeItem('thingor_collection_items');
+    localStorage.removeItem('thingor_pantry_items');
+    localStorage.removeItem('thingor_quick_notes');
+    localStorage.removeItem('thingor_item_relations');
+    localStorage.removeItem('thingor_storage_containers');
+    localStorage.removeItem('thingor_container_items');
+    localStorage.removeItem('thingor_household');
+    localStorage.removeItem('thingor_household_members');
+    localStorage.removeItem('thingor_household_invites');
+    localStorage.removeItem('thingor_active_household_id');
+    localStorage.removeItem('thingor_notifications');
+    localStorage.removeItem('thingor_notification_settings');
+    localStorage.removeItem('thingor_vault_settings');
+    localStorage.removeItem('thingor_item_shares');
+    sessionStorage.removeItem('thingor_vault_unlocked');
+
+    // 5. Reset URL / History to landing (only if not actively authenticating)
+    if (!preserveAuth) {
+      localStorage.removeItem('thingor_current_view');
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({ view: 'landing', selectedItemId: null, isModal: false }, '', '');
+      }
+      setCurrentView('landing');
+    }
+  }, []);
 
   // PWA History & Back Navigation Handler
   const isPoppingRef = useRef(false);
@@ -1159,11 +1334,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Sync to LocalStorage
   useEffect(() => {
-    localStorage.setItem('thingor_current_view', currentView);
-  }, [currentView]);
+    if (user) {
+      localStorage.setItem('thingor_current_view', currentView);
+    } else {
+      localStorage.removeItem('thingor_current_view');
+    }
+  }, [currentView, user]);
 
   useEffect(() => {
-    if (items.length > 0) {
+    if (user) {
       try {
         const cacheItems = items.slice(0, 50);
         localStorage.setItem('thingor_items', JSON.stringify(cacheItems));
@@ -1171,20 +1350,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       } catch {
         console.warn('LocalStorage quota limit reached, skipping full item serialization');
       }
+    } else {
+      localStorage.removeItem('thingor_items');
+      localStorage.removeItem('thingor_items_backup');
     }
-  }, [items]);
+  }, [items, user]);
 
   useEffect(() => {
-    localStorage.setItem('thingor_categories', JSON.stringify(categories));
-  }, [categories]);
+    if (user) {
+      localStorage.setItem('thingor_categories', JSON.stringify(categories));
+    } else {
+      localStorage.removeItem('thingor_categories');
+    }
+  }, [categories, user]);
 
   useEffect(() => {
-    localStorage.setItem('thingor_locations', JSON.stringify(locations));
-  }, [locations]);
+    if (user) {
+      localStorage.setItem('thingor_locations', JSON.stringify(locations));
+    } else {
+      localStorage.removeItem('thingor_locations');
+    }
+  }, [locations, user]);
 
   useEffect(() => {
-    localStorage.setItem('thingor_documents', JSON.stringify(documents));
-  }, [documents]);
+    if (user) {
+      localStorage.setItem('thingor_documents', JSON.stringify(documents));
+    } else {
+      localStorage.removeItem('thingor_documents');
+    }
+  }, [documents, user]);
 
   useEffect(() => {
     if (user) {
@@ -1222,8 +1416,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [sharedItemData, setSharedItemData] = useState<SharedItemViewData | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('thingor_item_shares', JSON.stringify(itemShares));
-  }, [itemShares]);
+    if (user) {
+      localStorage.setItem('thingor_item_shares', JSON.stringify(itemShares));
+    } else {
+      localStorage.removeItem('thingor_item_shares');
+    }
+  }, [itemShares, user]);
 
   const isUUID = (str?: string | null): boolean =>
     Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
@@ -1425,9 +1623,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         );
         if (isSuspended(profile)) {
           await supabase.auth.signOut();
-          setUser(null);
-          userRef.current = null;
-          localStorage.removeItem('thingor_user');
+          clearUserSessionData();
           alert('Fiókod fel van függesztve. Kérjük, lépj kapcsolatba a rendszeradminisztrátorral.');
           return;
         }
@@ -1435,32 +1631,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         userRef.current = profile;
       } else if (event === 'SIGNED_OUT') {
         // Explicit sign out: clear local state without recursively calling signOut()
-        setUser(null);
-        userRef.current = null;
-        viewHistoryRef.current = [];
-        setItems([]);
-        setDocuments([]);
-        setLocations([]);
-        setHousehold(null);
-        setHouseholdMembers([]);
-        setHouseholdInvites([]);
-        setReceivedInvites([]);
-        setStorageContainers([]);
-        setContainerItems([]);
-        localStorage.removeItem('thingor_user');
-        localStorage.removeItem('thingor_items');
-        localStorage.removeItem('thingor_documents');
-        localStorage.removeItem('thingor_locations');
-        localStorage.removeItem('thingor_household');
-        localStorage.removeItem('thingor_household_members');
-        localStorage.removeItem('thingor_household_invites');
-        localStorage.removeItem('thingor_storage_containers');
-        localStorage.removeItem('thingor_container_items');
-        localStorage.removeItem('thingor_current_view');
-        if (typeof window !== 'undefined') {
-          window.history.replaceState({ view: 'landing', selectedItemId: null, isModal: false }, '', '');
-        }
-        setCurrentView('landing');
+        clearUserSessionData();
       }
     });
 
@@ -1841,26 +2012,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const cleanEmail = email.trim().toLowerCase();
 
     // Clear any previous user state before logging in
-    setItems([]);
-    setDocuments([]);
-    setLocations([]);
-    setHousehold(null);
-    setHouseholdMembers([]);
-    setHouseholdInvites([]);
-    setReceivedInvites([]);
-    setStorageContainers([]);
-    setContainerItems([]);
-    setDashboardMetrics(null);
-    localStorage.removeItem('thingor_items');
-    localStorage.removeItem('thingor_items_backup');
-    localStorage.removeItem('thingor_dashboard_metrics');
-    localStorage.removeItem('thingor_documents');
-    localStorage.removeItem('thingor_locations');
-    localStorage.removeItem('thingor_household');
-    localStorage.removeItem('thingor_household_members');
-    localStorage.removeItem('thingor_household_invites');
-    localStorage.removeItem('thingor_storage_containers');
-    localStorage.removeItem('thingor_container_items');
+    clearUserSessionData({ preserveAuthModal: true });
 
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: pass });
@@ -1875,8 +2027,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         );
         if (isSuspended(profile)) {
           await supabase.auth.signOut();
-          setUser(null);
-          localStorage.removeItem('thingor_user');
+          clearUserSessionData();
           return {
             success: false,
             error: language === 'hu'
@@ -1938,22 +2089,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const cleanEmail = email.trim().toLowerCase();
 
     // Clear any previous user state before signing up
-    setItems([]);
-    setDocuments([]);
-    setLocations([]);
-    setHousehold(null);
-    setHouseholdMembers([]);
-    setHouseholdInvites([]);
-    setReceivedInvites([]);
-    setDashboardMetrics(null);
-    localStorage.removeItem('thingor_items');
-    localStorage.removeItem('thingor_items_backup');
-    localStorage.removeItem('thingor_dashboard_metrics');
-    localStorage.removeItem('thingor_documents');
-    localStorage.removeItem('thingor_locations');
-    localStorage.removeItem('thingor_household');
-    localStorage.removeItem('thingor_household_members');
-    localStorage.removeItem('thingor_household_invites');
+    clearUserSessionData({ preserveAuthModal: true });
 
     const currentIsAdmin = isAdmin(user);
     if (isRegistrationSuspended && !currentIsAdmin) {
@@ -2080,44 +2216,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isSupabaseConfigured && supabase) {
       supabase.auth.signOut().catch(console.error);
     }
-    setUser(null);
-    userRef.current = null;
-    viewHistoryRef.current = [];
-    setItems([]);
-    setDocuments([]);
-    setLocations([]);
-    setHousehold(null);
-    setHouseholdMembers([]);
-    setHouseholdInvites([]);
-    setReceivedInvites([]);
-    setNotifications([]);
-    setUserNotificationSettings(null);
-    setVaultSettings(null);
-    setIsVaultUnlocked(false);
-    sessionStorage.removeItem('thingor_vault_unlocked');
-    localStorage.removeItem('thingor_vault_settings');
-    localStorage.removeItem('thingor_user');
-    localStorage.removeItem('thingor_items');
-    localStorage.removeItem('thingor_items_backup');
-    localStorage.removeItem('thingor_dashboard_metrics');
-    setDashboardMetrics(null);
-    localStorage.removeItem('thingor_documents');
-    localStorage.removeItem('thingor_locations');
-    localStorage.removeItem('thingor_household');
-    localStorage.removeItem('thingor_household_members');
-    localStorage.removeItem('thingor_household_invites');
-    localStorage.removeItem('thingor_notifications');
-    localStorage.removeItem('thingor_notification_settings');
-    localStorage.removeItem('thingor_storage_containers');
-    localStorage.removeItem('thingor_container_items');
-    setStorageContainers([]);
-    setContainerItems([]);
-    localStorage.removeItem('thingor_current_view');
-    setIsAuthModalOpen(false);
-    if (typeof window !== 'undefined') {
-      window.history.replaceState({ view: 'landing', selectedItemId: null, isModal: false }, '', '');
-    }
-    setCurrentView('landing');
+    clearUserSessionData();
   };
 
   const resetFilters = () => setFilters(INITIAL_FILTERS);
@@ -2555,19 +2654,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const fetchNotifications = async () => {
     if (!notificationTablesAvailableRef.current) return;
     if (isSupabaseConfigured && supabase && user?.id) {
+      const activeUserId = user.id;
       try {
         const [notificationsRes, settingsRes] = await Promise.all([
           supabase
             .from('notifications')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', activeUserId)
             .order('created_at', { ascending: false }),
           supabase
             .from('user_notification_settings')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', activeUserId)
             .maybeSingle(),
         ]);
+
+        if (userRef.current?.id !== activeUserId) return;
 
         const { data, error } = notificationsRes;
         const { data: settingsData, error: settingsError } = settingsRes;
@@ -2579,7 +2681,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
 
-        if (!error && data) {
+        if (!error && data && userRef.current?.id === activeUserId) {
           setNotifications(data as AppNotification[]);
           localStorage.setItem('thingor_notifications', JSON.stringify(data));
         }
@@ -2590,7 +2692,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
 
-        if (!settingsError && settingsData) {
+        if (!settingsError && settingsData && userRef.current?.id === activeUserId) {
           setUserNotificationSettings(settingsData as UserNotificationSettings);
           localStorage.setItem('thingor_notification_settings', JSON.stringify(settingsData));
         }
@@ -3455,12 +3557,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Physical Storage Containers & Bulk Items Module CRUD
   const fetchStorageContainers = useCallback(async (): Promise<void> => {
     if (!isSupabaseConfigured || !supabase || !user?.id) return;
+    const activeUserId = user.id;
     try {
       const { data, error } = await supabase
         .from('storage_containers')
         .select('*')
         .order('created_at', { ascending: true });
-      if (!error && data) {
+      if (!error && data && userRef.current?.id === activeUserId) {
         setStorageContainers(data as StorageContainer[]);
       } else if (error) {
         throw error;
@@ -3473,11 +3576,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchContainerItems = useCallback(async (containerId?: string): Promise<void> => {
     if (!isSupabaseConfigured || !supabase || !user?.id) return;
+    const activeUserId = user.id;
     try {
       let query = supabase.from('container_items').select('*').order('created_at', { ascending: true });
       if (containerId) query = query.eq('container_id', containerId);
       const { data, error } = await query;
-      if (!error && data) {
+      if (!error && data && userRef.current?.id === activeUserId) {
         if (containerId) {
           setContainerItems(prev => {
             const others = prev.filter(ci => ci.container_id !== containerId);
