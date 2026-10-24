@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { X, Camera, AlertCircle, ArrowLeft, Search, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -25,17 +25,197 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const scannerRegionId = 'qr-scanner-region';
 
+  // Lifecycle & stream tracking references
+  const currentSessionIdRef = useRef(0);
+  const activeStreamsRef = useRef<Set<MediaStream>>(new Set());
+  const activeTracksRef = useRef<Set<MediaStreamTrack>>(new Set());
+
+  // Safely stop all active MediaStreamTracks and clear active streams
+  const stopAllTracks = useCallback(() => {
+    activeTracksRef.current.forEach((track) => {
+      try {
+        if (track.readyState !== 'ended') {
+          track.stop();
+        }
+      } catch (_) {
+        // Ignore track stop errors
+      }
+    });
+    activeTracksRef.current.clear();
+
+    activeStreamsRef.current.forEach((stream) => {
+      try {
+        stream.getTracks().forEach((track) => {
+          try {
+            if (track.readyState !== 'ended') {
+              track.stop();
+            }
+          } catch (_) {}
+        });
+      } catch (_) {
+        // Ignore stream stop errors
+      }
+    });
+    activeStreamsRef.current.clear();
+  }, []);
+
+  // Clean DOM video elements and reset srcObject
+  const cleanDomVideosAndTracks = useCallback(() => {
+    try {
+      const container = document.getElementById(scannerRegionId);
+      const videos = container
+        ? Array.from(container.querySelectorAll('video'))
+        : Array.from(document.querySelectorAll<HTMLVideoElement>(`#${scannerRegionId} video, video[id*="qr"]`));
+
+      videos.forEach((video) => {
+        try {
+          const stream = video.srcObject;
+          if (stream instanceof MediaStream) {
+            stream.getTracks().forEach((track) => {
+              try {
+                if (track.readyState !== 'ended') {
+                  track.stop();
+                }
+              } catch (_) {}
+            });
+            video.srcObject = null;
+          }
+        } catch (_) {}
+
+        try {
+          video.pause();
+          video.src = '';
+          video.load();
+        } catch (_) {}
+      });
+    } catch (_) {
+      // Ignore DOM inspection errors
+    }
+  }, [scannerRegionId]);
+
+  // Stop Html5Qrcode instance safely according to its state
+  const stopScannerInstance = useCallback(async (instance: Html5Qrcode | null) => {
+    if (!instance) return;
+    try {
+      const state = instance.getState();
+      if (
+        state === Html5QrcodeScannerState.SCANNING ||
+        state === Html5QrcodeScannerState.PAUSED ||
+        instance.isScanning
+      ) {
+        await instance.stop();
+      }
+    } catch (_) {
+      // Ignore stop errors and proceed to clear
+    }
+
+    try {
+      instance.clear();
+    } catch (_) {
+      // Ignore clear errors
+    }
+  }, []);
+
+  // Master cleanup function: stops tracks immediately, terminates scanner instance, and resets DOM
+  const stopScanner = useCallback(async () => {
+    // Invalidate current session to abort any pending start() / getUserMedia
+    currentSessionIdRef.current += 1;
+
+    // 1. Immediately stop all tracked tracks synchronously
+    stopAllTracks();
+
+    // 2. Clean all video elements currently attached to the DOM
+    cleanDomVideosAndTracks();
+
+    // 3. Stop and clear Html5Qrcode instance
+    const instance = html5QrcodeRef.current;
+    html5QrcodeRef.current = null;
+    if (instance) {
+      await stopScannerInstance(instance);
+    }
+
+    // 4. Secondary sweep of DOM videos and tracks after instance cleanup
+    cleanDomVideosAndTracks();
+    stopAllTracks();
+
+    setIsScanning(false);
+  }, [stopAllTracks, cleanDomVideosAndTracks, stopScannerInstance]);
+
+  // Handle explicit close by user
+  const handleClose = useCallback(() => {
+    stopScanner();
+    onClose();
+  }, [stopScanner, onClose]);
+
+  // Listen to Escape key to ensure camera cleanup on keyboard close
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleClose]);
+
+  // Main lifecycle effect: starts scanner when open, ensures thorough cleanup on close/unmount
   useEffect(() => {
     if (!isOpen) {
       stopScanner();
       return;
     }
 
-    let isMounted = true;
+    const sessionId = ++currentSessionIdRef.current;
     setScannerError(null);
     setScanSuccessText(null);
 
-    const startScanner = async () => {
+    let originalGUM: typeof navigator.mediaDevices.getUserMedia | null = null;
+    let patchedGUM = false;
+
+    // Allow modal DOM animation/rendering to complete before starting camera
+    const timer = setTimeout(async () => {
+      if (currentSessionIdRef.current !== sessionId) return;
+
+      const container = document.getElementById(scannerRegionId);
+      if (!container) return;
+
+      // Intercept getUserMedia for this session to track streams and intercept cancelled starts
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+        originalGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+        patchedGUM = true;
+
+        navigator.mediaDevices.getUserMedia = async (constraints) => {
+          const stream = await originalGUM!(constraints);
+
+          // Track stream and tracks
+          activeStreamsRef.current.add(stream);
+          stream.getTracks().forEach((track) => {
+            activeTracksRef.current.add(track);
+            track.addEventListener('ended', () => {
+              activeTracksRef.current.delete(track);
+            });
+          });
+
+          // If session was closed while user was approving permission or camera was initializing
+          if (currentSessionIdRef.current !== sessionId) {
+            stream.getTracks().forEach((track) => {
+              try {
+                track.stop();
+              } catch (_) {}
+            });
+            activeStreamsRef.current.delete(stream);
+            throw new Error('Scanner modal closed before camera initialization completed');
+          }
+
+          return stream;
+        };
+      }
+
       try {
         const html5Qrcode = new Html5Qrcode(scannerRegionId);
         html5QrcodeRef.current = html5Qrcode;
@@ -49,26 +229,45 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         setIsScanning(true);
 
         await html5Qrcode.start(
-          { facingMode: 'environment' }, // Prefer back camera on phones
+          { facingMode: 'environment' },
           config,
           (decodedText) => {
-            if (isMounted) {
+            if (currentSessionIdRef.current === sessionId) {
               setScanSuccessText(isHu ? 'Sikeres beolvasás!' : 'Scan successful!');
+              // Immediately stop camera tracks upon successful scan
               stopScanner();
               setTimeout(() => {
                 onScanResult(decodedText);
-              }, 400);
+              }, 350);
             }
           },
           () => {
             // Ignore frame scan failures
           }
         );
+
+        // If session was cancelled while start() was resolving
+        if (currentSessionIdRef.current !== sessionId) {
+          await stopScannerInstance(html5Qrcode);
+          cleanDomVideosAndTracks();
+          stopAllTracks();
+        }
       } catch (err: any) {
-        if (isMounted) {
+        if (currentSessionIdRef.current === sessionId) {
           setIsScanning(false);
-          const errMsg = err?.message || err || '';
-          if (errMsg.includes('Permission') || errMsg.includes('allowed')) {
+          const errMsg = err?.message || err?.toString() || '';
+
+          if (errMsg.includes('closed') || errMsg.includes('cancelled')) {
+            // Cancelled by user closing the modal, no error display needed
+            return;
+          }
+
+          if (
+            errMsg.includes('Permission') ||
+            errMsg.includes('allowed') ||
+            errMsg.includes('NotAllowedError') ||
+            errMsg.includes('PermissionDeniedError')
+          ) {
             setScannerError(
               isHu
                 ? 'Kameraengedély megtagadva. Kérjük, engedélyezd a kamerát a böngésző beállításaiban.'
@@ -88,53 +287,49 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             );
           }
         }
+      } finally {
+        // Restore original getUserMedia if it was patched
+        if (patchedGUM && originalGUM && navigator.mediaDevices) {
+          navigator.mediaDevices.getUserMedia = originalGUM;
+        }
       }
-    };
-
-    // Small timeout to allow DOM element to render
-    const timer = setTimeout(() => {
-      startScanner();
-    }, 200);
+    }, 180);
 
     return () => {
       clearTimeout(timer);
-      isMounted = false;
+      if (patchedGUM && originalGUM && navigator.mediaDevices) {
+        navigator.mediaDevices.getUserMedia = originalGUM;
+      }
       stopScanner();
     };
-  }, [isOpen]);
-
-  const stopScanner = async () => {
-    if (html5QrcodeRef.current) {
-      try {
-        if (html5QrcodeRef.current.isScanning) {
-          await html5QrcodeRef.current.stop();
-        }
-        html5QrcodeRef.current.clear();
-      } catch (e) {
-        // Ignore stop errors
-      }
-      html5QrcodeRef.current = null;
-    }
-    setIsScanning(false);
-  };
+  }, [isOpen, isHu, onScanResult, stopScanner, cleanDomVideosAndTracks, stopAllTracks, stopScannerInstance]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualInput.trim()) return;
+    stopScanner();
     onScanResult(manualInput.trim());
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
       <div className="relative w-full max-w-lg rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl overflow-hidden flex flex-col">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)]">
           <div className="flex items-center gap-2.5">
             <button
-              onClick={onClose}
+              type="button"
+              onClick={handleClose}
               className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -147,7 +342,8 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            type="button"
+            onClick={handleClose}
             className="p-2 rounded-xl text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] transition-colors"
           >
             <X className="h-5 w-5" />
@@ -226,3 +422,4 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
     </div>
   );
 };
+
