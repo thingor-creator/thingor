@@ -28,6 +28,13 @@ export interface TranslationKeys {
   marketplace_saved: string;
   marketplace_messages: string;
   marketplace_create: string;
+  follow: string;
+  following: string;
+  unfollow: string;
+  followers: string;
+  no_followers_yet: string;
+  no_following_yet: string;
+  follow_login_required: string;
   add_thing: string;
   browse_things: string;
   add_location: string;
@@ -121,6 +128,13 @@ export const translations: Record<Language, TranslationKeys> = {
     marketplace_saved: 'Mentett kedvencek',
     marketplace_messages: 'Üzenetek & Ajánlatok',
     marketplace_create: 'Hirdetés feladása',
+    follow: 'Követés',
+    following: 'Követed',
+    unfollow: 'Követés visszavonása',
+    followers: 'Követő',
+    no_followers_yet: 'Még nincsenek követői.',
+    no_following_yet: 'Még nem követ senkit.',
+    follow_login_required: 'A követéshez bejelentkezés szükséges.',
     add_thing: 'Tárgy hozzáadása',
     browse_things: 'Tárgyak böngészése',
     add_location: 'Helyszín hozzáadása',
@@ -207,6 +221,13 @@ export const translations: Record<Language, TranslationKeys> = {
     marketplace_saved: 'Saved Items',
     marketplace_messages: 'Messages & Offers',
     marketplace_create: 'Create Listing',
+    follow: 'Follow',
+    following: 'Following',
+    unfollow: 'Unfollow',
+    followers: 'Followers',
+    no_followers_yet: 'No followers yet.',
+    no_following_yet: 'Not following anyone yet.',
+    follow_login_required: 'Sign in required to follow this member.',
     add_thing: 'Add Thing',
     browse_things: 'Browse things',
     add_location: 'Add location',
