@@ -238,8 +238,11 @@ export const HouseholdView: React.FC = () => {
   const sharedTotalValue = sharedItems.reduce((sum, i) => sum + (i.current_value || i.purchase_price || 0), 0);
 
   // Current user member and permissions
-  const currentUserMember = householdMembers.find(m => m.user_id === user?.id);
-  const isOwnerOrAdmin = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
+  const currentUserMember = householdMembers.find(
+    m => m.user_id === user?.id || (m.user_email && user?.email && m.user_email.toLowerCase() === user.email.toLowerCase())
+  );
+  const isOwnerOrAdmin = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin' || (household ? household.owner_id === user?.id : false);
+  const isActualMemberOrOwner = !!currentUserMember || (household ? household.owner_id === user?.id : false);
 
   if (!user) {
     return (
@@ -268,7 +271,7 @@ export const HouseholdView: React.FC = () => {
     );
   }
 
-  if (!household) {
+  if (!household || !isActualMemberOrOwner) {
     return (
       <div className="max-w-2xl mx-auto space-y-6 py-8">
         {/* Received Pending Invitations */}

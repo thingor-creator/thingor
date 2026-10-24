@@ -723,23 +723,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [household, setHousehold] = useState<Household | null>(() => {
     const saved = localStorage.getItem('thingor_household');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+    const savedUser = localStorage.getItem('thingor_user');
+    if (saved && savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        const parsedHh = JSON.parse(saved);
+        if (parsedHh && parsedUser?.id && (parsedHh.owner_id === parsedUser.id || !isUUID(parsedHh.id))) {
+          return parsedHh;
+        }
+      } catch (e) {}
     }
     return null;
   });
 
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>(() => {
     const saved = localStorage.getItem('thingor_household_members');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+    const savedUser = localStorage.getItem('thingor_user');
+    if (saved && savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        const parsedMembers = JSON.parse(saved);
+        if (Array.isArray(parsedMembers) && parsedUser?.id && parsedMembers.some((m: HouseholdMember) => m.user_id === parsedUser.id || (m.user_email && parsedUser.email && m.user_email.toLowerCase() === parsedUser.email.toLowerCase()))) {
+          return parsedMembers;
+        }
+      } catch (e) {}
     }
     return [];
   });
 
   const [householdInvites, setHouseholdInvites] = useState<HouseholdInvite[]>(() => {
     const saved = localStorage.getItem('thingor_household_invites');
-    if (saved) {
+    const savedUser = localStorage.getItem('thingor_user');
+    if (saved && savedUser) {
       try { return JSON.parse(saved); } catch (e) {}
     }
     return [];
@@ -793,12 +808,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [financings, user]);
 
   useEffect(() => {
-    if (household) localStorage.setItem('thingor_household', JSON.stringify(household));
+    if (household && user) localStorage.setItem('thingor_household', JSON.stringify(household));
     else localStorage.removeItem('thingor_household');
-  }, [household]);
+  }, [household, user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && householdMembers.length > 0) {
       localStorage.setItem('thingor_household_members', JSON.stringify(householdMembers));
     } else {
       localStorage.removeItem('thingor_household_members');
@@ -1626,17 +1641,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (!session) {
         // Confirmed missing server-side session (not an error or network drop)
-        if (userRef.current) {
-          clearUserSessionData();
-        } else {
-          setUser(null);
-        }
+        clearUserSessionData();
         return;
       }
 
       if (session?.user) {
         if (userRef.current?.id === session.user.id && userRef.current?.role) {
           return;
+        }
+        if (userRef.current && userRef.current.id !== session.user.id) {
+          clearUserSessionData({ preserveAuthModal: true });
         }
         if (fetchingUserIdRef.current === session.user.id) {
           return;
@@ -1683,6 +1697,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setIsAuthModalOpen(true);
       } else if (event === 'SIGNED_IN' && session?.user) {
         setIsAuthModalOpen(false);
+        if (!userRef.current || userRef.current.id !== session.user.id) {
+          clearUserSessionData({ preserveAuthModal: true });
+        }
         if (currentViewRef.current === 'landing') {
           if (typeof window !== 'undefined' && window.history.state && window.history.state.isModal) {
             window.history.replaceState({ view: 'dashboard', selectedItemId: null, isModal: false }, '', '#dashboard');
@@ -1983,6 +2000,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         } else if (isMounted && household && !isUUID(household.id)) {
           ensureValidHousehold(household);
+        } else if (isMounted) {
+          // If user is not part of any household in Supabase, ensure stale state from previous session is purged
+          setHousehold(null);
+          setHouseholdMembers([]);
+          setHouseholdInvites([]);
+          localStorage.removeItem('thingor_household');
+          localStorage.removeItem('thingor_household_members');
+          localStorage.removeItem('thingor_household_invites');
+          localStorage.removeItem('thingor_active_household_id');
         }
       });
 
