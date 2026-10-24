@@ -28,6 +28,7 @@ import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { StorageView } from './components/StorageView';
+import { MarketplaceView } from './components/marketplace/MarketplaceView';
 import { ImageViewerModal } from './components/ImageViewerModal';
 import { Wrench, ShieldCheck, ShieldAlert, LogOut } from 'lucide-react';
 import { applyTheme } from './lib/theme';
@@ -58,6 +59,7 @@ const AppContent: React.FC = () => {
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
   const [isStorageViewOpen, setIsStorageViewOpen] = useState(false);
+  const [marketplaceListingId, setMarketplaceListingId] = useState<string | null>(null);
 
   // Scroll window to top whenever view or selected item changes
   useEffect(() => {
@@ -112,6 +114,23 @@ const AppContent: React.FC = () => {
       setIsStorageViewOpen(false);
       if (currentView === 'storage') {
         setCurrentView(isAuthenticated ? 'dashboard' : 'landing');
+      }
+
+      // 1.5 Check marketplace view (#marketplace, #marketplace/listing/xyz, ?view=marketplace)
+      if (hash.startsWith('#marketplace/listing/')) {
+        const lid = hash.replace('#marketplace/listing/', '').trim();
+        setMarketplaceListingId(lid);
+        if (currentView !== 'marketplace') {
+          setCurrentView('marketplace');
+        }
+        return;
+      }
+      if (hash === '#marketplace' || searchParams.get('view') === 'marketplace' || pathname === '/marketplace') {
+        setMarketplaceListingId(null);
+        if (currentView !== 'marketplace') {
+          setCurrentView('marketplace');
+        }
+        return;
       }
 
       // 2. Check share token (#share/xyz, ?share=xyz, /share/xyz)
@@ -293,6 +312,7 @@ const AppContent: React.FC = () => {
               {currentView === 'collections' && <CollectionsView />}
               {currentView === 'pantry' && <PantryView />}
               {currentView === 'vault' && <VaultView />}
+              {currentView === 'marketplace' && <MarketplaceView initialListingId={marketplaceListingId} />}
               {currentView === 'admin' && <AdminView />}
               {currentView === 'settings' && <SettingsView />}
             </>

@@ -390,3 +390,82 @@ export async function deleteFileFromR2(filePath: string): Promise<{ success: boo
     return { success: false, error: err.message || 'Cloudflare R2 delete failed' };
   }
 }
+
+/**
+ * Validates that a marketplace listing image URL or relative path belongs to the authorized
+ * public Thingor media domain and the listing owner's photos folder.
+ * Enforces true URL parsing, rejects external hosts, host spoofing, query parameters,
+ * tokens, vault documents, and path traversal.
+ */
+export function validateMarketplaceImageOrigin(
+  imageUrl: string,
+  ownerId: string
+): { valid: boolean; error?: string } {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return { valid: false, error: 'Képhivatkozás megadása kötelező' };
+  }
+
+  const trimmed = imageUrl.trim();
+  if (trimmed.length < 5 || trimmed.length > 1000) {
+    return { valid: false, error: 'A képhivatkozás hossza érvénytelen (5-1000 karakter)' };
+  }
+
+  // Reject whitespace, control characters, query strings, fragments, backslashes, percent-encoding
+  if (/[\s\x00-\x1f\x7f]/.test(trimmed) || /[?#\\%]/.test(trimmed)) {
+    return { valid: false, error: 'A képhivatkozás érvénytelen karaktereket tartalmaz' };
+  }
+
+  if (trimmed.includes('..') || trimmed.includes('@')) {
+    return { valid: false, error: 'Útvonalbejárás vagy érvénytelen authority észlelve' };
+  }
+
+  // Strictly forbid documents, vault paths, and presigned parameters
+  if (/(vault|documents|x-amz-|token=)/i.test(trimmed)) {
+    return { valid: false, error: 'Privát dokumentumok és védett Vault fájlok nem használhatók piactéri képként' };
+  }
+
+  let pathPart = trimmed;
+  if (/^https:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      const host = url.hostname.toLowerCase();
+      // Only authorized media domain is allowed
+      if (host !== 'media.thingor.com') {
+        return { valid: false, error: `Nem engedélyezett képtárhely domain: ${host}` };
+      }
+      pathPart = url.pathname;
+    } catch {
+      return { valid: false, error: 'Érvénytelen URL formátum' };
+    }
+  } else if (/^[a-zA-Z0-9+.-]+:\/\//.test(trimmed) || trimmed.startsWith('//')) {
+    return { valid: false, error: 'Nem engedélyezett URL séma (csak https:// vagy relatív útvonal használható)' };
+  }
+
+  const normalizedPath = pathPart.replace(/^\/+/, '');
+  const segments = normalizedPath.split('/');
+  if (segments.length < 3) {
+    return { valid: false, error: 'A képútvonal formátuma érvénytelen (<owner_id>/photos/<filename>)' };
+  }
+
+  const [pathOwnerId, folder, ...fileParts] = segments;
+
+  if (pathOwnerId.toLowerCase() !== ownerId.toLowerCase()) {
+    return { valid: false, error: 'A képnek a hirdető saját fotótárhelyéből kell származnia' };
+  }
+
+  if (folder !== 'photos') {
+    return { valid: false, error: 'Csak a nyilvános fotómappából származó kép engedélyezett' };
+  }
+
+  const fileName = fileParts.join('/');
+  if (!fileName || segments.some(s => s === '.' || s === '..' || !s)) {
+    return { valid: false, error: 'Érvénytelen fájlnév szegmens' };
+  }
+
+  if (!/\.(jpe?g|png|webp|gif|avif)$/i.test(fileName)) {
+    return { valid: false, error: 'Nem támogatott képformátum' };
+  }
+
+  return { valid: true };
+}
+

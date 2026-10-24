@@ -22,6 +22,12 @@ export interface TranslationKeys {
   household: string;
   quick_notes: string;
   admin_panel: string;
+  marketplace: string;
+  marketplace_sub: string;
+  marketplace_my_listings: string;
+  marketplace_saved: string;
+  marketplace_messages: string;
+  marketplace_create: string;
   add_thing: string;
   browse_things: string;
   add_location: string;
@@ -109,6 +115,12 @@ export const translations: Record<Language, TranslationKeys> = {
     household: 'Család / Háztartás',
     quick_notes: 'Jegyzetek',
     admin_panel: 'Adminisztráció',
+    marketplace: 'Közösségi Piactér',
+    marketplace_sub: 'Oszd meg, add bérbe, add el vagy cseréld el értékeidet a közösségben',
+    marketplace_my_listings: 'Saját hirdetéseim',
+    marketplace_saved: 'Mentett kedvencek',
+    marketplace_messages: 'Üzenetek & Ajánlatok',
+    marketplace_create: 'Hirdetés feladása',
     add_thing: 'Tárgy hozzáadása',
     browse_things: 'Tárgyak böngészése',
     add_location: 'Helyszín hozzáadása',
@@ -189,6 +201,12 @@ export const translations: Record<Language, TranslationKeys> = {
     household: 'Household & Family',
     quick_notes: 'Quick Notes',
     admin_panel: 'Admin Panel',
+    marketplace: 'Community Marketplace',
+    marketplace_sub: 'Share, rent, sell or barter your belongings in the community',
+    marketplace_my_listings: 'My Listings',
+    marketplace_saved: 'Saved Items',
+    marketplace_messages: 'Messages & Offers',
+    marketplace_create: 'Create Listing',
     add_thing: 'Add Thing',
     browse_things: 'Browse things',
     add_location: 'Add location',

@@ -472,7 +472,9 @@ export interface PantryItem {
   updated_at?: string;
 }
 
-export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'lending' | 'collections' | 'pantry' | 'vault' | 'admin' | 'guest_share' | 'legal' | 'settings' | 'storage';
+export type ViewMode = 'landing' | 'dashboard' | 'items' | 'locations' | 'categories' | 'documents' | 'repairs' | 'financing' | 'household' | 'notes' | 'lending' | 'collections' | 'pantry' | 'vault' | 'admin' | 'guest_share' | 'legal' | 'settings' | 'storage' | 'marketplace';
+
+export * from './marketplace';
 
 export type SortField = 'name' | 'created_at' | 'purchase_date' | 'current_value' | 'category' | 'location';
 export type SortOrder = 'asc' | 'desc';

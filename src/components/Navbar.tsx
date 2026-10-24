@@ -84,8 +84,11 @@ export const Navbar: React.FC = () => {
     if (view === 'storage') {
       window.location.hash = '#storage';
       setCurrentHash('#storage');
+    } else if (view === 'marketplace') {
+      window.location.hash = '#marketplace';
+      setCurrentHash('#marketplace');
     } else {
-      if (window.location.hash.includes('storage')) {
+      if (window.location.hash.includes('storage') || window.location.hash.includes('marketplace')) {
         window.location.hash = '';
       }
       setCurrentHash('');
@@ -399,6 +402,19 @@ export const Navbar: React.FC = () => {
                   <span>{t('dashboard')}</span>
                 </button>
 
+                {/* 1.5 Piactér */}
+                <button
+                  onClick={() => handleNav('marketplace')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs xl:text-sm font-semibold whitespace-nowrap transition-all shrink-0 border ${
+                    !isStorageActive && currentView === 'marketplace'
+                      ? 'bg-[var(--card-bg,#3A4551)] text-emerald-400 border-[var(--border-color,#56616D)] shadow-sm'
+                      : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-[var(--text-primary,var(--text-main,#E0E3E6))] hover:bg-[var(--surface-bg,#465362)]/50 border-transparent'
+                  }`}
+                >
+                  <ShoppingBag className={`h-4 w-4 shrink-0 ${!isStorageActive && currentView === 'marketplace' ? 'text-emerald-400' : 'text-emerald-400/80'}`} />
+                  <span>{isHu ? 'Piactér' : 'Marketplace'}</span>
+                </button>
+
                 {/* 2. Tárgyaim (Grouped Dropdown) */}
                 <div className="relative shrink-0">
                   <button
@@ -664,6 +680,17 @@ export const Navbar: React.FC = () => {
                       {t('my_things')}
                     </button>
                     <button
+                      onClick={() => handleNav('marketplace')}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        currentView === 'marketplace'
+                          ? 'bg-[var(--surface-bg,#465362)] text-emerald-400 font-semibold'
+                          : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)] hover:text-white'
+                      }`}
+                    >
+                      <ShoppingBag className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>{isHu ? 'Közösségi Piactér' : 'Marketplace'}</span>
+                    </button>
+                    <button
                       onClick={() => handleNav('storage')}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                         isStorageActive
@@ -707,6 +734,17 @@ export const Navbar: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                <button
+                  onClick={() => handleNav('marketplace')}
+                  className={`flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold rounded-xl border transition-all shrink-0 whitespace-nowrap ${
+                    currentView === 'marketplace'
+                      ? 'bg-[var(--card-bg,#3A4551)] text-emerald-400 border-[var(--border-color,#56616D)] shadow-sm'
+                      : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:text-white border-transparent hover:bg-[var(--surface-bg,#465362)]/50'
+                  }`}
+                >
+                  <ShoppingBag className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>{isHu ? 'Piactér' : 'Marketplace'}</span>
+                </button>
                 <button
                   onClick={() => {
                     setAuthModalMode('login');
@@ -861,6 +899,16 @@ export const Navbar: React.FC = () => {
                     {isHu ? 'Modulok & Család' : 'Modules & Family'}
                   </p>
                   <div className="space-y-1">
+                    <button
+                      onClick={() => handleNav('marketplace')}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
+                        currentView === 'marketplace' ? 'bg-[var(--surface-bg,#465362)] text-emerald-400 font-bold' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/50'
+                      }`}
+                    >
+                      <ShoppingBag className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <span>{isHu ? 'Közösségi Piactér' : 'Social Marketplace'}</span>
+                    </button>
+
                     <button
                       onClick={() => handleNav('household')}
                       className={`w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-xs transition-colors ${
