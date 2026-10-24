@@ -24,10 +24,14 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
-  Pencil
+  Pencil,
+  Image as ImageIcon,
+  Upload,
+  Maximize2
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp, useModalBack } from '../context/AppContext';
+import { uploadFileToStorage } from '../lib/storage';
 import type { ContainerType, ContainerItemUnit } from '../types';
 
 export interface StorageViewProps {
@@ -64,7 +68,29 @@ export interface StorageContainerDisplay {
   household_id?: string | null;
   items: StorageItemDisplay[];
   bulkItems: ContainerBulkItemDisplay[];
+  photos: string[];
   isReal: boolean;
+}
+
+export function parseContainerPhotos(photoUrl?: string | null): string[] {
+  if (!photoUrl || !photoUrl.trim()) return [];
+  const trimmed = photoUrl.trim();
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((p): p is string => typeof p === 'string' && p.trim().length > 0);
+      }
+    } catch {}
+  }
+  return [trimmed];
+}
+
+export function serializeContainerPhotos(photos: string[]): string | null {
+  const clean = photos.filter(p => typeof p === 'string' && p.trim().length > 0);
+  if (clean.length === 0) return null;
+  if (clean.length === 1) return clean[0];
+  return JSON.stringify(clean);
 }
 
 const CONTAINER_TYPE_LABELS: Record<ContainerType, { hu: string; en: string }> = {
@@ -95,6 +121,7 @@ const INITIAL_MOCK_CONTAINERS: StorageContainerDisplay[] = [
       { id: 'mock-101', name: 'Munkaasztal satu', category: 'Nehézgépek', code: 'ITM-9812', isRealItem: false }
     ],
     bulkItems: [],
+    photos: [],
     isReal: false
   },
   {
@@ -111,6 +138,7 @@ const INITIAL_MOCK_CONTAINERS: StorageContainerDisplay[] = [
     bulkItems: [
       { id: 'bulk-mock-201', name: 'Szigetelőszalag 10m fekete', quantity: 6, unit: 'db' }
     ],
+    photos: [],
     isReal: false
   },
   {
@@ -130,6 +158,7 @@ const INITIAL_MOCK_CONTAINERS: StorageContainerDisplay[] = [
       { id: 'bulk-mock-302', name: 'P120 szemcsés csiszolóvászon', quantity: 15, unit: 'ív' },
       { id: 'bulk-mock-303', name: 'Kábelkötegelő 200mm fekete', quantity: 85, unit: 'db' }
     ],
+    photos: [],
     isReal: false
   },
   {
@@ -144,6 +173,7 @@ const INITIAL_MOCK_CONTAINERS: StorageContainerDisplay[] = [
       { id: 'mock-105', name: 'Gardena fűszegélynyíró', category: 'Kerti gép', code: 'ITM-3199', isRealItem: false }
     ],
     bulkItems: [],
+    photos: [],
     isReal: false
   },
   {
@@ -161,6 +191,7 @@ const INITIAL_MOCK_CONTAINERS: StorageContainerDisplay[] = [
       { id: 'bulk-mock-501', name: '4T Motorolaj SAE30', quantity: 2, unit: 'l' },
       { id: 'bulk-mock-502', name: 'Trimmer damil 2.4mm', quantity: 30, unit: 'm' }
     ],
+    photos: [],
     isReal: false
   }
 ];
@@ -186,6 +217,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     setSelectedItemId,
     user,
     isHouseholdModuleAllowed,
+    openImageViewer,
   } = useApp();
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -210,6 +242,9 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [newContainerLocationId, setNewContainerLocationId] = useState<string>('');
   const [newContainerDesc, setNewContainerDesc] = useState('');
   const [newContainerScope, setNewContainerScope] = useState<'private' | 'household'>('private');
+  const [newContainerPhotos, setNewContainerPhotos] = useState<string[]>([]);
+  const [isUploadingNewPhotos, setIsUploadingNewPhotos] = useState(false);
+  const [newPhotoError, setNewPhotoError] = useState<string | null>(null);
 
   // Form states for editing existing container
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -218,6 +253,12 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [editContainerParentId, setEditContainerParentId] = useState<string>('');
   const [editContainerLocationId, setEditContainerLocationId] = useState<string>('');
   const [editContainerDesc, setEditContainerDesc] = useState('');
+  const [editContainerPhotos, setEditContainerPhotos] = useState<string[]>([]);
+  const [isUploadingEditPhotos, setIsUploadingEditPhotos] = useState(false);
+  const [editPhotoError, setEditPhotoError] = useState<string | null>(null);
+
+  // Photo state for direct upload on detail panel
+  const [isUploadingDetailPhoto, setIsUploadingDetailPhoto] = useState(false);
 
   // Form states for adding bulk item
   const [newBulkName, setNewBulkName] = useState('');
@@ -226,13 +267,12 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [newBulkMinQty, setNewBulkMinQty] = useState<string>('');
   const [newBulkNotes, setNewBulkNotes] = useState('');
 
-  // Mobile back button traps: closing panels / modals / subviews on back button without changing route
+  // Mobile back button traps: closing modals on device back button without changing route
   useModalBack(isCreateModalOpen, () => setIsCreateModalOpen(false), 'storage-create-modal');
   useModalBack(isQrModalOpen, () => setIsQrModalOpen(false), 'storage-qr-modal');
   useModalBack(isAssignItemModalOpen, () => setIsAssignItemModalOpen(false), 'storage-assign-modal');
   useModalBack(isAddBulkModalOpen, () => setIsAddBulkModalOpen(false), 'storage-add-bulk-modal');
   useModalBack(isEditModalOpen, () => setIsEditModalOpen(false), 'storage-edit-modal');
-  useModalBack(selectedContainerId !== null, () => setSelectedContainerId(null), 'storage-container-detail');
 
   // Real data is active whenever user is authenticated
   const isRealDataActive = isAuthenticated;
@@ -311,13 +351,14 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           household_id: sc.household_id,
           items: assignedItems,
           bulkItems,
+          photos: parseContainerPhotos(sc.photo_url),
           isReal: true,
         };
       });
     }
 
     return INITIAL_MOCK_CONTAINERS;
-  }, [isRealDataActive, storageContainers, containerItems, items, locations, categories]);
+  }, [isRealDataActive, accessibleContainers, storageContainers, containerItems, items, locations, categories]);
 
   // Deep-link URL hash support (#storage/<container_id>)
   useEffect(() => {
@@ -376,9 +417,21 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     });
   };
 
-  const handleSelectContainer = (containerId: string, shouldScroll = false) => {
+  const handleSelectContainer = (containerId: string, shouldScroll = true) => {
     setSelectedContainerId(containerId);
     window.location.hash = `#storage/${containerId}`;
+
+    // Expand all ancestors in tree
+    const expandSet = new Set<string>();
+    let cur = containers.find(c => c.id === containerId);
+    while (cur && cur.parentId) {
+      expandSet.add(cur.parentId);
+      cur = containers.find(c => c.id === cur?.parentId);
+    }
+    if (expandSet.size > 0) {
+      setExpandedIds(prev => new Set([...prev, ...expandSet]));
+    }
+
     if (shouldScroll && typeof window !== 'undefined' && window.innerWidth < 1024) {
       setTimeout(() => {
         detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -387,6 +440,12 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   };
 
   const selectedContainer = containers.find(c => c.id === selectedContainerId) || containers[0] || null;
+
+  // Direct child containers for the selected container
+  const childContainers = useMemo(() => {
+    if (!selectedContainer) return [];
+    return containers.filter(c => c.parentId === selectedContainer.id);
+  }, [containers, selectedContainer]);
 
   // Breadcrumb generator
   const getBreadcrumbs = (containerId: string | null): StorageContainerDisplay[] => {
@@ -452,6 +511,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           notes: newContainerDesc.trim() || null,
           ownership_scope: newContainerScope,
           household_id: newContainerScope === 'household' ? (household?.id || null) : null,
+          photo_url: serializeContainerPhotos(newContainerPhotos),
           user_id: '',
         });
 
@@ -459,8 +519,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           if (newContainerParentId) {
             setExpandedIds(prev => new Set([...prev, newContainerParentId]));
           }
-          setSelectedContainerId(created.id);
-          window.location.hash = `#storage/${created.id}`;
+          handleSelectContainer(created.id, true);
         }
         showToast(`"${newContainerName.trim()}" tároló sikeresen létrehozva a Supabase-ben!`);
       } else {
@@ -474,6 +533,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
       setNewContainerLocationId('');
       setNewContainerDesc('');
       setNewContainerScope('private');
+      setNewContainerPhotos([]);
+      setNewPhotoError(null);
     } catch (err: any) {
       console.error('Tároló létrehozási hiba:', err);
       showToast(err?.message || 'Hiba a tároló mentésekor');
@@ -490,6 +551,8 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     setEditContainerParentId(selectedContainer.parentId || '');
     setEditContainerLocationId(selectedContainer.locationId || '');
     setEditContainerDesc(selectedContainer.description || '');
+    setEditContainerPhotos(selectedContainer.photos || []);
+    setEditPhotoError(null);
     setIsEditModalOpen(true);
   };
 
@@ -516,6 +579,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
         parent_container_id: editContainerParentId ? editContainerParentId : null,
         location_id: editContainerParentId ? undefined : (editContainerLocationId ? editContainerLocationId : null),
         notes: editContainerDesc.trim() || null,
+        photo_url: serializeContainerPhotos(editContainerPhotos),
       });
 
       showToast(`"${editContainerName.trim()}" tároló sikeresen frissítve!`);
@@ -525,6 +589,130 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
       showToast(err?.message || 'Hiba a tároló módosításakor');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Upload photos for create modal
+  const handleUploadNewPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !user?.id) return;
+    setIsUploadingNewPhotos(true);
+    setNewPhotoError(null);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          setNewPhotoError('Csak képfájlok (JPG, PNG, WebP) tölthetők fel.');
+          continue;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          setNewPhotoError('A fájl mérete nem haladhatja meg a 15 MB-ot.');
+          continue;
+        }
+        const res = await uploadFileToStorage(file, 'photos', user.id);
+        if (res.signedUrl || res.path) {
+          uploaded.push(res.signedUrl || res.path || '');
+        } else if (res.error) {
+          setNewPhotoError(res.error);
+        }
+      }
+      if (uploaded.length > 0) {
+        setNewContainerPhotos(prev => [...prev, ...uploaded]);
+      }
+    } catch (err: any) {
+      setNewPhotoError(err?.message || 'Hiba a képek feltöltésekor');
+    } finally {
+      setIsUploadingNewPhotos(false);
+      e.target.value = '';
+    }
+  };
+
+  // Upload photos for edit modal
+  const handleUploadEditPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !user?.id) return;
+    setIsUploadingEditPhotos(true);
+    setEditPhotoError(null);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          setEditPhotoError('Csak képfájlok (JPG, PNG, WebP) tölthetők fel.');
+          continue;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          setEditPhotoError('A fájl mérete nem haladhatja meg a 15 MB-ot.');
+          continue;
+        }
+        const res = await uploadFileToStorage(file, 'photos', user.id);
+        if (res.signedUrl || res.path) {
+          uploaded.push(res.signedUrl || res.path || '');
+        } else if (res.error) {
+          setEditPhotoError(res.error);
+        }
+      }
+      if (uploaded.length > 0) {
+        setEditContainerPhotos(prev => [...prev, ...uploaded]);
+      }
+    } catch (err: any) {
+      setEditPhotoError(err?.message || 'Hiba a képek feltöltésekor');
+    } finally {
+      setIsUploadingEditPhotos(false);
+      e.target.value = '';
+    }
+  };
+
+  // Upload photo directly on detail panel
+  const handleUploadDetailPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedContainer) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !user?.id) return;
+    setIsUploadingDetailPhoto(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          showToast('Csak képfájlok (JPG, PNG, WebP) tölthetők fel.');
+          continue;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          showToast('A fájl mérete nem haladhatja meg a 15 MB-ot.');
+          continue;
+        }
+        const res = await uploadFileToStorage(file, 'photos', user.id);
+        if (res.signedUrl || res.path) {
+          uploaded.push(res.signedUrl || res.path || '');
+        } else if (res.error) {
+          showToast(res.error);
+        }
+      }
+      if (uploaded.length > 0) {
+        const nextPhotos = [...selectedContainer.photos, ...uploaded];
+        await updateStorageContainer(selectedContainer.id, {
+          photo_url: serializeContainerPhotos(nextPhotos)
+        });
+        showToast(`${uploaded.length} fénykép sikeresen hozzáadva a tárolóhoz!`);
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a fénykép feltöltésekor');
+    } finally {
+      setIsUploadingDetailPhoto(false);
+      e.target.value = '';
+    }
+  };
+
+  // Remove photo directly on detail panel
+  const handleRemoveDetailPhoto = async (indexToRemove: number) => {
+    if (!selectedContainer) return;
+    if (!window.confirm('Biztosan törölni szeretnéd ezt a fényképet a tárolóból?')) return;
+    try {
+      const nextPhotos = selectedContainer.photos.filter((_, idx) => idx !== indexToRemove);
+      await updateStorageContainer(selectedContainer.id, {
+        photo_url: serializeContainerPhotos(nextPhotos)
+      });
+      showToast('Fénykép eltávolítva a tárolóból.');
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a fénykép törlésekor');
     }
   };
 
@@ -705,7 +893,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     return (
       <div key={container.id} className="space-y-1.5">
         <div
-          onClick={() => handleSelectContainer(container.id, false)}
+          onClick={() => handleSelectContainer(container.id, true)}
           className={`group flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${
             isSelected
               ? 'bg-[var(--card-bg,#3A4551)] border-[var(--color-primary-blue,#2563EB)] shadow-lg shadow-[var(--color-primary-blue,#2563EB)]/10 ring-1 ring-[var(--color-primary-blue,#2563EB)]/50'
@@ -1015,6 +1203,199 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 </div>
               </div>
 
+              {/* SECTION 0: Container Photos & Visual Documentation */}
+              <div className="space-y-3 pb-4 border-b border-[var(--border-color,#56616D)]/60">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    <span>Fényképek</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                      {selectedContainer.photos.length} db
+                    </span>
+                  </h3>
+
+                  {isAuthenticated && (
+                    <label className={`text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer transition-colors ${
+                      isUploadingDetailPhoto ? 'opacity-50 pointer-events-none' : ''
+                    }`}>
+                      {isUploadingDetailPhoto ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5" />
+                      )}
+                      <span>+ Kép feltöltése</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleUploadDetailPhoto}
+                        disabled={isUploadingDetailPhoto}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {selectedContainer.photos.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {/* Primary Photo Showcase */}
+                    <div
+                      onClick={() => openImageViewer(selectedContainer.photos, { title: selectedContainer.name, activeIndex: 0 })}
+                      className="relative w-full h-48 sm:h-56 rounded-2xl overflow-hidden bg-black/40 border border-[var(--border-color,#56616D)] group cursor-pointer shadow-md"
+                    >
+                      <img
+                        src={selectedContainer.photos[0]}
+                        alt={selectedContainer.name}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3.5">
+                        <span className="text-xs text-white font-medium flex items-center gap-1">
+                          <Maximize2 className="w-3.5 h-3.5" />
+                          <span>Kattints a nagyításhoz</span>
+                        </span>
+                        {isAuthenticated && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveDetailPhoto(0);
+                            }}
+                            className="p-1.5 rounded-lg bg-rose-500/80 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                            title="Kép törlése"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[10px] text-white font-semibold">
+                        1 / {selectedContainer.photos.length}
+                      </div>
+                    </div>
+
+                    {/* Secondary Thumbnails */}
+                    {selectedContainer.photos.length > 1 && (
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 pt-1">
+                        {selectedContainer.photos.map((photo, pIdx) => (
+                          <div
+                            key={pIdx}
+                            onClick={() => openImageViewer(selectedContainer.photos, { title: selectedContainer.name, activeIndex: pIdx })}
+                            className="relative aspect-square rounded-xl overflow-hidden bg-black/30 border border-[var(--border-color,#56616D)] group cursor-pointer"
+                          >
+                            <img
+                              src={photo}
+                              alt={`${selectedContainer.name} ${pIdx + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Maximize2 className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            {isAuthenticated && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveDetailPhoto(pIdx);
+                                }}
+                                className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                title="Kép törlése"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-2">
+                    <div className="w-8 h-8 mx-auto rounded-lg bg-[var(--surface-bg,#465362)] flex items-center justify-center text-[var(--text-sub,#B5BDC6)]">
+                      <ImageIcon className="w-4 h-4" />
+                    </div>
+                    <p>Még nincs fénykép feltöltve ehhez a tárolóhoz.</p>
+                    {isAuthenticated && (
+                      <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white font-semibold text-xs border border-[var(--border-color,#56616D)] cursor-pointer transition-colors ${
+                        isUploadingDetailPhoto ? 'opacity-50 pointer-events-none' : ''
+                      }`}>
+                        {isUploadingDetailPhoto ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
+                        )}
+                        <span>{isUploadingDetailPhoto ? 'Feltöltés...' : '+ Első kép feltöltése'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handleUploadDetailPhoto}
+                          disabled={isUploadingDetailPhoto}
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 0B: Sub-containers (Altárolók a tárolóban) */}
+              {childContainers.length > 0 && (
+                <div className="space-y-3 pb-4 border-b border-[var(--border-color,#56616D)]/60">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                      <FolderTree className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                      <span>Belső Altárolók</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                        {childContainers.length} db
+                      </span>
+                    </h3>
+                    {isAuthenticated && (
+                      <button
+                        onClick={() => {
+                          setNewContainerParentId(selectedContainer.id);
+                          setNewContainerScope(selectedContainer.ownership_scope || 'private');
+                          setIsCreateModalOpen(true);
+                        }}
+                        className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Altároló hozzáadása</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {childContainers.map(child => (
+                      <div
+                        key={child.id}
+                        onClick={() => handleSelectContainer(child.id, true)}
+                        className="p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 hover:border-[var(--color-primary-blue,#2563EB)] transition-all cursor-pointer flex items-center justify-between gap-2.5 group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-lg bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] flex items-center justify-center shrink-0 border border-[var(--border-color,#56616D)]/60">
+                            <Box className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-xs text-white truncate group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
+                              {child.name}
+                            </p>
+                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] font-mono truncate">
+                              {child.code} • {CONTAINER_TYPE_LABELS[child.containerType]?.hu || child.containerType}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[10px] text-[var(--text-sub,#B5BDC6)] shrink-0 font-medium">
+                          <span>{child.items.length + child.bulkItems.length} tétel</span>
+                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* SECTION 1: Assigned Thingor Items */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
@@ -1321,6 +1702,62 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 />
               </div>
 
+              {/* Photo Upload in Create Modal */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-white block">Tároló Fényképei</label>
+                  <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-medium">
+                    {newContainerPhotos.length} kép feltöltve
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className={`w-full py-3 px-4 rounded-xl border border-dashed border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:bg-[var(--surface-bg,#465362)]/60 flex items-center justify-center gap-2 cursor-pointer transition-colors text-xs text-[var(--text-sub,#B5BDC6)] font-semibold ${
+                    isUploadingNewPhotos ? 'opacity-50 pointer-events-none' : ''
+                  }`}>
+                    {isUploadingNewPhotos ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    )}
+                    <span>{isUploadingNewPhotos ? 'Feltöltés folyamatban...' : '+ Képek feltöltése (JPG, PNG, WebP)'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleUploadNewPhotos}
+                      disabled={isUploadingNewPhotos}
+                    />
+                  </label>
+
+                  {newPhotoError && (
+                    <p className="text-[11px] text-rose-400 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{newPhotoError}</span>
+                    </p>
+                  )}
+
+                  {newContainerPhotos.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 pt-1">
+                      {newContainerPhotos.map((photo, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-black/40 border border-[var(--border-color,#56616D)] group">
+                          <img src={photo} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setNewContainerPhotos(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 hover:bg-rose-600 text-white transition-opacity cursor-pointer"
+                            title="Kép eltávolítása"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="pt-3 border-t border-[var(--border-color,#56616D)]/60 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
@@ -1444,6 +1881,62 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   placeholder="Belső rekeszek, méretek, kulcs helye..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-white text-xs sm:text-sm placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
                 />
+              </div>
+
+              {/* Photo Upload in Edit Modal */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-white block">Tároló Fényképei</label>
+                  <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] font-medium">
+                    {editContainerPhotos.length} kép feltöltve
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className={`w-full py-3 px-4 rounded-xl border border-dashed border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)]/40 hover:bg-[var(--surface-bg,#465362)]/60 flex items-center justify-center gap-2 cursor-pointer transition-colors text-xs text-[var(--text-sub,#B5BDC6)] font-semibold ${
+                    isUploadingEditPhotos ? 'opacity-50 pointer-events-none' : ''
+                  }`}>
+                    {isUploadingEditPhotos ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                    )}
+                    <span>{isUploadingEditPhotos ? 'Feltöltés folyamatban...' : '+ Képek feltöltése (JPG, PNG, WebP)'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleUploadEditPhotos}
+                      disabled={isUploadingEditPhotos}
+                    />
+                  </label>
+
+                  {editPhotoError && (
+                    <p className="text-[11px] text-rose-400 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{editPhotoError}</span>
+                    </p>
+                  )}
+
+                  {editContainerPhotos.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 pt-1">
+                      {editContainerPhotos.map((photo, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-black/40 border border-[var(--border-color,#56616D)] group">
+                          <img src={photo} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setEditContainerPhotos(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 hover:bg-rose-600 text-white transition-opacity cursor-pointer"
+                            title="Kép eltávolítása"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="pt-3 border-t border-[var(--border-color,#56616D)]/60 flex items-center justify-end gap-2.5">
