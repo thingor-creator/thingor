@@ -353,6 +353,25 @@ serve(async (req) => {
       const filePath = `${user.id}/${folder}/${Date.now()}_${sanitizedName}`;
       const targetBucket = getBucketForFolder(folder);
 
+      // Server-side atomic storage quota reservation
+      const declaredSize = Number(fileSize) || 1024 * 1024;
+      const { data: reserveData, error: reserveError } = await supabaseAdmin.rpc("reserve_storage_quota", {
+        p_file_path: filePath,
+        p_declared_bytes: declaredSize,
+        p_household_id: body.householdId || null,
+        p_user_id: user.id,
+      });
+
+      if (reserveError || !reserveData?.reservation_id) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Tárhelykvóta túllépés vagy foglalási hiba", 
+            details: reserveError?.message || "Foglalás sikertelen"
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const putCommand = new PutObjectCommand({
         Bucket: targetBucket,
         Key: filePath,
@@ -369,7 +388,107 @@ serve(async (req) => {
           uploadUrl,
           path: filePath,
           publicUrl,
+          reservationId: reserveData?.reservation_id,
         }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ACTION: commit-upload (Verifies physical object in R2 and commits reservation)
+    if (action === "commit-upload") {
+      const { reservationId, path: rawPath } = body;
+      if (!reservationId || !rawPath) {
+        return new Response(
+          JSON.stringify({ error: "Missing reservationId or path" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const pathValidation = validateAndNormalizePath(rawPath);
+      if (!pathValidation.valid) {
+        return new Response(
+          JSON.stringify({ error: pathValidation.error || "Invalid file path" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const filePath = pathValidation.normalizedPath!;
+      const fileOwnerId = pathValidation.ownerId!;
+      const folder = pathValidation.folder!;
+      const targetBucket = getBucketForFolder(folder);
+
+      // Verify ownership before commit
+      const isOwner = fileOwnerId === user.id.toLowerCase();
+      let isAdmin = false;
+      if (!isOwner) {
+        isAdmin = await checkIsAdmin(supabaseUrl, supabaseServiceKey, user.id);
+      }
+      if (!isOwner && !isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: You are not authorized to commit this upload" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify physical existence and real size directly from R2 via HeadObject
+      try {
+        const headCommand = new HeadObjectCommand({
+          Bucket: targetBucket,
+          Key: filePath,
+        });
+        const headRes = await s3Client.send(headCommand);
+        const actualBytes = headRes.ContentLength || 0;
+
+        // Commit reservation in DB
+        const { error: commitError } = await supabaseAdmin.rpc("commit_storage_reservation", {
+          p_reservation_id: reservationId,
+          p_actual_bytes: actualBytes,
+          p_user_id: user.id,
+        });
+
+        if (commitError) {
+          try {
+            await s3Client.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: filePath }));
+          } catch (_) {}
+          return new Response(
+            JSON.stringify({ error: "Quota commit failed", details: commitError.message }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            path: filePath,
+            actualBytes,
+            etag: headRes.ETag,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (headErr: any) {
+        // Physical file does not exist in R2, release reservation
+        await supabaseAdmin.rpc("release_storage_reservation", {
+          p_reservation_id: reservationId,
+          p_user_id: user.id,
+        });
+        return new Response(
+          JSON.stringify({ error: "Physical file verification failed in R2", details: headErr.message }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // ACTION: release-upload (Releases pending reservation on client abort/error)
+    if (action === "release-upload") {
+      const { reservationId } = body;
+      if (reservationId) {
+        await supabaseAdmin.rpc("release_storage_reservation", {
+          p_reservation_id: reservationId,
+          p_user_id: user.id,
+        });
+      }
+      return new Response(
+        JSON.stringify({ success: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -385,49 +504,127 @@ serve(async (req) => {
         );
       }
 
-      if (!fileData) {
+      if (!fileData || typeof fileData !== "string") {
         return new Response(
-          JSON.stringify({ error: "Missing file data" }),
+          JSON.stringify({ error: "Missing or invalid file data" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const binaryStr = atob(fileData);
-      const len = binaryStr.length;
-      if (len > 15 * 1024 * 1024) {
+      let binaryStr: string;
+      try {
+        binaryStr = atob(fileData);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Invalid base64 encoding in fileData" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const actualBytesCount = binaryStr.length;
+      if (actualBytesCount <= 0) {
+        return new Response(
+          JSON.stringify({ error: "File cannot be empty" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (actualBytesCount > 15 * 1024 * 1024) {
         return new Response(
           JSON.stringify({ error: "File size exceeds 15MB limit" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
+      const bytes = new Uint8Array(actualBytesCount);
+      for (let i = 0; i < actualBytesCount; i++) {
         bytes[i] = binaryStr.charCodeAt(i);
       }
 
       const sanitizedName = (fileName || "upload").replace(/[^a-zA-Z0-9.-]/g, "_");
       const filePath = `${user.id}/${folder}/${Date.now()}_${sanitizedName}`;
-
       const targetBucket = getBucketForFolder(folder);
-      const putCommand = new PutObjectCommand({
-        Bucket: targetBucket,
-        Key: filePath,
-        Body: bytes,
-        ContentType: fileType || "application/octet-stream",
+
+      // Server-side atomic storage quota reservation BEFORE uploading to R2
+      const { data: reserveData, error: reserveError } = await supabaseAdmin.rpc("reserve_storage_quota", {
+        p_file_path: filePath,
+        p_declared_bytes: actualBytesCount,
+        p_household_id: body.householdId || null,
+        p_user_id: user.id,
       });
 
-      await s3Client.send(putCommand);
-      // Public URL is ONLY available for photos when r2PublicDomain is configured.
-      const publicUrl = folder === "photos" && r2PublicDomain ? `${r2PublicDomain}/${filePath}` : "";
+      if (reserveError || !reserveData?.reservation_id) {
+        return new Response(
+          JSON.stringify({
+            error: "Tárhelykvóta túllépés vagy foglalási hiba",
+            details: reserveError?.message || "Foglalás sikertelen",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-      return new Response(
-        JSON.stringify({
-          path: filePath,
-          publicUrl,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const reservationId = reserveData.reservation_id;
+      let r2Uploaded = false;
+
+      try {
+        const putCommand = new PutObjectCommand({
+          Bucket: targetBucket,
+          Key: filePath,
+          Body: bytes,
+          ContentType: fileType || "application/octet-stream",
+        });
+
+        await s3Client.send(putCommand);
+        r2Uploaded = true;
+
+        // Commit reservation in DB
+        const { error: commitError } = await supabaseAdmin.rpc("commit_storage_reservation", {
+          p_reservation_id: reservationId,
+          p_actual_bytes: actualBytesCount,
+          p_user_id: user.id,
+        });
+
+        if (commitError) {
+          try {
+            await s3Client.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: filePath }));
+          } catch (_) {}
+          await supabaseAdmin.rpc("release_storage_reservation", {
+            p_reservation_id: reservationId,
+            p_user_id: user.id,
+          });
+
+          return new Response(
+            JSON.stringify({ error: "Storage quota commit failed", details: commitError.message }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const publicUrl = folder === "photos" && r2PublicDomain ? `${r2PublicDomain}/${filePath}` : "";
+
+        return new Response(
+          JSON.stringify({
+            path: filePath,
+            publicUrl,
+            reservationId,
+            actualBytes: actualBytesCount,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (uploadErr: any) {
+        if (r2Uploaded) {
+          try {
+            await s3Client.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: filePath }));
+          } catch (_) {}
+        }
+        await supabaseAdmin.rpc("release_storage_reservation", {
+          p_reservation_id: reservationId,
+          p_user_id: user.id,
+        });
+
+        return new Response(
+          JSON.stringify({ error: "Direct upload to R2 failed", details: uploadErr.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // 5. ACTION: delete (Secure deletion with strict ownership & admin check)
@@ -477,8 +674,26 @@ serve(async (req) => {
         }
       }
 
+      // Server-side atomic quota release
+      const { data: releaseData, error: releaseError } = await supabaseAdmin.rpc("release_storage_by_path", {
+        p_file_path: filePath,
+        p_owner_id: fileOwnerId,
+      });
+
+      if (releaseError) {
+        console.error("Storage quota release error after R2 deletion:", releaseError);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            warning: "File deleted from storage, but quota record update failed. Idempotent retry can be called.",
+            quotaError: releaseError.message 
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, released: releaseData }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

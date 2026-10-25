@@ -73,11 +73,13 @@ export async function uploadFileToR2(
   }
 
   if (file.size > 15 * 1024 * 1024) {
-    return { error: 'File size exceeds 15MB limit' };
+    return { error: 'A fájlméret meghaladja a megengedett 15 MB-os határt.' };
   }
 
   // Pre-validate session before initiating upload
   await ensureValidSession();
+
+  let currentReservationId: string | undefined = undefined;
 
   try {
     // 1. Request presigned upload URL from Edge Function
@@ -110,22 +112,90 @@ export async function uploadFileToR2(
     }
 
     if (error || !data?.uploadUrl) {
-      console.warn('Presigned upload URL generation failed, attempting direct upload fallback:', error);
+      const errMsg = await extractEdgeFunctionError(error, data, 'Nem sikerült feltöltési URL-t igényelni');
+      
+      // Strict terminal error check: NEVER fall back on quota, authorization, or client-side errors
+      const isQuotaError = /kvóta|kapacitás|quota|capacity/i.test(errMsg);
+      const isTerminalHttp = error?.status === 400 || error?.status === 401 || error?.status === 403;
+
+      if (isQuotaError || isTerminalHttp) {
+        return { error: errMsg };
+      }
+
+      console.warn('Presigned URL request failed due to transient network/server error, attempting direct upload fallback:', errMsg);
       return await uploadDirectToEdgeFunction(file, folder);
     }
 
-    // 2. Upload file to presigned PUT URL
-    const uploadRes = await fetch(data.uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': file.type || 'application/octet-stream',
-      },
-      body: file,
-    });
+    currentReservationId = data.reservationId;
+
+    // 2. Upload file to presigned PUT URL directly to R2
+    let uploadRes: Response;
+    try {
+      uploadRes = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+        body: file,
+      });
+    } catch (networkErr: any) {
+      // Direct PUT suffered network or CORS error
+      console.warn('Network or CORS error during PUT to presigned URL, releasing reservation before fallback:', networkErr);
+      if (currentReservationId) {
+        const resIdToRelease = currentReservationId;
+        currentReservationId = undefined;
+        try {
+          await supabase.functions.invoke('storage-r2', {
+            body: { action: 'release-upload', reservationId: resIdToRelease },
+          });
+        } catch (relErr) {
+          console.warn('Failed to release reservation after PUT network error:', relErr);
+        }
+      }
+      return await uploadDirectToEdgeFunction(file, folder);
+    }
 
     if (!uploadRes.ok) {
-      console.warn('Direct PUT to presigned URL failed, attempting direct upload fallback...');
+      const putStatus = uploadRes.status;
+      console.warn(`Presigned PUT URL responded with HTTP ${putStatus}, releasing reservation before fallback...`);
+      if (currentReservationId) {
+        const resIdToRelease = currentReservationId;
+        currentReservationId = undefined;
+        try {
+          await supabase.functions.invoke('storage-r2', {
+            body: { action: 'release-upload', reservationId: resIdToRelease },
+          });
+        } catch (relErr) {
+          console.warn('Failed to release reservation after non-OK PUT:', relErr);
+        }
+      }
       return await uploadDirectToEdgeFunction(file, folder);
+    }
+
+    // 3. Commit reservation on server with physical HeadObject verification
+    // PUT succeeded; do NOT release reservation before commit!
+    if (currentReservationId) {
+      const resIdToCommit = currentReservationId;
+      const commitRes = await supabase.functions.invoke('storage-r2', {
+        body: {
+          action: 'commit-upload',
+          reservationId: resIdToCommit,
+          path: data.path,
+        },
+      });
+
+      if (commitRes.error || commitRes.data?.error) {
+        console.error('Storage quota commit error:', commitRes.error || commitRes.data?.error);
+        const commitErrMsg = await extractEdgeFunctionError(
+          commitRes.error,
+          commitRes.data,
+          'Feltöltés sikertelen: kvótaérvényesítési hiba.'
+        );
+        // Do NOT fall back to direct upload here! File is already uploaded or quota was rejected.
+        return { error: commitErrMsg };
+      }
+      // Reservation successfully committed
+      currentReservationId = undefined;
     }
 
     if (folder === 'photos') {
@@ -136,8 +206,19 @@ export async function uploadFileToR2(
     // Documents are strictly private: return persistent path for DB storage, NEVER save transient signed URLs
     return { path: data.path, signedUrl: data.path };
   } catch (err: any) {
-    console.warn('Upload error, attempting fallback:', err);
-    return await uploadDirectToEdgeFunction(file, folder);
+    const originalErrorMessage = err?.message || String(err) || 'Váratlan hiba történt a feltöltés során';
+    if (currentReservationId) {
+      try {
+        await supabase.functions.invoke('storage-r2', {
+          body: { action: 'release-upload', reservationId: currentReservationId },
+        });
+      } catch (releaseErr) {
+        console.warn('Failed to release storage reservation on unexpected error:', releaseErr);
+      }
+      currentReservationId = undefined;
+    }
+    console.error('Upload exception:', err);
+    return { error: originalErrorMessage };
   }
 }
 
