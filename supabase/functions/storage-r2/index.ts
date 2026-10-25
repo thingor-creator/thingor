@@ -450,6 +450,12 @@ serve(async (req) => {
           try {
             await s3Client.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: filePath }));
           } catch (_) {}
+          try {
+            await supabaseAdmin.rpc("release_storage_reservation", {
+              p_reservation_id: reservationId,
+              p_user_id: user.id,
+            });
+          } catch (_) {}
           return new Response(
             JSON.stringify({ error: "Quota commit failed", details: commitError.message }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
