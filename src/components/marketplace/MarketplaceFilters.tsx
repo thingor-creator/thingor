@@ -9,7 +9,8 @@ import {
   Tag,
   ArrowUpDown,
   MapPin,
-  CircleDollarSign
+  CircleDollarSign,
+  Loader2,
 } from 'lucide-react';
 
 interface MarketplaceFiltersProps {
@@ -86,7 +87,11 @@ export const MarketplaceFilters: React.FC<MarketplaceFiltersProps> = ({
       <div className="flex flex-col md:flex-row items-center gap-2.5">
         {/* Search input */}
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-sub,#B5BDC6)]" />
+          {isSearching ? (
+            <Loader2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-primary-blue,#2563EB)] animate-spin" />
+          ) : (
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-sub,#B5BDC6)]" />
+          )}
           <input
             type="text"
             value={filters.query || ''}
@@ -213,7 +218,7 @@ export const MarketplaceFilters: React.FC<MarketplaceFiltersProps> = ({
               <input
                 type="number"
                 min="0"
-                step="500"
+                step="any"
                 placeholder={isHu ? 'Min' : 'Min'}
                 value={filters.min_price ?? ''}
                 onChange={(e) => {
@@ -226,7 +231,7 @@ export const MarketplaceFilters: React.FC<MarketplaceFiltersProps> = ({
               <input
                 type="number"
                 min="0"
-                step="500"
+                step="any"
                 placeholder={isHu ? 'Max' : 'Max'}
                 value={filters.max_price ?? ''}
                 onChange={(e) => {

@@ -456,7 +456,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
                   <input
                     type="number"
                     min="0"
-                    step="100"
+                    step="any"
                     required
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
@@ -504,7 +504,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
                     <input
                       type="number"
                       min="0"
-                      step="500"
+                      step="any"
                       value={rentalDeposit}
                       onChange={(e) => setRentalDeposit(e.target.value)}
                       placeholder="0"

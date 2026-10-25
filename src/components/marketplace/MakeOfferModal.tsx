@@ -221,7 +221,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
                   <input
                     type="number"
                     min="1"
-                    step="100"
+                    step="any"
                     required
                     value={offeredPrice}
                     onChange={(e) => setOfferedPrice(e.target.value)}

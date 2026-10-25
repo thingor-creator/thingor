@@ -342,6 +342,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({ initialListing
       {activeTab === 'browse' && (
         <MarketplaceFilters
           filters={filters}
+          isSearching={loading}
           onChange={(newFilters) => {
             setFilters(newFilters);
             setCurrentPage(1);
