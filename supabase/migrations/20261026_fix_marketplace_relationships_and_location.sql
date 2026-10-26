@@ -26,26 +26,38 @@ ON CONFLICT (user_id) DO NOTHING;
 
 -- 3. Add explicit foreign keys to public.public_profiles for PostgREST schema cache
 ALTER TABLE public.marketplace_listings
-  DROP CONSTRAINT IF EXISTS marketplace_listings_seller_id_fkey;
+  DROP CONSTRAINT IF EXISTS marketplace_listings_seller_id_fkey,
+  DROP CONSTRAINT IF EXISTS marketplace_listings_user_id_fkey;
 
 ALTER TABLE public.marketplace_listings
+  ADD CONSTRAINT marketplace_listings_user_id_fkey
+  FOREIGN KEY (user_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE,
   ADD CONSTRAINT marketplace_listings_seller_id_fkey
   FOREIGN KEY (user_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE;
 
 ALTER TABLE public.marketplace_conversations
   DROP CONSTRAINT IF EXISTS marketplace_conversations_seller_profile_fkey,
-  DROP CONSTRAINT IF EXISTS marketplace_conversations_buyer_profile_fkey;
+  DROP CONSTRAINT IF EXISTS marketplace_conversations_buyer_profile_fkey,
+  DROP CONSTRAINT IF EXISTS marketplace_conversations_seller_id_fkey,
+  DROP CONSTRAINT IF EXISTS marketplace_conversations_buyer_id_fkey;
 
 ALTER TABLE public.marketplace_conversations
+  ADD CONSTRAINT marketplace_conversations_seller_id_fkey
+  FOREIGN KEY (seller_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE,
+  ADD CONSTRAINT marketplace_conversations_buyer_id_fkey
+  FOREIGN KEY (buyer_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE,
   ADD CONSTRAINT marketplace_conversations_seller_profile_fkey
   FOREIGN KEY (seller_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE,
   ADD CONSTRAINT marketplace_conversations_buyer_profile_fkey
   FOREIGN KEY (buyer_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE;
 
 ALTER TABLE public.marketplace_offers
-  DROP CONSTRAINT IF EXISTS marketplace_offers_sender_profile_fkey;
+  DROP CONSTRAINT IF EXISTS marketplace_offers_sender_profile_fkey,
+  DROP CONSTRAINT IF EXISTS marketplace_offers_sender_id_fkey;
 
 ALTER TABLE public.marketplace_offers
+  ADD CONSTRAINT marketplace_offers_sender_id_fkey
+  FOREIGN KEY (sender_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE,
   ADD CONSTRAINT marketplace_offers_sender_profile_fkey
   FOREIGN KEY (sender_id) REFERENCES public.public_profiles(user_id) ON DELETE CASCADE;
 
