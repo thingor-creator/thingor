@@ -30,7 +30,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
   initialItem,
   onSaved,
 }) => {
-  const { user, items, language, categories } = useApp();
+  const { user, items, language, categories, locations } = useApp();
   const isHu = language === 'hu';
 
   // Form Fields
@@ -113,6 +113,14 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
 
     setSourceItemId(item.id);
 
+    // Location: prefill from item location if set
+    if (item.location_id) {
+      const loc = locations.find((l) => l.id === item.location_id);
+      if (loc && loc.name) {
+        setLocationRegion(loc.name);
+      }
+    }
+
     // Safely import all available photos from item
     const photosToImport = [item.photo_url, ...(item.additional_photos || [])].filter(Boolean) as string[];
     const importedUrls: string[] = [];
@@ -159,7 +167,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
       setRentalPeriodUnit((listing.rental_period_unit as RentalPeriodUnit) || 'day');
       setRentalDeposit(listing.rental_deposit !== null && listing.rental_deposit !== undefined ? String(listing.rental_deposit) : '');
       setBarterDescription(listing.barter_description || '');
-      setLocationRegion(listing.location_region || '');
+      setLocationRegion(listing.location_region || 'Országos / Foxpost');
       setDescription(listing.description || '');
       setHasWarranty(Boolean(listing.has_warranty));
       setHasInvoice(Boolean(listing.has_invoice));
@@ -177,7 +185,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
       setRentalPeriodUnit('day');
       setRentalDeposit('');
       setBarterDescription('');
-      setLocationRegion('');
+      setLocationRegion((user as any)?.location_region || 'Országos / Foxpost');
       setDescription('');
       setHasWarranty(false);
       setHasInvoice(false);

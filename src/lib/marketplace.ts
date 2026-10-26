@@ -128,7 +128,7 @@ export async function fetchMarketplaceListings(
       `
       *,
       images:listing_images(*),
-      seller:public_profiles!marketplace_listings_user_id_fkey(
+      seller:public_profiles!marketplace_listings_seller_id_fkey(
         user_id, display_name, avatar_url, location_region, trust_score, successful_deals, is_verified, created_at
       )
     `,
@@ -280,7 +280,7 @@ export async function fetchListingById(
         `
         *,
         images:listing_images(*),
-        seller:public_profiles!marketplace_listings_user_id_fkey(
+        seller:public_profiles!marketplace_listings_seller_id_fkey(
           user_id, display_name, avatar_url, bio, location_region, trust_score, successful_deals, is_verified, created_at
         )
       `
@@ -370,7 +370,7 @@ export async function fetchSavedListings(
         listing:marketplace_listings(
           *,
           images:listing_images(*),
-          seller:public_profiles!marketplace_listings_user_id_fkey(
+          seller:public_profiles!marketplace_listings_seller_id_fkey(
             user_id, display_name, avatar_url, trust_score, is_verified
           )
         )
@@ -493,7 +493,7 @@ export async function createListing(payload: {
         rental_period_unit: payload.rental_period_unit || null,
         rental_deposit: payload.rental_deposit || null,
         barter_target_description: payload.barter_description || null,
-        location_region: payload.location_region?.trim() || null,
+        location_region: payload.location_region?.trim() || 'Országos / Foxpost',
         has_warranty: Boolean(payload.has_warranty),
         has_invoice: Boolean(payload.has_invoice),
       })
@@ -553,7 +553,7 @@ export async function updateListing(
     if (payload.barter_description !== undefined || payload.barter_target_description !== undefined) {
       updates.barter_target_description = payload.barter_description || payload.barter_target_description;
     }
-    if (payload.location_region !== undefined) updates.location_region = payload.location_region?.trim() || null;
+    if (payload.location_region !== undefined) updates.location_region = payload.location_region?.trim() || 'Országos / Foxpost';
     if (payload.has_warranty !== undefined) updates.has_warranty = payload.has_warranty;
     if (payload.has_invoice !== undefined) updates.has_invoice = payload.has_invoice;
     if (payload.status !== undefined) updates.status = payload.status;
@@ -691,10 +691,10 @@ export async function fetchConversations(): Promise<ApiResponse<MarketplaceConve
           id, title, price, currency, listing_type, status,
           images:listing_images(*)
         ),
-        seller:public_profiles!marketplace_conversations_seller_id_fkey(
+        seller:public_profiles!marketplace_conversations_seller_profile_fkey(
           user_id, display_name, avatar_url, trust_score, is_verified
         ),
-        buyer:public_profiles!marketplace_conversations_buyer_id_fkey(
+        buyer:public_profiles!marketplace_conversations_buyer_profile_fkey(
           user_id, display_name, avatar_url, trust_score, is_verified
         )
       `
@@ -743,10 +743,10 @@ export async function getOrCreateConversation(
           id, title, price, currency, listing_type, status,
           images:listing_images(*)
         ),
-        seller:public_profiles!marketplace_conversations_seller_id_fkey(
+        seller:public_profiles!marketplace_conversations_seller_profile_fkey(
           user_id, display_name, avatar_url, trust_score, is_verified
         ),
-        buyer:public_profiles!marketplace_conversations_buyer_id_fkey(
+        buyer:public_profiles!marketplace_conversations_buyer_profile_fkey(
           user_id, display_name, avatar_url, trust_score, is_verified
         )
       `
@@ -782,10 +782,10 @@ export async function getOrCreateConversation(
           id, title, price, currency, listing_type, status,
           images:listing_images(*)
         ),
-        seller:public_profiles!marketplace_conversations_seller_id_fkey(
+        seller:public_profiles!marketplace_conversations_seller_profile_fkey(
           user_id, display_name, avatar_url, trust_score, is_verified
         ),
-        buyer:public_profiles!marketplace_conversations_buyer_id_fkey(
+        buyer:public_profiles!marketplace_conversations_buyer_profile_fkey(
           user_id, display_name, avatar_url, trust_score, is_verified
         )
       `
@@ -929,7 +929,7 @@ export async function fetchOffersForListing(
       .select(
         `
         *,
-        sender:public_profiles!marketplace_offers_sender_id_fkey(
+        sender:public_profiles!marketplace_offers_sender_profile_fkey(
           user_id, display_name, avatar_url, trust_score, is_verified
         )
       `
