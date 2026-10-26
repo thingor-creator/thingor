@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { MarketplaceListing } from '../../types/marketplace';
-import { fetchListingById, toggleSavedListing, updateListingStatus, deleteListing, blockUser } from '../../lib/marketplace';
+import { fetchListingById, toggleSavedListing, updateListingStatus, deleteListing, blockUser, getConditionDisplayLabel } from '../../lib/marketplace';
 import { useApp } from '../../context/AppContext';
 import {
   X,
@@ -383,7 +383,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                         <>
                           <span>•</span>
                           <span className="px-2 py-0.5 rounded bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)] font-medium">
-                            {listing.condition}
+                            {getConditionDisplayLabel(listing.condition, isHu)}
                           </span>
                         </>
                       )}

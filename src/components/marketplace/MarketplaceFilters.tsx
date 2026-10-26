@@ -56,11 +56,11 @@ export const MarketplaceFilters: React.FC<MarketplaceFiltersProps> = ({
 
   const conditionOptions = [
     { id: '', label: isHu ? 'Minden állapot' : 'All Conditions' },
-    { id: 'New', label: isHu ? 'Új' : 'New' },
-    { id: 'Excellent', label: isHu ? 'Kiváló' : 'Excellent' },
-    { id: 'Good', label: isHu ? 'Jó' : 'Good' },
-    { id: 'Fair', label: isHu ? 'Használt' : 'Fair' },
-    { id: 'Poor', label: isHu ? 'Kopott' : 'Poor' },
+    { id: 'new', label: isHu ? 'Új' : 'New' },
+    { id: 'like_new', label: isHu ? 'Újszerű / Kiváló' : 'Like New' },
+    { id: 'good', label: isHu ? 'Jó állapotú' : 'Good' },
+    { id: 'fair', label: isHu ? 'Használt' : 'Fair' },
+    { id: 'parts', label: isHu ? 'Alkatrésznek / Kopott' : 'For Parts / Poor' },
   ];
 
   const sortOptions: { id: ListingSortBy; label: string }[] = [

@@ -15,6 +15,42 @@ import type {
 } from '../types/marketplace';
 import { validateMarketplaceImageOrigin } from './r2';
 
+/**
+ * Normalizes any condition string (from UI, Item, or database) to the PostgreSQL public.item_condition enum:
+ * 'new' | 'like_new' | 'good' | 'fair' | 'parts'
+ */
+export function normalizeDbCondition(condition?: string | null): 'new' | 'like_new' | 'good' | 'fair' | 'parts' {
+  if (!condition) return 'good';
+  const c = condition.toLowerCase().trim();
+  if (c === 'new') return 'new';
+  if (c === 'like_new' || c === 'excellent') return 'like_new';
+  if (c === 'good') return 'good';
+  if (c === 'fair') return 'fair';
+  if (c === 'parts' || c === 'poor' || c === 'broken') return 'parts';
+  return 'good';
+}
+
+/**
+ * Formats condition into user-friendly localized display text
+ */
+export function getConditionDisplayLabel(condition?: string | null, isHu = true): string {
+  const norm = normalizeDbCondition(condition);
+  switch (norm) {
+    case 'new':
+      return isHu ? 'Új' : 'New';
+    case 'like_new':
+      return isHu ? 'Újszerű / Kiváló' : 'Like New';
+    case 'good':
+      return isHu ? 'Jó állapotú' : 'Good';
+    case 'fair':
+      return isHu ? 'Használt' : 'Fair';
+    case 'parts':
+      return isHu ? 'Alkatrésznek / Kopott' : 'For Parts / Poor';
+    default:
+      return condition || (isHu ? 'Jó' : 'Good');
+  }
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -124,7 +160,7 @@ export async function fetchMarketplaceListings(
 
   // Filter: Condition
   if (filters.condition && filters.condition !== 'all') {
-    query = query.eq('condition', filters.condition);
+    query = query.eq('condition', normalizeDbCondition(filters.condition));
   }
 
   // Filter: Location Region
@@ -451,7 +487,7 @@ export async function createListing(payload: {
         listing_type: dbType,
         status: 'active',
         category: payload.category_id || payload.category || 'Elektronika',
-        condition: payload.condition || 'good',
+        condition: normalizeDbCondition(payload.condition),
         price: payload.price !== undefined ? payload.price : null,
         currency: payload.currency || 'HUF',
         rental_period_unit: payload.rental_period_unit || null,
@@ -509,7 +545,7 @@ export async function updateListing(
     if (payload.category_id !== undefined || payload.category !== undefined) {
       updates.category = payload.category_id || payload.category;
     }
-    if (payload.condition !== undefined) updates.condition = payload.condition;
+    if (payload.condition !== undefined) updates.condition = normalizeDbCondition(payload.condition);
     if (payload.price !== undefined) updates.price = payload.price;
     if (payload.currency !== undefined) updates.currency = payload.currency;
     if (payload.rental_period_unit !== undefined) updates.rental_period_unit = payload.rental_period_unit;

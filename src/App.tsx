@@ -60,6 +60,7 @@ const AppContent: React.FC = () => {
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
   const [isStorageViewOpen, setIsStorageViewOpen] = useState(false);
   const [marketplaceListingId, setMarketplaceListingId] = useState<string | null>(null);
+  const [marketplaceCreateItemId, setMarketplaceCreateItemId] = useState<string | null>(null);
 
   // Scroll window to top whenever view or selected item changes
   useEffect(() => {
@@ -116,10 +117,21 @@ const AppContent: React.FC = () => {
         setCurrentView(isAuthenticated ? 'dashboard' : 'landing');
       }
 
-      // 1.5 Check marketplace view (#marketplace, #marketplace/listing/xyz, ?view=marketplace)
+      // 1.5 Check marketplace view (#marketplace, #marketplace/listing/xyz, #marketplace/create, ?view=marketplace)
+      if (hash.startsWith('#marketplace/create')) {
+        const queryParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : window.location.search);
+        const itemId = queryParams.get('itemId');
+        setMarketplaceListingId(null);
+        setMarketplaceCreateItemId(itemId || null);
+        if (currentView !== 'marketplace') {
+          setCurrentView('marketplace');
+        }
+        return;
+      }
       if (hash.startsWith('#marketplace/listing/')) {
         const lid = hash.replace('#marketplace/listing/', '').trim();
         setMarketplaceListingId(lid);
+        setMarketplaceCreateItemId(null);
         if (currentView !== 'marketplace') {
           setCurrentView('marketplace');
         }
@@ -127,6 +139,7 @@ const AppContent: React.FC = () => {
       }
       if (hash === '#marketplace' || searchParams.get('view') === 'marketplace' || pathname === '/marketplace') {
         setMarketplaceListingId(null);
+        setMarketplaceCreateItemId(null);
         if (currentView !== 'marketplace') {
           setCurrentView('marketplace');
         }
@@ -312,7 +325,12 @@ const AppContent: React.FC = () => {
               {currentView === 'collections' && <CollectionsView />}
               {currentView === 'pantry' && <PantryView />}
               {currentView === 'vault' && <VaultView />}
-              {currentView === 'marketplace' && <MarketplaceView initialListingId={marketplaceListingId} />}
+              {currentView === 'marketplace' && (
+                <MarketplaceView
+                  initialListingId={marketplaceListingId}
+                  initialCreateItemId={marketplaceCreateItemId}
+                />
+              )}
               {currentView === 'admin' && <AdminView />}
               {currentView === 'settings' && <SettingsView />}
             </>

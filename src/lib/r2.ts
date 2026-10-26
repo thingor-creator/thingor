@@ -491,8 +491,11 @@ export function validateMarketplaceImageOrigin(
     return { valid: false, error: 'A képhivatkozás hossza érvénytelen (5-1000 karakter)' };
   }
 
+  // Permit safe external preset host images.unsplash.com (used in presets/sample data)
+  const isUnsplash = trimmed.startsWith('https://images.unsplash.com/');
+
   // Reject whitespace, control characters, query strings, fragments, backslashes, percent-encoding
-  if (/[\s\x00-\x1f\x7f]/.test(trimmed) || /[?#\\%]/.test(trimmed)) {
+  if (/[\s\x00-\x1f\x7f]/.test(trimmed) || (!isUnsplash && /[?#\\%]/.test(trimmed))) {
     return { valid: false, error: 'A képhivatkozás érvénytelen karaktereket tartalmaz' };
   }
 
@@ -503,6 +506,10 @@ export function validateMarketplaceImageOrigin(
   // Strictly forbid documents, vault paths, and presigned parameters
   if (/(vault|documents|x-amz-|token=)/i.test(trimmed)) {
     return { valid: false, error: 'Privát dokumentumok és védett Vault fájlok nem használhatók piactéri képként' };
+  }
+
+  if (isUnsplash) {
+    return { valid: true };
   }
 
   let pathPart = trimmed;

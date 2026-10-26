@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { MarketplaceListing, ListingType, RentalPeriodUnit } from '../../types/marketplace';
 import type { Item } from '../../types';
-import { createListing, updateListing } from '../../lib/marketplace';
+import { createListing, updateListing, normalizeDbCondition, getConditionDisplayLabel } from '../../lib/marketplace';
 import { uploadFileToR2, getR2FileSignedUrl, validateMarketplaceImageOrigin } from '../../lib/r2';
 import { useApp } from '../../context/AppContext';
 import {
@@ -19,6 +19,7 @@ interface CreateEditListingModalProps {
   isOpen: boolean;
   onClose: () => void;
   listing?: MarketplaceListing | null;
+  initialItem?: Item | null;
   onSaved: (savedListing: MarketplaceListing) => void;
 }
 
@@ -26,16 +27,17 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
   isOpen,
   onClose,
   listing,
+  initialItem,
   onSaved,
 }) => {
-  const { user, items, language } = useApp();
+  const { user, items, language, categories } = useApp();
   const isHu = language === 'hu';
 
   // Form Fields
   const [title, setTitle] = useState('');
   const [listingType, setListingType] = useState<ListingType>('sale');
   const [categoryId, setCategoryId] = useState('Elektronika');
-  const [condition, setCondition] = useState('Good');
+  const [condition, setCondition] = useState<'new' | 'like_new' | 'good' | 'fair' | 'parts'>('good');
   const [price, setPrice] = useState<string>('');
   const [currency, setCurrency] = useState('HUF');
   const [rentalPeriodUnit, setRentalPeriodUnit] = useState<RentalPeriodUnit>('day');
@@ -57,6 +59,86 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
 
   const isEditMode = Boolean(listing?.id);
 
+  // Safe import from user's inventory
+  const handleImportItem = async (item: Item) => {
+    setTitle(item.name || '');
+
+    // Description: prioritize description, combine with notes if present
+    const descParts: string[] = [];
+    if (item.description && item.description.trim()) {
+      descParts.push(item.description.trim());
+    }
+    if (item.notes && item.notes.trim()) {
+      descParts.push(item.notes.trim());
+    }
+    setDescription(descParts.join('\n\n'));
+
+    // Category mapping: resolve name from ID if needed and match to allowed options
+    const matchedCategory = categories.find((c) => c.id === item.category_id || c.name === item.category_id);
+    const catName = matchedCategory ? matchedCategory.name : (item.category_id || '');
+    const validCategories = [
+      'Elektronika',
+      'Szerszámok',
+      'Otthon & Háztartás',
+      'Kert',
+      'Járművek',
+      'Sport & Szabadidő',
+      'Könyvek',
+      'Gyűjtemények',
+      'Ruházat',
+      'Háztartási gépek',
+      'Egyéb tárgyak',
+    ];
+    const foundCategory = validCategories.find(c => c.toLowerCase() === catName.toLowerCase());
+    setCategoryId(foundCategory || 'Egyéb tárgyak');
+
+    // Condition mapping to DB enum
+    if (item.condition) {
+      setCondition(normalizeDbCondition(item.condition));
+    }
+
+    // Price mapping: check current_value then purchase_price
+    const priceVal = item.current_value || item.purchase_price;
+    if (priceVal !== undefined && priceVal !== null && !isNaN(priceVal)) {
+      setPrice(String(priceVal));
+    }
+
+    // Warranty: check if warranty_end is in future
+    if (item.warranty_end) {
+      const isStillValid = new Date(item.warranty_end).getTime() > Date.now();
+      setHasWarranty(isStillValid);
+    } else {
+      setHasWarranty(false);
+    }
+
+    setSourceItemId(item.id);
+
+    // Safely import all available photos from item
+    const photosToImport = [item.photo_url, ...(item.additional_photos || [])].filter(Boolean) as string[];
+    const importedUrls: string[] = [];
+    for (const rawPhoto of photosToImport) {
+      try {
+        const fullUrl = await getR2FileSignedUrl(rawPhoto);
+        const targetUrl = fullUrl || rawPhoto;
+        if (user) {
+          const validation = validateMarketplaceImageOrigin(targetUrl, user.id);
+          if (validation.valid) {
+            importedUrls.push(targetUrl);
+          }
+        } else {
+          importedUrls.push(targetUrl);
+        }
+      } catch {
+        // Skip photo if not compliant
+      }
+    }
+    if (importedUrls.length > 0) {
+      setImages(importedUrls);
+    }
+
+    setShowInventoryPicker(false);
+  };
+
   // Initialize or reset form
   useEffect(() => {
     if (!isOpen) {
@@ -71,7 +153,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
       setTitle(listing.title || '');
       setListingType(listing.listing_type || 'sale');
       setCategoryId(listing.category_id || 'Elektronika');
-      setCondition(listing.condition || 'Good');
+      setCondition(normalizeDbCondition(listing.condition));
       setPrice(listing.price !== null && listing.price !== undefined ? String(listing.price) : '');
       setCurrency(listing.currency || 'HUF');
       setRentalPeriodUnit((listing.rental_period_unit as RentalPeriodUnit) || 'day');
@@ -83,11 +165,13 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
       setHasInvoice(Boolean(listing.has_invoice));
       setImages(listing.images ? listing.images.map((i) => i.image_url) : []);
       setSourceItemId(listing.source_item_id);
+    } else if (initialItem) {
+      handleImportItem(initialItem);
     } else {
       setTitle('');
       setListingType('sale');
       setCategoryId('Elektronika');
-      setCondition('Good');
+      setCondition('good');
       setPrice('');
       setCurrency('HUF');
       setRentalPeriodUnit('day');
@@ -100,7 +184,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
       setImages([]);
       setSourceItemId(undefined);
     }
-  }, [isOpen, listing]);
+  }, [isOpen, listing, initialItem]);
 
   if (!isOpen) return null;
 
@@ -168,31 +252,6 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
       const others = prev.filter((_, idx) => idx !== indexToPrimary);
       return [primary, ...others];
     });
-  };
-
-  // Safe import from user's inventory
-  const handleImportItem = async (item: Item) => {
-    setTitle(item.name || '');
-    if (item.category_id) setCategoryId(item.category_id);
-    if (item.condition) setCondition(item.condition);
-    if (item.notes) setDescription(item.notes);
-    if (item.purchase_price) setPrice(String(item.purchase_price));
-    setSourceItemId(item.id);
-
-    // Safely import image if valid
-    if (item.photo_url && user) {
-      try {
-        const fullUrl = await getR2FileSignedUrl(item.photo_url);
-        const validation = validateMarketplaceImageOrigin(fullUrl, user.id);
-        if (validation.valid) {
-          setImages([fullUrl]);
-        }
-      } catch {
-        // Skip photo if not compliant
-      }
-    }
-
-    setShowInventoryPicker(false);
   };
 
   // Submit Handler
@@ -431,14 +490,14 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
               </label>
               <select
                 value={condition}
-                onChange={(e) => setCondition(e.target.value)}
+                onChange={(e) => setCondition(normalizeDbCondition(e.target.value))}
                 className="w-full px-3 py-2 rounded-[10px] bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-white focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)]"
               >
-                <option value="New">{isHu ? 'Új (bontatlan / sosem használt)' : 'New'}</option>
-                <option value="Excellent">{isHu ? 'Kiváló (újszerű, hibátlan)' : 'Excellent'}</option>
-                <option value="Good">{isHu ? 'Jó állapotú (normál használat)' : 'Good'}</option>
-                <option value="Fair">{isHu ? 'Használt (esztétikai hiba)' : 'Fair'}</option>
-                <option value="Poor">{isHu ? 'Kopott / Felújításra szorul' : 'Poor'}</option>
+                <option value="new">{isHu ? 'Új (bontatlan / sosem használt)' : 'New'}</option>
+                <option value="like_new">{isHu ? 'Újszerű / Kiváló (hibátlan)' : 'Like New / Excellent'}</option>
+                <option value="good">{isHu ? 'Jó állapotú (normál használat)' : 'Good'}</option>
+                <option value="fair">{isHu ? 'Használt (megkímélt / esztétikai hiba)' : 'Fair'}</option>
+                <option value="parts">{isHu ? 'Alkatrésznek / Kopott' : 'For Parts / Poor'}</option>
               </select>
             </div>
           </div>
@@ -744,7 +803,7 @@ export const CreateEditListingModal: React.FC<CreateEditListingModalProps> = ({
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-white">{item.name}</span>
                         <span className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
-                          {item.category_id || (isHu ? 'Általános' : 'General')} • {item.condition || 'Jó'}
+                          {(categories.find(c => c.id === item.category_id)?.name || item.category_id || (isHu ? 'Általános' : 'General'))} • {getConditionDisplayLabel(item.condition, isHu)}
                         </span>
                       </div>
                     </div>

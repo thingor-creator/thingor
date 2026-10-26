@@ -1,5 +1,6 @@
 import React from 'react';
 import type { MarketplaceListing } from '../../types/marketplace';
+import { getConditionDisplayLabel } from '../../lib/marketplace';
 import { useApp } from '../../context/AppContext';
 import {
   MapPin,
@@ -70,14 +71,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   };
 
   const getConditionLabel = (condition: string) => {
-    switch (condition) {
-      case 'New': return isHu ? 'Új' : 'New';
-      case 'Excellent': return isHu ? 'Kiváló' : 'Excellent';
-      case 'Good': return isHu ? 'Jó állapotú' : 'Good';
-      case 'Fair': return isHu ? 'Használt' : 'Fair';
-      case 'Poor': return isHu ? 'Kopott' : 'Poor';
-      default: return condition;
-    }
+    return getConditionDisplayLabel(condition, isHu);
   };
 
   const formatPrice = () => {

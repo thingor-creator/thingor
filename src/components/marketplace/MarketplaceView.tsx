@@ -36,10 +36,14 @@ type MarketplaceTab = 'browse' | 'my_listings' | 'saved';
 
 interface MarketplaceViewProps {
   initialListingId?: string | null;
+  initialCreateItemId?: string | null;
 }
 
-export const MarketplaceView: React.FC<MarketplaceViewProps> = ({ initialListingId }) => {
-  const { user, isAuthenticated, setIsAuthModalOpen, language } = useApp();
+export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
+  initialListingId,
+  initialCreateItemId,
+}) => {
+  const { user, isAuthenticated, setIsAuthModalOpen, language, items } = useApp();
   const isHu = language === 'hu';
 
   // Navigation Sub-tab
@@ -65,8 +69,20 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({ initialListing
   const [selectedListingId, setSelectedListingId] = useState<string | null>(initialListingId || null);
   const [isDetailOpen, setIsDetailOpen] = useState(Boolean(initialListingId));
 
-  const [isCreateEditOpen, setIsCreateEditOpen] = useState(false);
+  const [isCreateEditOpen, setIsCreateEditOpen] = useState(Boolean(initialCreateItemId));
   const [editingListing, setEditingListing] = useState<MarketplaceListing | null>(null);
+  const [initialItemToCreate, setInitialItemToCreate] = useState<any | null>(null);
+
+  // If initialCreateItemId is passed, find the item and prepare to create listing
+  useEffect(() => {
+    if (initialCreateItemId && items.length > 0) {
+      const target = items.find((i) => i.id === initialCreateItemId);
+      if (target) {
+        setInitialItemToCreate(target);
+        setIsCreateEditOpen(true);
+      }
+    }
+  }, [initialCreateItemId, items]);
 
   const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
   const [isSellerProfileOpen, setIsSellerProfileOpen] = useState(false);
@@ -521,9 +537,11 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({ initialListing
       <CreateEditListingModal
         isOpen={isCreateEditOpen}
         listing={editingListing}
+        initialItem={initialItemToCreate}
         onClose={() => {
           setIsCreateEditOpen(false);
           setEditingListing(null);
+          setInitialItemToCreate(null);
         }}
         onSaved={(_saved) => {
           loadListings();

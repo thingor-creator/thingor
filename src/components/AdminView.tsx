@@ -30,8 +30,16 @@ import {
   Loader2,
   Image as ImageIcon,
   Menu,
+  Ticket,
+  Gift,
+  Copy,
+  Check,
+  Clock,
+  Ban,
+  Crown,
 } from 'lucide-react';
 import type { UserStatus, LegalSlug, UserDetailStats } from '../types';
+import { supabase } from '../lib/supabase';
 import { isAdmin as checkIsAdmin } from '../lib/permissions';
 import { isR2Configured } from '../lib/r2';
 import { uploadFileToStorage, deleteFileFromStorage } from '../lib/storage';
@@ -69,7 +77,23 @@ export const AdminView: React.FC = () => {
     goBack,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'registration' | 'content' | 'legal' | 'settings' | 'audit' | 'faq'>('overview');
+interface PromoCodeRecord {
+  id: string;
+  code: string;
+  type: 'vip' | 'promo';
+  target_plan_id: string;
+  duration_days: number | null;
+  valid_until: string | null;
+  max_uses: number;
+  used_count: number;
+  status: 'active' | 'exhausted' | 'expired' | 'revoked';
+  campaign_name: string | null;
+  admin_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'registration' | 'content' | 'legal' | 'settings' | 'audit' | 'faq' | 'promo'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -81,10 +105,35 @@ export const AdminView: React.FC = () => {
   const [showDeleteUserConfirmModal, setShowDeleteUserConfirmModal] = useState(false);
   const [targetUserToDelete, setTargetUserToDelete] = useState<{ id: string; email: string } | null>(null);
 
+  // Promo / VIP codes state
+  const [promoCodes, setPromoCodes] = useState<PromoCodeRecord[]>([]);
+  const [isLoadingPromoCodes, setIsLoadingPromoCodes] = useState(false);
+  const [promoSearchTerm, setPromoSearchTerm] = useState('');
+  const [promoStatusFilter, setPromoStatusFilter] = useState<'all' | 'active' | 'exhausted' | 'expired' | 'revoked'>('all');
+  const [showCreatePromoModal, setShowCreatePromoModal] = useState(false);
+  const [newPromoCode, setNewPromoCode] = useState('');
+  const [newPromoType, setNewPromoType] = useState<'vip' | 'promo'>('vip');
+  const [newPromoTargetPlan, setNewPromoTargetPlan] = useState<'plus' | 'family' | 'business'>('plus');
+  const [newPromoDurationPreset, setNewPromoDurationPreset] = useState<'7' | '30' | '90' | '180' | '365' | 'perpetual' | 'custom'>('30');
+  const [newPromoDurationCustom, setNewPromoDurationCustom] = useState<number | ''>('');
+  const [newPromoValidUntil, setNewPromoValidUntil] = useState('');
+  const [newPromoMaxUses, setNewPromoMaxUses] = useState(1);
+  const [newPromoCampaign, setNewPromoCampaign] = useState('');
+  const [newPromoNotes, setNewPromoNotes] = useState('');
+  const [isCreatingPromo, setIsCreatingPromo] = useState(false);
+  const [targetCodeToRevoke, setTargetCodeToRevoke] = useState<PromoCodeRecord | null>(null);
+  const [revokeMode, setRevokeMode] = useState<'immediate' | 'graceful'>('graceful');
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revokeGracePeriodDays, setRevokeGracePeriodDays] = useState(30);
+  const [isRevokingPromo, setIsRevokingPromo] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+
   // Mobile back button traps: closing modals on back button without changing route
   useModalBack(selectedUserStats !== null, () => setSelectedUserStats(null), 'admin-user-stats');
   useModalBack(showSuspendConfirmModal, () => setShowSuspendConfirmModal(false), 'admin-suspend-confirm');
   useModalBack(showDeleteUserConfirmModal, () => setShowDeleteUserConfirmModal(false), 'admin-delete-confirm');
+  useModalBack(showCreatePromoModal, () => setShowCreatePromoModal(false), 'admin-create-promo');
+  useModalBack(targetCodeToRevoke !== null, () => setTargetCodeToRevoke(null), 'admin-revoke-promo');
 
   // Settings form state
   const [siteName, setSiteName] = useState(siteSettings.site_name);
@@ -202,6 +251,112 @@ export const AdminView: React.FC = () => {
       fetchLegalDocumentVersions(activeLegalSlug);
     }
   }, [isAdmin, activeLegalSlug]);
+
+  const fetchPromoCodes = async () => {
+    setIsLoadingPromoCodes(true);
+    try {
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPromoCodes(data || []);
+    } catch (err: any) {
+      console.error('Hiba a VIP kódok lekérésekor:', err);
+      setActionMsg({ type: 'error', text: 'Nem sikerült betölteni a VIP kódokat: ' + (err?.message || '') });
+    } finally {
+      setIsLoadingPromoCodes(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin && (activeTab === 'promo' || activeTab === 'overview')) {
+      fetchPromoCodes();
+    }
+  }, [isAdmin, activeTab]);
+
+  const handleCreatePromoCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingPromo(true);
+    try {
+      const durationDays = newPromoDurationPreset === 'perpetual'
+        ? null
+        : newPromoDurationPreset === 'custom'
+        ? (newPromoDurationCustom ? Number(newPromoDurationCustom) : null)
+        : Number(newPromoDurationPreset);
+
+      const validUntilIso = newPromoValidUntil ? new Date(newPromoValidUntil).toISOString() : null;
+
+      const { data, error } = await supabase.rpc('admin_generate_promo_code', {
+        p_code: newPromoCode.trim() || null,
+        p_type: newPromoType,
+        p_target_plan_id: newPromoTargetPlan,
+        p_duration_days: durationDays,
+        p_valid_until: validUntilIso,
+        p_max_uses: Number(newPromoMaxUses) || 1,
+        p_campaign_name: newPromoCampaign.trim() || null,
+        p_admin_notes: newPromoNotes.trim() || null
+      });
+
+      if (error) throw error;
+      const createdCode = data?.code || newPromoCode.trim().toUpperCase();
+      if (createdCode && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(createdCode);
+      }
+      setActionMsg({
+        type: 'success',
+        text: `VIP kód sikeresen létrehozva és a vágólapra másolva: ${createdCode}`
+      });
+      setTimeout(() => setActionMsg(null), 4000);
+      await fetchPromoCodes();
+      setShowCreatePromoModal(false);
+      setNewPromoCode('');
+      setNewPromoCampaign('');
+      setNewPromoNotes('');
+      setNewPromoValidUntil('');
+      setNewPromoMaxUses(1);
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: 'Hiba a VIP kód létrehozásakor: ' + (err?.message || 'Ismeretlen hiba') });
+    } finally {
+      setIsCreatingPromo(false);
+    }
+  };
+
+  const handleRevokePromoCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetCodeToRevoke) return;
+    setIsRevokingPromo(true);
+    try {
+      const { data, error } = await supabase.rpc('admin_revoke_promo_code', {
+        p_promo_code_id: targetCodeToRevoke.id,
+        p_mode: revokeMode,
+        p_reason: revokeReason.trim() || 'Adminisztrátori visszavonás',
+        p_grace_period_days: Number(revokeGracePeriodDays) || 30
+      });
+
+      if (error) throw error;
+      setActionMsg({
+        type: 'success',
+        text: `VIP kód (${targetCodeToRevoke.code}) sikeresen visszavonva (${revokeMode === 'immediate' ? 'azonnali' : 'türelmi idővel'}). Érintett beváltások: ${data?.affected_redemptions ?? 0}`
+      });
+      setTimeout(() => setActionMsg(null), 4000);
+      setTargetCodeToRevoke(null);
+      setRevokeReason('');
+      await fetchPromoCodes();
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: 'Hiba a VIP kód visszavonásakor: ' + (err?.message || '') });
+    } finally {
+      setIsRevokingPromo(false);
+    }
+  };
+
+  const handleCopyCode = (code: string, id: string) => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code);
+    }
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2500);
+  };
 
   useEffect(() => {
     setSiteName(siteSettings.site_name);
@@ -421,6 +576,7 @@ export const AdminView: React.FC = () => {
       <div className="md:hidden flex items-center gap-1.5 overflow-x-auto px-4 py-2.5 bg-[var(--card-bg,#3A4551)] border-b border-[var(--border-color,#56616D)] no-scrollbar shrink-0">
         {[
           { id: 'overview', label: 'Áttekintés', icon: LayoutDashboard, color: 'text-indigo-400' },
+          { id: 'promo', label: 'VIP Kódok', icon: Ticket, color: 'text-amber-400' },
           { id: 'users', label: 'Moderáció', icon: ShieldAlert, color: 'text-rose-400' },
           { id: 'content', label: 'Kezdőlap', icon: Layers, color: 'text-pink-400' },
           { id: 'faq', label: 'GYIK', icon: HelpCircle, color: 'text-purple-400' },
@@ -554,6 +710,18 @@ export const AdminView: React.FC = () => {
                   >
                     <Sliders className="w-4 h-4 text-amber-400" />
                     <span>Regisztráció & Működés</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('promo'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeTab === 'promo'
+                        ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-amber-500 shadow-sm'
+                        : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                    }`}
+                  >
+                    <Ticket className="w-4 h-4 text-amber-400" />
+                    <span>VIP & Promóciók</span>
                   </button>
 
                   <button
@@ -706,6 +874,18 @@ export const AdminView: React.FC = () => {
                 >
                   <Sliders className="w-4 h-4 text-amber-400" />
                   <span>Regisztráció & Működés</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('promo')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'promo'
+                      ? 'bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] border-l-4 border-amber-500 shadow-sm'
+                      : 'text-[var(--text-sub,#B5BDC6)] hover:bg-[var(--surface-bg,#465362)] hover:text-[var(--text-main,#E0E3E6)]'
+                  }`}
+                >
+                  <Ticket className="w-4 h-4 text-amber-400" />
+                  <span>VIP & Promóciók</span>
                 </button>
 
                 <button
@@ -1542,6 +1722,303 @@ export const AdminView: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* TAB 9: VIP & PROMO CODES */}
+          {activeTab === 'promo' && (
+            <div className="space-y-6 sm:space-y-8 animate-fade-in">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-[var(--text-main,#E0E3E6)] tracking-tight flex items-center gap-2.5">
+                    <Ticket className="w-6 h-6 text-amber-400" />
+                    <span>VIP & Promóciós Kódok Kezelése</span>
+                  </h1>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-1">
+                    Biztonságosan generálj VIP hozzáféréseket, promóciós kuponokat és felügyeld a beváltásokat.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={fetchPromoCodes}
+                    disabled={isLoadingPromoCodes}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs font-semibold text-[var(--text-main,#E0E3E6)] hover:bg-[var(--surface-bg,#465362)]/80 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingPromoCodes ? 'animate-spin' : ''}`} />
+                    <span>Frissítés</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowCreatePromoModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02]"
+                  >
+                    <Plus className="w-4 h-4 text-slate-950 stroke-[3]" />
+                    <span>Új VIP Kód Generálása</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Stat Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[var(--text-sub,#B5BDC6)]">Összes Kód</span>
+                    <Ticket className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-[var(--text-main,#E0E3E6)] mt-2">
+                    {promoCodes.length}
+                  </p>
+                </div>
+
+                <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[var(--text-sub,#B5BDC6)]">Aktív Kódok</span>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-emerald-400 mt-2">
+                    {promoCodes.filter(c => c.status === 'active').length}
+                  </p>
+                </div>
+
+                <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[var(--text-sub,#B5BDC6)]">Összes Beváltás</span>
+                    <Gift className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-blue-400 mt-2">
+                    {promoCodes.reduce((acc, c) => acc + (c.used_count || 0), 0)}
+                  </p>
+                </div>
+
+                <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[var(--text-sub,#B5BDC6)]">Visszavont / Lejárt</span>
+                    <Ban className="w-4 h-4 text-rose-400" />
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-rose-400 mt-2">
+                    {promoCodes.filter(c => c.status === 'revoked' || c.status === 'expired').length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Filter and Search Bar */}
+              <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-sm">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-sub,#B5BDC6)]" />
+                  <input
+                    type="text"
+                    placeholder="Keresés kód, kampány, admin megjegyzés vagy csomag alapján..."
+                    value={promoSearchTerm}
+                    onChange={e => setPromoSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                  {(['all', 'active', 'exhausted', 'expired', 'revoked'] as const).map(statusKey => {
+                    const label = statusKey === 'all' ? 'Mind'
+                      : statusKey === 'active' ? 'Aktív'
+                      : statusKey === 'exhausted' ? 'Kimerült'
+                      : statusKey === 'expired' ? 'Lejárt'
+                      : 'Visszavont';
+                    const isSelected = promoStatusFilter === statusKey;
+                    return (
+                      <button
+                        key={statusKey}
+                        onClick={() => setPromoStatusFilter(statusKey)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                          isSelected
+                            ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                            : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Codes Listing */}
+              <div className="space-y-3">
+                {isLoadingPromoCodes ? (
+                  <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-12 text-center">
+                    <Loader2 className="w-8 h-8 text-amber-400 animate-spin mx-auto mb-3" />
+                    <p className="text-xs text-[var(--text-sub,#B5BDC6)]">VIP kódok betöltése a szerverről...</p>
+                  </div>
+                ) : promoCodes.length === 0 ? (
+                  <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-12 text-center">
+                    <Ticket className="w-10 h-10 text-[var(--text-sub,#B5BDC6)] mx-auto mb-3 opacity-40" />
+                    <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)]">Még nincs létrehozott VIP kód</h3>
+                    <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-1 max-w-sm mx-auto">
+                      Kattints a fenti "Új VIP Kód Generálása" gombra egy új biztonságos kupon létrehozásához.
+                    </p>
+                  </div>
+                ) : (
+                  promoCodes
+                    .filter(c => {
+                      if (promoStatusFilter !== 'all' && c.status !== promoStatusFilter) return false;
+                      if (!promoSearchTerm.trim()) return true;
+                      const q = promoSearchTerm.toLowerCase();
+                      return (
+                        c.code.toLowerCase().includes(q) ||
+                        (c.campaign_name && c.campaign_name.toLowerCase().includes(q)) ||
+                        (c.admin_notes && c.admin_notes.toLowerCase().includes(q)) ||
+                        c.target_plan_id.toLowerCase().includes(q)
+                      );
+                    })
+                    .map(item => {
+                      const isExpired = item.status === 'expired';
+                      const isExhausted = item.status === 'exhausted' || item.used_count >= item.max_uses;
+                      const isRevoked = item.status === 'revoked';
+
+                      const planBadgeColor =
+                        item.target_plan_id === 'business'
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                          : item.target_plan_id === 'family'
+                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                          : 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+
+                      const statusBadge = isRevoked ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          Visszavonva
+                        </span>
+                      ) : isExhausted ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          Kimerült
+                        </span>
+                      ) : isExpired ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                          Lejárt
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          Aktív
+                        </span>
+                      );
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-4 sm:p-5 hover:border-amber-500/40 transition-all shadow-sm space-y-3"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* Monospace code with click-to-copy */}
+                              <button
+                                onClick={() => handleCopyCode(item.code, item.id)}
+                                className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-amber-300 font-mono text-xs sm:text-sm font-bold hover:bg-slate-900 hover:border-amber-400 transition-all shadow-inner"
+                                title="Kattints a kód másolásához"
+                              >
+                                <span>{item.code}</span>
+                                {copiedCodeId === item.id ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-300 shrink-0" />
+                                )}
+                              </button>
+
+                              {/* Target plan */}
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border flex items-center gap-1 ${planBadgeColor}`}>
+                                {item.target_plan_id === 'business' && <Crown className="w-3 h-3 text-amber-300" />}
+                                {item.target_plan_id} csomag
+                              </span>
+
+                              {/* Duration badge */}
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border border-[var(--border-color,#56616D)] flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-amber-400" />
+                                {item.duration_days ? `${item.duration_days} napos VIP` : 'Örökös (Perpetual)'}
+                              </span>
+
+                              {/* Status badge */}
+                              {statusBadge}
+                            </div>
+
+                            {/* Actions: Copy and Revoke */}
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
+                              <button
+                                onClick={() => handleCopyCode(item.code, item.id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-xs font-semibold text-[var(--text-main,#E0E3E6)] border border-[var(--border-color,#56616D)] transition-colors"
+                              >
+                                {copiedCodeId === item.id ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span className="text-emerald-400">Másolva!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-[var(--text-sub,#B5BDC6)]" />
+                                    <span>Másolás</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {!isRevoked && (
+                                <button
+                                  onClick={() => {
+                                    setTargetCodeToRevoke(item);
+                                    setRevokeMode('graceful');
+                                    setRevokeReason('');
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-semibold transition-colors"
+                                  title="Kód visszavonása / letiltása"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                  <span>Visszavonás</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Metadata row: Usage progress, Campaign, Expiration */}
+                          <div className="pt-2 border-t border-[var(--border-color,#56616D)]/60 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                            {/* Uses */}
+                            <div>
+                              <div className="flex items-center justify-between text-[11px] text-[var(--text-sub,#B5BDC6)] mb-1">
+                                <span>Felhasználva:</span>
+                                <span className="font-bold text-[var(--text-main,#E0E3E6)]">
+                                  {item.used_count} / {item.max_uses}
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-[var(--surface-bg,#465362)] rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all ${
+                                    isExhausted ? 'bg-amber-400' : 'bg-emerald-400'
+                                  }`}
+                                  style={{
+                                    width: `${Math.min(100, (item.used_count / Math.max(1, item.max_uses)) * 100)}%`
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Campaign & Notes */}
+                            <div className="truncate">
+                              <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] block">Kampány / Megjegyzés:</span>
+                              <span className="text-xs text-[var(--text-main,#E0E3E6)] font-medium truncate block">
+                                {item.campaign_name || item.admin_notes || '—'}
+                              </span>
+                            </div>
+
+                            {/* Expiry & Created */}
+                            <div className="text-left sm:text-right">
+                              <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] block">
+                                {item.valid_until
+                                  ? `Beváltható: ${new Date(item.valid_until).toLocaleDateString('hu-HU')}`
+                                  : 'Nincs lejárati korlát'}
+                              </span>
+                              <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] font-mono block">
+                                Készült: {new Date(item.created_at).toLocaleDateString('hu-HU')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
@@ -1643,6 +2120,335 @@ export const AdminView: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* CREATE VIP PROMO CODE MODAL */}
+      {showCreatePromoModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleCreatePromoCode}
+            className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                  <Ticket className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[var(--text-main,#E0E3E6)]">Új VIP Kód Létrehozása</h3>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)]">Generálj egyedi, biztonságos hozzáférési kódot</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreatePromoModal(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Custom Code or Auto-generate */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)] flex items-center justify-between">
+                <span>Egyedi Kód (Opcionális)</span>
+                <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] font-normal">Hagyd üresen automatikus generáláshoz</span>
+              </label>
+              <input
+                type="text"
+                placeholder="pl. THINGOR-VIP-2026 (üresen: automatikus)"
+                value={newPromoCode}
+                onChange={e => setNewPromoCode(e.target.value.toUpperCase())}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs font-mono uppercase text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            {/* Promo Type */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Kódtípus</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewPromoType('vip')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    newPromoType === 'vip'
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-300 ring-1 ring-amber-400'
+                      : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border-[var(--border-color,#56616D)]'
+                  }`}
+                >
+                  VIP Hozzáférés
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewPromoType('promo')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    newPromoType === 'promo'
+                      ? 'bg-blue-500/20 border-blue-400 text-blue-300 ring-1 ring-blue-400'
+                      : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] border-[var(--border-color,#56616D)]'
+                  }`}
+                >
+                  Promóciós Kupon
+                </button>
+              </div>
+            </div>
+
+            {/* Target Plan */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Célcsomag (Előfizetési szint)</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'plus', name: 'Plus', desc: '1 000 tárgy, 500 MB', color: 'border-blue-500/40 text-blue-300' },
+                  { id: 'family', name: 'Family', desc: '5 000 tárgy, 2 GB, 5 tag', color: 'border-emerald-500/40 text-emerald-300' },
+                  { id: 'business', name: 'Business', desc: 'Korlátlan, 10 GB, Széf', color: 'border-amber-500/40 text-amber-300' },
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setNewPromoTargetPlan(p.id as any)}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      newPromoTargetPlan === p.id
+                        ? 'bg-[var(--surface-bg,#465362)] border-amber-400 shadow-sm ring-1 ring-amber-400'
+                        : 'bg-[var(--surface-bg,#465362)]/60 border-[var(--border-color,#56616D)] hover:border-slate-500'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{p.name}</div>
+                    <div className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5">{p.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* VIP Duration Preset */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">VIP Időtartam</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { id: '7', label: '7 nap' },
+                  { id: '30', label: '30 nap' },
+                  { id: '90', label: '90 nap' },
+                  { id: '180', label: '180 nap' },
+                  { id: '365', label: '1 év' },
+                  { id: 'perpetual', label: 'Örökös' },
+                  { id: 'custom', label: 'Egyedi...' },
+                ].map(d => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setNewPromoDurationPreset(d.id as any)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      newPromoDurationPreset === d.id
+                        ? 'bg-amber-500 text-slate-950 font-bold'
+                        : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white border border-[var(--border-color,#56616D)]'
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+              {newPromoDurationPreset === 'custom' && (
+                <div className="pt-1.5">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Napok száma (pl. 45)"
+                    value={newPromoDurationCustom}
+                    onChange={e => setNewPromoDurationCustom(e.target.value ? Number(e.target.value) : '')}
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Max uses & Valid Until */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Max. Beváltások Száma</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={newPromoMaxUses}
+                  onChange={e => setNewPromoMaxUses(Math.max(1, Number(e.target.value)))}
+                  required
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Beváltási Határidő (Opcionális)</label>
+                <input
+                  type="date"
+                  value={newPromoValidUntil}
+                  onChange={e => setNewPromoValidUntil(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            {/* Campaign Name & Notes */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Kampány Neve (Opcionális)</label>
+              <input
+                type="text"
+                placeholder="pl. 2026 Tavaszi Béta VIP Tesztelők"
+                value={newPromoCampaign}
+                onChange={e => setNewPromoCampaign(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Admin Megjegyzés (Belső használatra)</label>
+              <textarea
+                rows={2}
+                placeholder="pl. Vezetőségi engedéllyel kiadva kiemelt partnernek..."
+                value={newPromoNotes}
+                onChange={e => setNewPromoNotes(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-amber-400 resize-none"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--border-color,#56616D)]">
+              <button
+                type="button"
+                onClick={() => setShowCreatePromoModal(false)}
+                className="px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] text-xs font-semibold border border-[var(--border-color,#56616D)] transition-colors"
+              >
+                Mégse
+              </button>
+              <button
+                type="submit"
+                disabled={isCreatingPromo}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-bold transition-all shadow-md shadow-amber-500/20 disabled:opacity-50"
+              >
+                {isCreatingPromo && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>VIP Kód Létrehozása</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* REVOKE PROMO CODE MODAL */}
+      {targetCodeToRevoke && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleRevokePromoCode}
+            className="bg-[var(--card-bg,#3A4551)] border border-rose-500/40 rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-fade-in"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color,#56616D)]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[var(--text-main,#E0E3E6)]">VIP Kód Visszavonása</h3>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)]">Kód: <span className="font-mono text-amber-300 font-bold">{targetCodeToRevoke.code}</span></p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTargetCodeToRevoke(null)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Visszavonási Mód</label>
+              <div className="space-y-2">
+                <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  revokeMode === 'graceful'
+                    ? 'bg-[var(--surface-bg,#465362)] border-amber-400 ring-1 ring-amber-400'
+                    : 'bg-[var(--surface-bg,#465362)]/60 border-[var(--border-color,#56616D)]'
+                }`}>
+                  <input
+                    type="radio"
+                    name="revokeMode"
+                    value="graceful"
+                    checked={revokeMode === 'graceful'}
+                    onChange={() => setRevokeMode('graceful')}
+                    className="mt-0.5 text-amber-500 focus:ring-amber-400"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)] block">Kíméletes (Graceful)</span>
+                    <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] block mt-0.5">
+                      Új felhasználó már nem válthatja be. Az aktív felhasználók megőrzik hozzáférésüket a lejárati idejükig (vagy max 30 napig).
+                    </span>
+                    {revokeMode === 'graceful' && (
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <span className="text-[11px] text-[var(--text-sub,#B5BDC6)]">Türelmi idő örökös jog esetén:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={revokeGracePeriodDays}
+                          onChange={e => setRevokeGracePeriodDays(Math.max(1, Number(e.target.value)))}
+                          className="w-20 px-2 py-1 rounded-lg bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] focus:outline-none focus:border-amber-400"
+                        />
+                        <span className="text-[11px] text-[var(--text-sub,#B5BDC6)]">nap</span>
+                      </div>
+                    )}
+                  </div>
+                </label>
+
+                <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  revokeMode === 'immediate'
+                    ? 'bg-rose-500/10 border-rose-500 ring-1 ring-rose-500'
+                    : 'bg-[var(--surface-bg,#465362)]/60 border-[var(--border-color,#56616D)]'
+                }`}>
+                  <input
+                    type="radio"
+                    name="revokeMode"
+                    value="immediate"
+                    checked={revokeMode === 'immediate'}
+                    onChange={() => setRevokeMode('immediate')}
+                    className="mt-0.5 text-rose-500 focus:ring-rose-400"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-rose-300 block">Azonnali (Immediate)</span>
+                    <span className="text-[11px] text-[var(--text-sub,#B5BDC6)] block mt-0.5">
+                      Azonnal megszünteti az összes jelenleg aktív beváltást is erre a kódra.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">Visszavonás Indoka (Kötelező audit naplózáshoz)</label>
+              <textarea
+                rows={2}
+                placeholder="pl. Nem hivatalos forrásból kikerült, leállított kampány..."
+                value={revokeReason}
+                onChange={e => setRevokeReason(e.target.value)}
+                required
+                className="w-full px-3 py-2 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] text-xs text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-rose-400 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--border-color,#56616D)]">
+              <button
+                type="button"
+                onClick={() => setTargetCodeToRevoke(null)}
+                className="px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] text-xs font-semibold border border-[var(--border-color,#56616D)] transition-colors"
+              >
+                Mégse
+              </button>
+              <button
+                type="submit"
+                disabled={isRevokingPromo}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-900/30 disabled:opacity-50"
+              >
+                {isRevokingPromo && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Kód Visszavonása</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import {
@@ -37,10 +37,16 @@ import {
   Sparkles,
   RotateCcw,
   FileText,
+  Crown,
+  Ticket,
+  Clock,
+  Award,
+  Gift,
+  Loader2,
 } from 'lucide-react';
 import { THEMES, ACCENT_COLORS, applyTheme } from '../lib/theme';
 
-type SettingsTab = 'account' | 'appearance' | 'regional' | 'notifications' | 'security' | 'data';
+type SettingsTab = 'account' | 'appearance' | 'regional' | 'notifications' | 'security' | 'data' | 'subscription';
 
 const BOTTOM_BAR_OPTIONS = [
   { id: 'dashboard', labelHu: 'Vezérlőpult', labelEn: 'Dashboard', icon: LayoutDashboard },
@@ -98,6 +104,100 @@ export const SettingsView: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Subscription & VIP Entitlement State
+  interface UserEntitlement {
+    plan_id: string;
+    plan_name: string;
+    is_vip: boolean;
+    vip_expires_at: string | null;
+    item_limit: number | null;
+    doc_limit: number | null;
+    storage_limit_bytes: number;
+    container_limit: number | null;
+    household_invites_limit: number | null;
+    has_vault: boolean;
+    has_insurance_pdf: boolean;
+    has_export: boolean;
+  }
+  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null);
+  const [isLoadingEntitlement, setIsLoadingEntitlement] = useState(false);
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [redemptionSuccess, setRedemptionSuccess] = useState<{ planName: string; duration: string; expiresAt: string | null } | null>(null);
+  const [redemptionError, setRedemptionError] = useState<string | null>(null);
+
+  const fetchUserEntitlement = useCallback(async () => {
+    if (!supabase || !user) return;
+    setIsLoadingEntitlement(true);
+    try {
+      const { data, error } = await supabase.rpc('get_user_effective_entitlement');
+      if (error) throw error;
+      setEntitlement(data);
+    } catch (err: any) {
+      console.error('Hiba az előfizetési adatok lekérésekor:', err);
+    } finally {
+      setIsLoadingEntitlement(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserEntitlement();
+    }
+  }, [user, fetchUserEntitlement]);
+
+  const handleRedeemCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = promoCodeInput.trim().toUpperCase();
+    if (!cleanCode || !supabase) return;
+
+    setIsRedeeming(true);
+    setRedemptionError(null);
+    setRedemptionSuccess(null);
+
+    try {
+      const { data, error } = await supabase.rpc('redeem_promo_code', { p_code: cleanCode });
+      if (error) {
+        throw error;
+      }
+      if (data?.success) {
+        if (data.entitlement) {
+          setEntitlement(data.entitlement);
+        } else {
+          await fetchUserEntitlement();
+        }
+
+        const planName = data.entitlement?.plan_name || data.target_plan_id?.toUpperCase() || 'VIP';
+        const duration = data.is_perpetual
+          ? (isHu ? 'Örökös hozzáférés (lejárat nélküli)' : 'Perpetual access (no expiration)')
+          : data.expires_at
+          ? new Date(data.expires_at).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')
+          : (isHu ? 'Aktiválva' : 'Activated');
+
+        setRedemptionSuccess({
+          planName,
+          duration,
+          expiresAt: data.expires_at
+        });
+        setPromoCodeInput('');
+        showFeedback(
+          'success',
+          isHu
+            ? `VIP kód sikeresen beváltva: ${planName} csomag azonnal aktív!`
+            : `VIP code successfully redeemed: ${planName} plan activated!`
+        );
+      } else {
+        throw new Error(isHu ? 'A beváltás sikertelen volt.' : 'Redemption was unsuccessful.');
+      }
+    } catch (err: any) {
+      const msg = err?.message || (isHu ? 'Ismeretlen hiba a kód beváltásakor.' : 'Error redeeming code.');
+      setRedemptionError(msg);
+      showFeedback('error', msg);
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.display_name) {
@@ -253,6 +353,7 @@ export const SettingsView: React.FC = () => {
 
   const tabs = [
     { id: 'account', label: isHu ? 'Fiók & Profil' : 'Account & Profile', icon: User },
+    { id: 'subscription', label: isHu ? 'Csomag & VIP' : 'Plan & VIP', icon: Crown },
     { id: 'appearance', label: isHu ? 'Megjelenés' : 'Appearance', icon: Palette },
     { id: 'regional', label: isHu ? 'Nyelv & Pénznem' : 'Language & Currency', icon: Globe },
     { id: 'notifications', label: isHu ? 'Értesítések' : 'Notifications', icon: Bell },
@@ -531,6 +632,298 @@ export const SettingsView: React.FC = () => {
                 <Trash2 className="w-4 h-4" />
                 <span>{isHu ? 'Fiók végleges törlése...' : 'Permanently Delete Account...'}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: ELŐFIZETÉS & VIP */}
+      {activeTab === 'subscription' && (
+        <div className="space-y-6 max-w-4xl animate-in fade-in duration-200">
+          {/* 1. AKTÍV CSOMAG & VIP STÁTUSZ KÁRTYA */}
+          <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-6 shadow-sm space-y-6 relative overflow-hidden">
+            {/* Top decorative accent */}
+            <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+              entitlement?.is_vip
+                ? 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600'
+                : entitlement?.plan_id === 'business'
+                ? 'bg-gradient-to-r from-amber-500 to-purple-600'
+                : entitlement?.plan_id === 'family'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                : entitlement?.plan_id === 'plus'
+                ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                : 'bg-gradient-to-r from-slate-600 to-slate-500'
+            }`} />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-color,#56616D)]">
+              <div className="flex items-center gap-3.5">
+                <div className={`p-3 rounded-2xl shadow-md ${
+                  entitlement?.is_vip
+                    ? 'bg-amber-500/20 text-amber-300 ring-2 ring-amber-400/40'
+                    : 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]'
+                }`}>
+                  {entitlement?.is_vip ? (
+                    <Crown className="w-6 h-6 text-amber-400 animate-pulse" />
+                  ) : (
+                    <Award className="w-6 h-6 text-blue-400" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-extrabold text-[var(--text-main,#E0E3E6)]">
+                      {entitlement?.plan_name || 'Free'} {isHu ? 'Csomag' : 'Plan'}
+                    </h3>
+                    {entitlement?.is_vip && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm flex items-center gap-1">
+                        <Crown className="w-3 h-3 text-slate-950" />
+                        VIP
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[var(--text-sub,#B5BDC6)] mt-0.5">
+                    {isHu ? 'Jelenleg érvényes előfizetési csomagod és kvótáid' : 'Your current active subscription package and limits'}
+                  </p>
+                </div>
+              </div>
+
+              {/* VIP / Expiration Badge */}
+              <div className="flex flex-col sm:items-end">
+                {isLoadingEntitlement ? (
+                  <span className="text-xs text-[var(--text-sub,#B5BDC6)] flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> {isHu ? 'Betöltés...' : 'Loading...'}
+                  </span>
+                ) : entitlement?.is_vip ? (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-right">
+                    <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider block">
+                      {isHu ? 'VIP HOZZÁFÉRÉS ÁLLAPOTA' : 'VIP STATUS'}
+                    </span>
+                    <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)] flex items-center gap-1.5 justify-end mt-0.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      {entitlement.vip_expires_at
+                        ? `${isHu ? 'Lejárat: ' : 'Expires: '}${new Date(entitlement.vip_expires_at).toLocaleDateString(isHu ? 'hu-HU' : 'en-US')}`
+                        : (isHu ? 'Örökös VIP tagság (Lejárat nélküli)' : 'Perpetual VIP access (No expiry)')}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] text-right">
+                    <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] block">
+                      {isHu ? 'Státusz:' : 'Status:'}
+                    </span>
+                    <span className="text-xs font-semibold text-emerald-400">
+                      {isHu ? 'Aktív ingyenes csomag' : 'Active Free Tier'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* KVÓTÁK ÉS KORLÁTOK ÁTTEKINTŐ RÁCS */}
+            <div>
+              <h4 className="text-xs font-extrabold text-[var(--text-sub,#B5BDC6)] uppercase tracking-wider mb-3">
+                {isHu ? 'Csomaghoz tartozó keretek és jogosultságok' : 'Plan Quotas and Capabilities'}
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {/* Tárgy limit */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                  <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] block mb-1">
+                    {isHu ? 'Tárgyak' : 'Items'}
+                  </span>
+                  <span className="text-base font-black text-[var(--text-main,#E0E3E6)]">
+                    {entitlement?.item_limit ? `${entitlement.item_limit.toLocaleString()} db` : (isHu ? 'Korlátlan' : 'Unlimited')}
+                  </span>
+                </div>
+
+                {/* Dokumentum limit */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                  <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] block mb-1">
+                    {isHu ? 'Dokumentumok' : 'Documents'}
+                  </span>
+                  <span className="text-base font-black text-[var(--text-main,#E0E3E6)]">
+                    {entitlement?.doc_limit ? `${entitlement.doc_limit.toLocaleString()} db` : (isHu ? 'Korlátlan' : 'Unlimited')}
+                  </span>
+                </div>
+
+                {/* Tárhely kvóta */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                  <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] block mb-1">
+                    {isHu ? 'Média Tárhely' : 'Cloud Storage'}
+                  </span>
+                  <span className="text-base font-black text-amber-400">
+                    {entitlement?.storage_limit_bytes
+                      ? `${Math.round(entitlement.storage_limit_bytes / (1024 * 1024))} MB`
+                      : '100 MB'}
+                  </span>
+                </div>
+
+                {/* Digitális Széf */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                  <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] block mb-1">
+                    {isHu ? 'Digitális Széf' : 'Vault Access'}
+                  </span>
+                  <span className={`text-base font-black ${entitlement?.has_vault ? 'text-emerald-400' : 'text-slate-400'}`}>
+                    {entitlement?.has_vault ? (isHu ? 'Aktív' : 'Active') : (isHu ? 'Nincs' : 'Disabled')}
+                  </span>
+                </div>
+
+                {/* Családi megosztások */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] col-span-2 sm:col-span-1">
+                  <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] block mb-1">
+                    {isHu ? 'Családi Tagok' : 'Family Sharing'}
+                  </span>
+                  <span className="text-base font-black text-[var(--text-main,#E0E3E6)]">
+                    {entitlement?.household_invites_limit ? `${entitlement.household_invites_limit} fő` : (isHu ? 'Egyéni' : 'Personal')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. VIP KÓD BEVÁLTÁSA SZEKCIÓ */}
+          <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-color,#56616D)]">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
+                <Ticket className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[var(--text-main,#E0E3E6)]">
+                  {isHu ? 'VIP vagy Promóciós Kód Beváltása' : 'Redeem VIP or Promo Code'}
+                </h3>
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)]">
+                  {isHu
+                    ? 'Rendelkezel promóciós kuponnal vagy VIP kóddal? Váltsd be a magasabb csomagért!'
+                    : 'Have a VIP or promotional voucher code? Enter it below to unlock enhanced quotas!'}
+                </p>
+              </div>
+            </div>
+
+            {/* Sikeres beváltás visszajelzés */}
+            {redemptionSuccess && (
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-start gap-3 animate-in fade-in">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="space-y-1 text-xs">
+                  <p className="font-bold text-sm text-emerald-400">
+                    {isHu ? 'Sikeres Kódbeváltás!' : 'Code Successfully Redeemed!'}
+                  </p>
+                  <p>
+                    {isHu
+                      ? `Gratulálunk! A fiókod mostantól ${redemptionSuccess.planName} csomaggal és emelt kvótákkal működik.`
+                      : `Congratulations! Your account is now upgraded to the ${redemptionSuccess.planName} tier.`}
+                  </p>
+                  <p className="font-semibold text-emerald-200">
+                    {isHu ? `Érvényesség: ${redemptionSuccess.duration}` : `Validity: ${redemptionSuccess.duration}`}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Hibás beváltás visszajelzés */}
+            {redemptionError && (
+              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-start gap-3 animate-in fade-in">
+                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 text-xs">
+                  <p className="font-bold text-sm text-rose-400">
+                    {isHu ? 'A beváltás sikertelen' : 'Redemption Failed'}
+                  </p>
+                  <p>{redemptionError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Beváltó űrlap */}
+            <form onSubmit={handleRedeemCode} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-sub,#B5BDC6)] mb-1.5">
+                  {isHu ? 'VIP / Promóciós Kód' : 'VIP / Promo Code'}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={promoCodeInput}
+                    onChange={e => {
+                      setPromoCodeInput(e.target.value.toUpperCase());
+                      if (redemptionError) setRedemptionError(null);
+                    }}
+                    placeholder={isHu ? 'pl. THINGOR-VIP-7F2A8C' : 'e.g. THINGOR-VIP-7F2A8C'}
+                    required
+                    className="w-full px-4 py-3 bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)] rounded-xl text-sm font-mono uppercase tracking-wider text-[var(--text-main,#E0E3E6)] placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-amber-400 transition-colors"
+                  />
+                  {promoCodeInput && (
+                    <button
+                      type="button"
+                      onClick={() => setPromoCodeInput('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] mt-1.5">
+                  {isHu
+                    ? 'A kódok nem érzékenyek a kis- és nagybetűkre, szóköz nélkül érvényesek.'
+                    : 'Codes are case-insensitive and processed automatically by the server.'}
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isRedeeming || !promoCodeInput.trim()}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2"
+                >
+                  {isRedeeming ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                      <span>{isHu ? 'Ellenőrzés és beváltás...' : 'Validating & Redeeming...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="w-4 h-4 text-slate-950" />
+                      <span>{isHu ? 'Kód Beváltása' : 'Redeem Code'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* 3. CSOMAGOK ÖSSZEHASONLÍTÁSA KÁRTYÁK */}
+          <div className="bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] rounded-2xl p-6 shadow-sm space-y-4">
+            <h4 className="text-sm font-bold text-[var(--text-main,#E0E3E6)]">
+              {isHu ? 'Thingor Csomagok Részletei' : 'Thingor Subscription Tiers'}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { id: 'free', name: 'Free', items: '100 tárgy', storage: '100 MB', tag: isHu ? 'Alapcsomag' : 'Free Tier' },
+                { id: 'plus', name: 'Plus', items: '1 000 tárgy', storage: '500 MB', tag: isHu ? 'Egyéni' : 'Personal' },
+                { id: 'family', name: 'Family', items: '5 000 tárgy', storage: '2 GB', tag: isHu ? '5 családtag' : '5 members' },
+                { id: 'business', name: 'Business', items: isHu ? 'Korlátlan' : 'Unlimited', storage: '10 GB', tag: isHu ? 'VIP & Garancia' : 'VIP & Vault' },
+              ].map(plan => {
+                const isCurrent = entitlement?.plan_id === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isCurrent
+                        ? 'bg-[var(--surface-bg,#465362)] border-amber-400 ring-1 ring-amber-400 shadow-md'
+                        : 'bg-[var(--surface-bg,#465362)]/50 border-[var(--border-color,#56616D)]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)]">{plan.name}</span>
+                      {isCurrent && (
+                        <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/30">
+                          {isHu ? 'Aktuális' : 'Current'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-[var(--text-sub,#B5BDC6)] space-y-1">
+                      <p>• {plan.items}</p>
+                      <p>• {plan.storage} {isHu ? 'tárhely' : 'storage'}</p>
+                      <p>• {plan.tag}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -29,7 +29,8 @@ import {
   Handshake,
   Lock,
   Download,
-  ZoomIn
+  ZoomIn,
+  ShoppingBag
 } from 'lucide-react';
 import { uploadFileToStorage, openR2DocumentSecurely, downloadR2DocumentSecurely } from '../lib/storage';
 import { getR2FileSignedUrl } from '../lib/r2';
@@ -518,6 +519,18 @@ export const ItemDetailModal: React.FC = () => {
                 >
                   <QrCode className="h-3.5 w-3.5" />
                   {isHu ? 'QR-kód' : 'QR Code'}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedItemId(null);
+                    window.location.hash = `#marketplace/create?itemId=${item.id}`;
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow transition-all"
+                  title={isHu ? 'Hirdetés feladása a Közösségi Piactéren ebből a tárgyból' : 'List this item on Social Marketplace'}
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  {isHu ? 'Hirdetés a piactéren' : 'List on Marketplace'}
                 </button>
 
                 {isDeleting ? (
