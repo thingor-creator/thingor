@@ -419,7 +419,9 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
   const handleSelectContainer = (containerId: string, shouldScroll = true) => {
     setSelectedContainerId(containerId);
-    window.location.hash = `#storage/${containerId}`;
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(window.history.state, '', `#storage/${containerId}`);
+    }
 
     // Expand all ancestors in tree
     const expandSet = new Set<string>();
@@ -1223,7 +1225,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                       ) : (
                         <Plus className="w-3.5 h-3.5" />
                       )}
-                      <span>+ Kép feltöltése</span>
+                      <span>Kép feltöltése</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -1324,7 +1326,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                         ) : (
                           <Upload className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
                         )}
-                        <span>{isUploadingDetailPhoto ? 'Feltöltés...' : '+ Első kép feltöltése'}</span>
+                        <span>{isUploadingDetailPhoto ? 'Feltöltés...' : 'Első kép feltöltése'}</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -1360,7 +1362,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                         className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>+ Altároló hozzáadása</span>
+                        <span>Altároló hozzáadása</span>
                       </button>
                     )}
                   </div>
@@ -1416,7 +1418,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                       className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Tárgy hozzárendelése</span>
+                      <span>Tárgy hozzárendelése</span>
                     </button>
                   )}
                 </div>
@@ -1494,7 +1496,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>+ Új készlettétel</span>
+                    <span>Új készlettétel</span>
                   </button>
                 </div>
 

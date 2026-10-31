@@ -62,8 +62,8 @@ A Thingor fizikai tárolókezelőjének teljes értékű, biztonságos, éles ü
 
 1. Nyisd meg a böngésződben: `http://localhost:5173/#storage`
 2. Jelentkezz be felhasználóddal.
-3. **Új tároló:** Kattints a „+ Új tároló létrehozása” gombra, adj meg egy nevet és típust (pl. Szekrény, Doboz). A mentés után a tároló azonnal megjelenik a bal oldali fában és elmentődik a Supabase-ben.
-4. **Tárgy hozzárendelése:** Válaszd ki a tárolót, kattints a „+ Tárgy hozzárendelése” gombra, válaszd ki valamelyik meglévő Thingor tárgyadat.
-5. **Készlettétel:** Kattints a „+ Új készlettétel” gombra, adj meg egy tételt és mennyiséget. Próbáld ki a `+` és `-` gombokat.
+3. **Új tároló:** Kattints a „Új tároló létrehozása” gombra, adj meg egy nevet és típust (pl. Szekrény, Doboz). A mentés után a tároló azonnal megjelenik a bal oldali fában és elmentődik a Supabase-ben.
+4. **Tárgy hozzárendelése:** Válaszd ki a tárolót, kattints a „Tárgy hozzárendelése” gombra, válaszd ki valamelyik meglévő Thingor tárgyadat.
+5. **Készlettétel:** Kattints a „Új készlettétel” gombra, adj meg egy tételt és mennyiséget. Próbáld ki a `+` és `-` gombokat.
 6. **QR-címke:** Kattints a „QR-címke” gombra, ellenőrizd az SVG kódot és a nyomtatási előnézetet.
 7. **Törlésvédelem:** Próbálj meg törölni egy olyan tárolót, amiben tárgy van: a rendszer figyelmeztet, hogy nem törölhető, amíg ki nem üríted.

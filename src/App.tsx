@@ -190,7 +190,7 @@ const AppContent: React.FC = () => {
     parseUrlParameters();
     window.addEventListener('hashchange', parseUrlParameters);
     return () => window.removeEventListener('hashchange', parseUrlParameters);
-  }, [items, isAuthenticated, language]);
+  }, [items, isAuthenticated, language, currentView]);
 
   const handleQRScanResult = (resultText: string) => {
     setIsQRScannerOpen(false);

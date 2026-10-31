@@ -1154,9 +1154,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       // 3. Storage hash or storage view
       if (typeof window !== 'undefined' && (currentView === 'storage' || window.location.hash.includes('storage'))) {
+        // If still in storage view (e.g. hash is #storage or #storage/..., or state.view is 'storage'), do not exit!
+        if (state && state.view === 'storage') {
+          return;
+        }
+        if (window.location.hash.startsWith('#storage') && (!state || !state.view || state.view === 'storage')) {
+          return;
+        }
         window.location.hash = '';
         if (currentView === 'storage') {
-          const prev = viewHistoryRef.current.pop() || (userRef.current ? 'dashboard' : 'landing');
+          const prev = (state && state.view) || viewHistoryRef.current.pop() || (userRef.current ? 'dashboard' : 'landing');
           setCurrentView(prev);
         }
         return;
