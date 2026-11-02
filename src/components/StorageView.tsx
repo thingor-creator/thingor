@@ -228,6 +228,10 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [isAddBulkModalOpen, setIsAddBulkModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bulk' | 'items' | 'photos'>('overview');
+  const [mobileView, setMobileView] = useState<'tree' | 'detail'>('detail');
+  const [bulkSearchQuery, setBulkSearchQuery] = useState('');
+  const [assignedItemSearchQuery, setAssignedItemSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -419,6 +423,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
   const handleSelectContainer = (containerId: string, shouldScroll = true) => {
     setSelectedContainerId(containerId);
+    setMobileView('detail');
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       window.history.replaceState(window.history.state, '', `#storage/${containerId}`);
     }
@@ -459,6 +464,44 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     }
     return crumbs;
   };
+
+  // Computed helpers for overview and tabs
+  const totalBulkQuantity = useMemo(() => {
+    if (!selectedContainer) return 0;
+    return selectedContainer.bulkItems.reduce((acc, curr) => acc + (curr.quantity || 0), 0);
+  }, [selectedContainer]);
+
+  const lowStockCount = useMemo(() => {
+    if (!selectedContainer) return 0;
+    return selectedContainer.bulkItems.filter(
+      b => b.minQuantity !== null && b.minQuantity !== undefined && b.quantity <= b.minQuantity
+    ).length;
+  }, [selectedContainer]);
+
+  const parentContainer = useMemo(() => {
+    if (!selectedContainer?.parentId) return null;
+    return containers.find(c => c.id === selectedContainer.parentId) || null;
+  }, [containers, selectedContainer]);
+
+  // Filtered bulk items based on local search query in bulk tab
+  const filteredBulkItems = useMemo(() => {
+    if (!selectedContainer) return [];
+    if (!bulkSearchQuery.trim()) return selectedContainer.bulkItems;
+    const q = bulkSearchQuery.toLowerCase();
+    return selectedContainer.bulkItems.filter(b =>
+      b.name.toLowerCase().includes(q) || (b.notes && b.notes.toLowerCase().includes(q))
+    );
+  }, [selectedContainer, bulkSearchQuery]);
+
+  // Filtered assigned items based on local search query in items tab
+  const filteredAssignedItems = useMemo(() => {
+    if (!selectedContainer) return [];
+    if (!assignedItemSearchQuery.trim()) return selectedContainer.items;
+    const q = assignedItemSearchQuery.toLowerCase();
+    return selectedContainer.items.filter(i =>
+      i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)
+    );
+  }, [selectedContainer, assignedItemSearchQuery]);
 
   // Adjust quantity for bulk items
   const handleAdjustQuantity = async (bulkItemId: string, delta: number) => {
@@ -934,12 +977,9 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   {CONTAINER_TYPE_LABELS[container.containerType]?.hu || container.containerType}
                 </span>
               </div>
-              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[var(--text-sub,#B5BDC6)]">
-                <span className="font-mono text-[var(--color-primary-blue,#2563EB)] truncate">
-                  {container.code}
-                </span>
-                <span>•</span>
-                <span className="truncate max-w-[120px]">{container.locationName}</span>
+              <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-[var(--text-sub,#B5BDC6)]">
+                <MapPin className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]/70 shrink-0" />
+                <span className="truncate max-w-[180px]">{container.locationName}</span>
               </div>
             </div>
           </div>
@@ -978,41 +1018,42 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
       )}
 
       {/* Header & Status Notice */}
-      <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
+      <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-3.5 sm:p-5 space-y-3 shadow-lg relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white transition-colors border border-[var(--border-color,#56616D)] shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
+                className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white transition-colors border border-[var(--border-color,#56616D)] shrink-0 min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
                 title="Vissza a fő nézetre"
               >
-                <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
+                <ArrowLeft className="w-4 h-4" />
               </button>
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+                <h1 className="text-base sm:text-lg md:text-xl font-black text-white tracking-tight flex items-center gap-2">
+                  <Package className="w-5 h-5 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
                   <span>Fizikai Tárolók és Raktározás</span>
                 </h1>
                 {!isRealDataActive && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-[var(--color-primary-blue,#2563EB)] border border-blue-500/20 shrink-0">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-[var(--color-primary-blue,#2563EB)] border border-blue-500/20 shrink-0">
                     MVP Előnézet
                   </span>
                 )}
               </div>
-              <p className="text-[11px] sm:text-xs md:text-sm text-[var(--text-sub,#B5BDC6)] mt-1">
+              <p className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] mt-0.5 truncate sm:whitespace-normal">
                 Fizikai tárolódobozok, szekrények, polcok hierarchikus rendszere, készletkezelés és QR-címkézés.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-1 sm:pt-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2.5 min-h-[40px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center shadow-lg shadow-blue-500/20 transition-all cursor-pointer active:scale-95"
+              className="w-full sm:w-auto px-3.5 py-2 min-h-[38px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-500/20 transition-all cursor-pointer active:scale-95"
             >
+              <Plus className="w-4 h-4" />
               <span>Új tároló létrehozása</span>
             </button>
           </div>
@@ -1020,7 +1061,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
         {/* Error Alert Box with Retry */}
         {loadError && (
-          <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between gap-3">
+          <div className="p-3 rounded-xl sm:rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 text-xs text-rose-200">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{loadError}</span>
@@ -1037,7 +1078,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
 
         {/* Demo Mode Notice */}
         {!isRealDataActive && (
-          <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-2.5 sm:gap-3">
+          <div className="p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/70 flex items-start gap-2.5">
             <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
             <div className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] leading-relaxed">
               <strong className="text-white font-semibold">Bemutató mintaadatok (Demo mód):</strong> Nem vagy bejelentkezve, ezért a felület minta tárolókat jelenít meg. Jelentkezz be saját felhő tárolóid és készleteid kezeléséhez.
@@ -1046,10 +1087,12 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
         )}
       </div>
 
-      {/* Main Grid: Tree Column (Left) & Detail Drawer (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+      {/* Main Layout: Tree Column (Left 300-340px) & Tabbed Detail Workspace (Right) */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start w-full">
         {/* Left Column: Container Hierarchy Tree */}
-        <div className="lg:col-span-6 space-y-3 sm:space-y-4">
+        <div className={`w-full lg:w-[320px] lg:shrink-0 space-y-3 ${
+          mobileView === 'detail' ? 'hidden lg:block' : 'block'
+        }`}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <FolderTree className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
@@ -1057,9 +1100,21 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 Tárolók Hierarchiája
               </h2>
             </div>
-            <span className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)]">
-              {containers.length} db tároló
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)]">
+                {containers.length} db tároló
+              </span>
+              {selectedContainer && (
+                <button
+                  type="button"
+                  onClick={() => setMobileView('detail')}
+                  className="lg:hidden text-[11px] text-[var(--color-primary-blue,#2563EB)] font-bold flex items-center gap-0.5 hover:underline cursor-pointer"
+                >
+                  <span>Megnyitás</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Search bar */}
@@ -1070,7 +1125,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Keresés tároló nevére vagy kódjára..."
-              className="w-full pl-10 pr-4 py-2 sm:py-2.5 min-h-[40px] rounded-xl sm:rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
+              className="w-full pl-10 pr-4 py-2 min-h-[38px] rounded-xl sm:rounded-2xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
             />
           </div>
 
@@ -1109,27 +1164,41 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Right Column: Selected Container Detail Panel */}
-        <div className="lg:col-span-6" ref={detailPanelRef}>
+        {/* Right Column: Selected Container Detail Panel with Tabs */}
+        <div className={`flex-1 min-w-0 w-full ${
+          mobileView === 'tree' ? 'hidden lg:block' : 'block'
+        }`} ref={detailPanelRef}>
           {selectedContainer ? (
-            <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-xl lg:sticky lg:top-24">
+            <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xl">
               {/* Detail Header & Breadcrumb */}
-              <div className="space-y-2.5 pb-4 border-b border-[var(--border-color,#56616D)]/60">
+              <div className="space-y-2.5 pb-3.5 border-b border-[var(--border-color,#56616D)]/60">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-[var(--text-sub,#B5BDC6)] flex-wrap">
-                    {getBreadcrumbs(selectedContainer.id).map((crumb, idx, arr) => (
-                      <React.Fragment key={crumb.id}>
-                        <button
-                          onClick={() => handleSelectContainer(crumb.id, false)}
-                          className={`hover:text-white transition-colors font-medium truncate max-w-[140px] ${
-                            idx === arr.length - 1 ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : ''
-                          }`}
-                        >
-                          {crumb.name}
-                        </button>
-                        {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]/60 shrink-0" />}
-                      </React.Fragment>
-                    ))}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Mobile Back to Tree Button */}
+                    <button
+                      type="button"
+                      onClick={() => setMobileView('tree')}
+                      className="lg:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-[11px] font-semibold border border-[var(--border-color,#56616D)] transition-colors cursor-pointer mr-1"
+                    >
+                      <ArrowLeft className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
+                      <span>Fa nézet</span>
+                    </button>
+
+                    <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-[var(--text-sub,#B5BDC6)] flex-wrap">
+                      {getBreadcrumbs(selectedContainer.id).map((crumb, idx, arr) => (
+                        <React.Fragment key={crumb.id}>
+                          <button
+                            onClick={() => handleSelectContainer(crumb.id, false)}
+                            className={`hover:text-white transition-colors font-medium truncate max-w-[140px] ${
+                              idx === arr.length - 1 ? 'text-[var(--color-primary-blue,#2563EB)] font-bold' : ''
+                            }`}
+                          >
+                            {crumb.name}
+                          </button>
+                          {idx < arr.length - 1 && <ChevronRight className="w-3 h-3 text-[var(--text-sub,#B5BDC6)]/60 shrink-0" />}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   </div>
 
                   <button
@@ -1140,35 +1209,35 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     className="lg:hidden text-[10px] text-[var(--color-primary-blue,#2563EB)] hover:text-white flex items-center gap-1 font-semibold shrink-0 py-1 cursor-pointer"
                   >
                     <ArrowUp className="w-3 h-3" />
-                    <span>Fel a fához</span>
+                    <span>Tetejére</span>
                   </button>
                 </div>
 
-                <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-2 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pt-1">
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-lg sm:text-xl font-black text-white tracking-tight break-words flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tight break-words flex items-center gap-2">
                       {selectedContainer.name}
                     </h2>
-                    <p className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-[var(--text-sub,#B5BDC6)] mt-0.5 line-clamp-2">
                       {selectedContainer.description || 'Nincs leírás megadva ehhez a tárolóhoz.'}
                     </p>
                   </div>
 
                   {/* QR & Action Buttons */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     <button
                       onClick={() => setIsQrModalOpen(true)}
-                      className="px-3 py-1.5 min-h-[36px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[var(--border-color,#56616D)] cursor-pointer"
+                      className="px-3 py-1.5 min-h-[34px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[var(--border-color,#56616D)] cursor-pointer"
                       title="QR-kód és Címke"
                     >
-                      <QrCode className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                      <QrCode className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
                       <span>QR-címke</span>
                     </button>
 
                     {isAuthenticated && (
                       <button
                         onClick={handleOpenEditModal}
-                        className="px-3 py-1.5 min-h-[36px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[var(--border-color,#56616D)] cursor-pointer"
+                        className="px-3 py-1.5 min-h-[34px] rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[var(--border-color,#56616D)] cursor-pointer"
                         title="Tároló adatainak módosítása"
                       >
                         <Pencil className="w-3.5 h-3.5 text-amber-400" />
@@ -1179,10 +1248,10 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     <button
                       onClick={handleDeleteContainer}
                       disabled={isSubmitting}
-                      className="p-2 min-h-[36px] min-w-[36px] rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                      className="p-2 min-h-[34px] min-w-[34px] rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
                       title="Tároló törlése (csak ha üres)"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -1205,128 +1274,589 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 </div>
               </div>
 
-              {/* SECTION 0: Container Photos & Visual Documentation */}
-              <div className="space-y-3 pb-4 border-b border-[var(--border-color,#56616D)]/60">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
-                    <span>Fényképek</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
-                      {selectedContainer.photos.length} db
-                    </span>
-                  </h3>
+              {/* 4 TABS NAVIGATION */}
+              <div className="flex items-center gap-1 border-b border-[var(--border-color,#56616D)]/60 pb-2 overflow-x-auto no-scrollbar text-xs font-bold">
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`px-3 sm:px-4 py-2 rounded-xl flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                    activeTab === 'overview'
+                      ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-md shadow-blue-500/20'
+                      : 'text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)]/60'
+                  }`}
+                >
+                  <Info className="w-3.5 h-3.5" />
+                  <span>Áttekintés</span>
+                </button>
 
-                  {isAuthenticated && (
-                    <label className={`text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer transition-colors ${
-                      isUploadingDetailPhoto ? 'opacity-50 pointer-events-none' : ''
-                    }`}>
-                      {isUploadingDetailPhoto ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Plus className="w-3.5 h-3.5" />
-                      )}
-                      <span>Kép feltöltése</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleUploadDetailPhoto}
-                        disabled={isUploadingDetailPhoto}
-                      />
-                    </label>
-                  )}
-                </div>
+                <button
+                  onClick={() => setActiveTab('bulk')}
+                  className={`px-3 sm:px-4 py-2 rounded-xl flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                    activeTab === 'bulk'
+                      ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-md shadow-blue-500/20'
+                      : 'text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)]/60'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Készlet</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'bulk' ? 'bg-white/20 text-white' : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]'
+                  }`}>
+                    {selectedContainer.bulkItems.length}
+                  </span>
+                </button>
 
-                {selectedContainer.photos.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {/* Primary Photo Showcase */}
+                <button
+                  onClick={() => setActiveTab('items')}
+                  className={`px-3 sm:px-4 py-2 rounded-xl flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                    activeTab === 'items'
+                      ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-md shadow-blue-500/20'
+                      : 'text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)]/60'
+                  }`}
+                >
+                  <Boxes className="w-3.5 h-3.5" />
+                  <span>Tárgyak</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'items' ? 'bg-white/20 text-white' : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]'
+                  }`}>
+                    {selectedContainer.items.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('photos')}
+                  className={`px-3 sm:px-4 py-2 rounded-xl flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                    activeTab === 'photos'
+                      ? 'bg-[var(--color-primary-blue,#2563EB)] text-white shadow-md shadow-blue-500/20'
+                      : 'text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--surface-bg,#465362)]/60'
+                  }`}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Fényképek</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'photos' ? 'bg-white/20 text-white' : 'bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]'
+                  }`}>
+                    {selectedContainer.photos.length}
+                  </span>
+                </button>
+              </div>
+
+              {/* TAB 1: ÁTTEKINTÉS (OVERVIEW) */}
+              {activeTab === 'overview' && (
+                <div className="space-y-4 sm:space-y-5 animate-fadeIn">
+                  {/* 4 Stat Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                     <div
-                      onClick={() => openImageViewer(selectedContainer.photos, { title: selectedContainer.name, activeIndex: 0 })}
-                      className="relative w-full h-48 sm:h-56 rounded-2xl overflow-hidden bg-black/40 border border-[var(--border-color,#56616D)] group cursor-pointer shadow-md"
+                      onClick={() => setActiveTab('bulk')}
+                      className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/50 hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 transition-all cursor-pointer group"
                     >
-                      <img
-                        src={selectedContainer.photos[0]}
-                        alt={selectedContainer.name}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3.5">
-                        <span className="text-xs text-white font-medium flex items-center gap-1">
-                          <Maximize2 className="w-3.5 h-3.5" />
-                          <span>Kattints a nagyításhoz</span>
-                        </span>
+                      <div className="flex items-center justify-between gap-1 text-amber-400 mb-1">
+                        <Layers className="w-4 h-4" />
+                        <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] group-hover:text-amber-300">Megnyitás →</span>
+                      </div>
+                      <p className="text-lg sm:text-xl font-black text-white">{selectedContainer.bulkItems.length} <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">tétel</span></p>
+                      <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5 truncate">
+                        {totalBulkQuantity} egység {lowStockCount > 0 && <span className="text-amber-400 font-bold">({lowStockCount} fogyóban)</span>}
+                      </p>
+                    </div>
+
+                    <div
+                      onClick={() => setActiveTab('items')}
+                      className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/50 hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between gap-1 text-[var(--color-primary-blue,#2563EB)] mb-1">
+                        <Boxes className="w-4 h-4" />
+                        <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] group-hover:text-blue-300">Megnyitás →</span>
+                      </div>
+                      <p className="text-lg sm:text-xl font-black text-white">{selectedContainer.items.length} <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">db</span></p>
+                      <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5 truncate">
+                        Hozzárendelt tárgy
+                      </p>
+                    </div>
+
+                    <div
+                      onClick={() => setActiveTab('photos')}
+                      className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/50 hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between gap-1 text-emerald-400 mb-1">
+                        <ImageIcon className="w-4 h-4" />
+                        <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)] group-hover:text-emerald-300">Galéria →</span>
+                      </div>
+                      <p className="text-lg sm:text-xl font-black text-white">{selectedContainer.photos.length} <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">fotó</span></p>
+                      <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5 truncate">
+                        Dokumentáció
+                      </p>
+                    </div>
+
+                    <div
+                      className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/50 border border-[var(--border-color,#56616D)]/60"
+                    >
+                      <div className="flex items-center justify-between gap-1 text-purple-400 mb-1">
+                        <FolderTree className="w-4 h-4" />
+                        <span className="text-[10px] font-bold text-[var(--text-sub,#B5BDC6)]">Hierarchia</span>
+                      </div>
+                      <p className="text-lg sm:text-xl font-black text-white">{childContainers.length} <span className="text-xs font-semibold text-[var(--text-sub,#B5BDC6)]">altároló</span></p>
+                      <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5 truncate">
+                        {parentContainer ? `Szülő: ${parentContainer.name}` : 'Fő szintű tároló'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Container Parameters / Info Card */}
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/40 border border-[var(--border-color,#56616D)]/60 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                        <Info className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                        <span>Tároló Részletes Adatai</span>
+                      </h3>
+                      {isAuthenticated && (
+                        <button
+                          onClick={handleOpenEditModal}
+                          className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Módosítás</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                      <div className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)]/60 border border-[var(--border-color,#56616D)]/40 flex items-center justify-between gap-2">
+                        <span className="text-[var(--text-sub,#B5BDC6)]">Tároló Típusa:</span>
+                        <span className="font-semibold text-white">{CONTAINER_TYPE_LABELS[selectedContainer.containerType]?.hu || selectedContainer.containerType}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)]/60 border border-[var(--border-color,#56616D)]/40 flex items-center justify-between gap-2">
+                        <span className="text-[var(--text-sub,#B5BDC6)]">Helyszín:</span>
+                        <span className="font-semibold text-white">{selectedContainer.locationName}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)]/60 border border-[var(--border-color,#56616D)]/40 flex items-center justify-between gap-2">
+                        <span className="text-[var(--text-sub,#B5BDC6)]">QR / Címkekód:</span>
+                        <span className="font-mono font-bold text-[var(--color-primary-blue,#2563EB)]">{selectedContainer.code}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)]/60 border border-[var(--border-color,#56616D)]/40 flex items-center justify-between gap-2">
+                        <span className="text-[var(--text-sub,#B5BDC6)]">Hatókör / Megosztás:</span>
+                        <span className="font-semibold text-white">{selectedContainer.ownership_scope === 'household' ? 'Családi tároló (háztartás)' : 'Személyes privát tároló'}</span>
+                      </div>
+                      {parentContainer && (
+                        <div className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)]/60 border border-[var(--border-color,#56616D)]/40 flex items-center justify-between gap-2 sm:col-span-2">
+                          <span className="text-[var(--text-sub,#B5BDC6)]">Szülő Tároló a hierarchiában:</span>
+                          <button
+                            onClick={() => handleSelectContainer(parentContainer.id, true)}
+                            className="font-semibold text-[var(--color-primary-blue,#2563EB)] hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>{parentContainer.name}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      {selectedContainer.description && (
+                        <div className="p-2.5 rounded-xl bg-[var(--card-bg,#3A4551)]/60 border border-[var(--border-color,#56616D)]/40 sm:col-span-2 space-y-0.5">
+                          <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] block">Leírás / Megjegyzés:</span>
+                          <p className="text-white text-xs leading-relaxed">{selectedContainer.description}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sub-containers Showcase in Overview */}
+                  {childContainers.length > 0 && (
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                          <FolderTree className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                          <span>Belső Altárolók</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                            {childContainers.length} db
+                          </span>
+                        </h3>
                         {isAuthenticated && (
                           <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveDetailPhoto(0);
+                            onClick={() => {
+                              setNewContainerParentId(selectedContainer.id);
+                              setNewContainerScope(selectedContainer.ownership_scope || 'private');
+                              setIsCreateModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg bg-rose-500/80 hover:bg-rose-600 text-white transition-colors cursor-pointer"
-                            title="Kép törlése"
+                            className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Altároló hozzáadása</span>
                           </button>
                         )}
                       </div>
-                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[10px] text-white font-semibold">
-                        1 / {selectedContainer.photos.length}
-                      </div>
-                    </div>
 
-                    {/* Secondary Thumbnails */}
-                    {selectedContainer.photos.length > 1 && (
-                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 pt-1">
-                        {selectedContainer.photos.map((photo, pIdx) => (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {childContainers.map(child => (
                           <div
-                            key={pIdx}
-                            onClick={() => openImageViewer(selectedContainer.photos, { title: selectedContainer.name, activeIndex: pIdx })}
-                            className="relative aspect-square rounded-xl overflow-hidden bg-black/30 border border-[var(--border-color,#56616D)] group cursor-pointer"
+                            key={child.id}
+                            onClick={() => handleSelectContainer(child.id, true)}
+                            className="p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 hover:border-[var(--color-primary-blue,#2563EB)] transition-all cursor-pointer flex items-center justify-between gap-2.5 group"
                           >
-                            <img
-                              src={photo}
-                              alt={`${selectedContainer.name} ${pIdx + 1}`}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Maximize2 className="w-3.5 h-3.5 text-white" />
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className="w-8 h-8 rounded-lg bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] flex items-center justify-center shrink-0 border border-[var(--border-color,#56616D)]/60">
+                                <Box className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-bold text-xs text-white truncate group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
+                                  {child.name}
+                                </p>
+                                <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] truncate">
+                                  {CONTAINER_TYPE_LABELS[child.containerType]?.hu || child.containerType}
+                                </p>
+                              </div>
                             </div>
-                            {isAuthenticated && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveDetailPhoto(pIdx);
-                                }}
-                                className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                title="Kép törlése"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
+
+                            <div className="flex items-center gap-1 text-[10px] text-[var(--text-sub,#B5BDC6)] shrink-0 font-medium">
+                              <span>{child.items.length + child.bulkItems.length} tétel</span>
+                              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                            </div>
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Quick Previews: 2 columns for bulk teaser & items teaser */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Bulk preview teaser */}
+                    <div className="p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/40 border border-[var(--border-color,#56616D)]/50 space-y-2.5 flex flex-col justify-between">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Készlet ízelítő</span>
+                        </span>
+                        <button
+                          onClick={() => setActiveTab('bulk')}
+                          className="text-[11px] font-semibold text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <span>Összes ({selectedContainer.bulkItems.length})</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {selectedContainer.bulkItems.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {selectedContainer.bulkItems.slice(0, 3).map(b => (
+                            <div key={b.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--card-bg,#3A4551)]/60">
+                              <span className="text-white font-medium truncate max-w-[150px]">{b.name}</span>
+                              <span className="font-mono text-amber-300 font-bold text-[11px] shrink-0">{b.quantity} {b.unit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] italic py-1">Nincsenek rögzített készlettételek.</p>
+                      )}
+                    </div>
+
+                    {/* Items preview teaser */}
+                    <div className="p-3.5 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/40 border border-[var(--border-color,#56616D)]/50 space-y-2.5 flex flex-col justify-between">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Boxes className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
+                          <span>Hozzárendelt tárgyak</span>
+                        </span>
+                        <button
+                          onClick={() => setActiveTab('items')}
+                          className="text-[11px] font-semibold text-[var(--color-primary-blue,#2563EB)] hover:underline flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <span>Összes ({selectedContainer.items.length})</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {selectedContainer.items.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {selectedContainer.items.slice(0, 3).map(it => (
+                            <div key={it.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--card-bg,#3A4551)]/60">
+                              <span className="text-white font-medium truncate max-w-[150px]">{it.name}</span>
+                              <span className="text-[10px] text-[var(--text-sub,#B5BDC6)] truncate">{it.category}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] italic py-1">Nincsenek hozzárendelt Thingor tárgyak.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: KÉSZLET (BULK ITEMS) */}
+              {activeTab === 'bulk' && (
+                <div className="space-y-3.5 sm:space-y-4 animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-amber-400" />
+                      <h3 className="text-xs sm:text-sm font-bold text-white">
+                        Ömlesztett / Mennyiségi Készlettételek
+                      </h3>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                        {selectedContainer.bulkItems.length} tétel
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => setIsAddBulkModalOpen(true)}
+                      className="w-full sm:w-auto px-3.5 py-1.5 min-h-[34px] rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Új készlettétel</span>
+                    </button>
+                  </div>
+
+                  {/* Search within bulk items */}
+                  {selectedContainer.bulkItems.length > 2 && (
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-sub,#B5BDC6)]" />
+                      <input
+                        type="text"
+                        value={bulkSearchQuery}
+                        onChange={(e) => setBulkSearchQuery(e.target.value)}
+                        placeholder="Keresés készlettétel nevére vagy megjegyzésére..."
+                        className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-amber-400 transition-colors"
+                      />
+                    </div>
+                  )}
+
+                  {/* Bulk Items List */}
+                  {filteredBulkItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {filteredBulkItems.map(bulk => {
+                        const isLowStock = bulk.minQuantity !== null && bulk.minQuantity !== undefined && bulk.quantity <= bulk.minQuantity;
+
+                        return (
+                          <div
+                            key={bulk.id}
+                            className={`flex items-center justify-between p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border text-xs transition-all ${
+                              isLowStock ? 'border-amber-500/50 bg-amber-500/5' : 'border-[var(--border-color,#56616D)]/60'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1 pr-3">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold text-white truncate text-xs sm:text-sm">{bulk.name}</p>
+                                {isLowStock && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded-md font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    Alacsony készlet!
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5 flex-wrap">
+                                <span>Mértékegység: <strong className="text-white">{bulk.unit}</strong></span>
+                                {bulk.minQuantity !== null && bulk.minQuantity !== undefined && (
+                                  <>
+                                    <span>•</span>
+                                    <span className={isLowStock ? 'text-amber-400 font-semibold' : ''}>
+                                      Min. szint: {bulk.minQuantity} {bulk.unit}
+                                    </span>
+                                  </>
+                                )}
+                                {bulk.notes && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="italic truncate max-w-[200px]">{bulk.notes}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Interactive Counter & Delete */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex items-center gap-1 bg-[var(--card-bg,#3A4551)] p-1 rounded-xl border border-[var(--border-color,#56616D)]/80 shrink-0">
+                                <button
+                                  onClick={() => handleAdjustQuantity(bulk.id, -1)}
+                                  disabled={bulk.quantity <= 0}
+                                  className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--surface-bg,#465362)] hover:bg-rose-600 disabled:opacity-30 disabled:hover:bg-[var(--surface-bg,#465362)] text-white transition-colors active:scale-95 cursor-pointer"
+                                  title="Csökkentés (-1)"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="text-xs font-mono font-black text-white px-1.5 min-w-[36px] text-center">
+                                  {bulk.quantity}
+                                </span>
+                                <button
+                                  onClick={() => handleAdjustQuantity(bulk.id, 1)}
+                                  className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--surface-bg,#465362)] hover:bg-emerald-600 text-white transition-colors active:scale-95 cursor-pointer"
+                                  title="Növelés (+1)"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              <button
+                                onClick={() => handleDeleteBulkItem(bulk.id)}
+                                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer border border-rose-500/20"
+                                title="Készlettétel törlése"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : selectedContainer.bulkItems.length > 0 ? (
+                    <div className="text-center py-8 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-xs text-[var(--text-sub,#B5BDC6)]">
+                      Nincs a keresésnek megfelelő készlettétel.
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-2">
+                      <div className="w-10 h-10 mx-auto rounded-xl bg-[var(--surface-bg,#465362)] flex items-center justify-center text-amber-400">
+                        <Layers className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-white text-xs sm:text-sm">Nincsenek készlettételek ebben a tárolóban</p>
+                        <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] max-w-sm mx-auto">
+                          Rögzíts ömlesztett aprócikkeket, csavarokat, alkatrészeket, kábeleket vagy fogyóeszközöket!
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setIsAddBulkModalOpen(true)}
+                        className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Első készlettétel rögzítése</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: TÁRGYAK (ASSIGNED ITEMS) */}
+              {activeTab === 'items' && (
+                <div className="space-y-3.5 sm:space-y-4 animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <Boxes className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                      <h3 className="text-xs sm:text-sm font-bold text-white">
+                        Hozzárendelt Thingor-tárgyak
+                      </h3>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                        {selectedContainer.items.length} db
+                      </span>
+                    </div>
+
+                    {isAuthenticated && (
+                      <button
+                        onClick={() => {
+                          setItemSearchQuery('');
+                          setIsAssignItemModalOpen(true);
+                        }}
+                        className="w-full sm:w-auto px-3.5 py-1.5 min-h-[34px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Tárgy hozzárendelése</span>
+                      </button>
                     )}
                   </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-2">
-                    <div className="w-8 h-8 mx-auto rounded-lg bg-[var(--surface-bg,#465362)] flex items-center justify-center text-[var(--text-sub,#B5BDC6)]">
-                      <ImageIcon className="w-4 h-4" />
+
+                  {/* Search within assigned items */}
+                  {selectedContainer.items.length > 2 && (
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-sub,#B5BDC6)]" />
+                      <input
+                        type="text"
+                        value={assignedItemSearchQuery}
+                        onChange={(e) => setAssignedItemSearchQuery(e.target.value)}
+                        placeholder="Keresés hozzárendelt tárgy nevére vagy kategóriájára..."
+                        className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)] text-white text-xs placeholder-[var(--text-sub,#B5BDC6)] focus:outline-none focus:border-[var(--color-primary-blue,#2563EB)] transition-colors"
+                      />
                     </div>
-                    <p>Még nincs fénykép feltöltve ehhez a tárolóhoz.</p>
+                  )}
+
+                  {/* Items List */}
+                  {filteredAssignedItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {filteredAssignedItems.map(item => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/60 text-xs"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="font-bold text-white truncate text-xs sm:text-sm">{item.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[var(--text-sub,#B5BDC6)]">
+                              <span className="flex items-center gap-1">
+                                <Tag className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)]" />
+                                <span>{item.category}</span>
+                              </span>
+                              <span>•</span>
+                              <span className="font-mono text-blue-400">{item.code}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {item.isRealItem && (
+                              <button
+                                onClick={() => setSelectedItemId(item.id)}
+                                className="p-2 rounded-xl bg-[var(--card-bg,#3A4551)] hover:bg-[var(--card-bg,#3A4551)]/80 text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors border border-[var(--border-color,#56616D)]/40 cursor-pointer"
+                                title="Tárgy adatlapjának megnyitása"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {item.isRealItem && (
+                              <button
+                                onClick={() => handleUnassignItem(item.id)}
+                                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors border border-rose-500/20 cursor-pointer"
+                                title="Eltávolítás a tárolóból"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : selectedContainer.items.length > 0 ? (
+                    <div className="text-center py-8 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-xs text-[var(--text-sub,#B5BDC6)]">
+                      Nincs a keresésnek megfelelő hozzárendelt tárgy.
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-2">
+                      <div className="w-10 h-10 mx-auto rounded-xl bg-[var(--surface-bg,#465362)] flex items-center justify-center text-[var(--color-primary-blue,#2563EB)]">
+                        <Boxes className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-white text-xs sm:text-sm">Még nincs Thingor-tárgy ehhez a tárolóhoz rendelve</p>
+                        <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] max-w-sm mx-auto">
+                          Társíts meglévő leltározott tárgyakat ehhez a tárolódobozhoz vagy polchoz a gyors kereshetőségért!
+                        </p>
+                      </div>
+                      {isAuthenticated && (
+                        <button
+                          onClick={() => setIsAssignItemModalOpen(true)}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Tárgy hozzárendelése</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 4: FÉNYKÉPEK (PHOTOS) */}
+              {activeTab === 'photos' && (
+                <div className="space-y-3.5 sm:space-y-4 animate-fadeIn">
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                      <h3 className="text-xs sm:text-sm font-bold text-white">
+                        Fényképek és Vizuális Dokumentáció
+                      </h3>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
+                        {selectedContainer.photos.length} db
+                      </span>
+                    </div>
+
                     {isAuthenticated && (
-                      <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white font-semibold text-xs border border-[var(--border-color,#56616D)] cursor-pointer transition-colors ${
+                      <label className={`px-3 py-1.5 min-h-[34px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-colors ${
                         isUploadingDetailPhoto ? 'opacity-50 pointer-events-none' : ''
                       }`}>
                         {isUploadingDetailPhoto ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <Upload className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
+                          <Plus className="w-3.5 h-3.5" />
                         )}
-                        <span>{isUploadingDetailPhoto ? 'Feltöltés...' : 'Első kép feltöltése'}</span>
+                        <span>Kép feltöltése</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -1338,231 +1868,115 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                       </label>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* SECTION 0B: Sub-containers (Altárolók a tárolóban) */}
-              {childContainers.length > 0 && (
-                <div className="space-y-3 pb-4 border-b border-[var(--border-color,#56616D)]/60">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                      <FolderTree className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
-                      <span>Belső Altárolók</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
-                        {childContainers.length} db
-                      </span>
-                    </h3>
-                    {isAuthenticated && (
-                      <button
-                        onClick={() => {
-                          setNewContainerParentId(selectedContainer.id);
-                          setNewContainerScope(selectedContainer.ownership_scope || 'private');
-                          setIsCreateModalOpen(true);
-                        }}
-                        className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Altároló hozzáadása</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {childContainers.map(child => (
+                  {selectedContainer.photos.length > 0 ? (
+                    <div className="space-y-3">
+                      {/* Primary Showcase */}
                       <div
-                        key={child.id}
-                        onClick={() => handleSelectContainer(child.id, true)}
-                        className="p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 hover:bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]/60 hover:border-[var(--color-primary-blue,#2563EB)] transition-all cursor-pointer flex items-center justify-between gap-2.5 group"
+                        onClick={() => openImageViewer(selectedContainer.photos, { title: selectedContainer.name, activeIndex: 0 })}
+                        className="relative w-full h-52 sm:h-64 rounded-2xl overflow-hidden bg-black/40 border border-[var(--border-color,#56616D)] group cursor-pointer shadow-md"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className="w-8 h-8 rounded-lg bg-[var(--card-bg,#3A4551)] text-[var(--color-primary-blue,#2563EB)] flex items-center justify-center shrink-0 border border-[var(--border-color,#56616D)]/60">
-                            <Box className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-xs text-white truncate group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors">
-                              {child.name}
-                            </p>
-                            <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] font-mono truncate">
-                              {child.code} • {CONTAINER_TYPE_LABELS[child.containerType]?.hu || child.containerType}
-                            </p>
-                          </div>
+                        <img
+                          src={selectedContainer.photos[0]}
+                          alt={selectedContainer.name}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3.5">
+                          <span className="text-xs text-white font-medium flex items-center gap-1">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                            <span>Kattints a nagyításhoz</span>
+                          </span>
+                          {isAuthenticated && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveDetailPhoto(0);
+                              }}
+                              className="p-1.5 rounded-lg bg-rose-500/80 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                              title="Kép törlése"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
-
-                        <div className="flex items-center gap-1 text-[10px] text-[var(--text-sub,#B5BDC6)] shrink-0 font-medium">
-                          <span>{child.items.length + child.bulkItems.length} tétel</span>
-                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[10px] text-white font-semibold">
+                          1 / {selectedContainer.photos.length}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* SECTION 1: Assigned Thingor Items */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                    <Boxes className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
-                    <span>Hozzárendelt Tárgyak</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
-                      {selectedContainer.items.length} db
-                    </span>
-                  </h3>
-
-                  {isAuthenticated && (
-                    <button
-                      onClick={() => {
-                        setItemSearchQuery('');
-                        setIsAssignItemModalOpen(true);
-                      }}
-                      className="text-xs font-semibold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Tárgy hozzárendelése</span>
-                    </button>
+                      {/* Secondary Thumbnails */}
+                      {selectedContainer.photos.length > 1 && (
+                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 pt-1">
+                          {selectedContainer.photos.map((photo, pIdx) => (
+                            <div
+                              key={pIdx}
+                              onClick={() => openImageViewer(selectedContainer.photos, { title: selectedContainer.name, activeIndex: pIdx })}
+                              className="relative aspect-square rounded-xl overflow-hidden bg-black/30 border border-[var(--border-color,#56616D)] group cursor-pointer"
+                            >
+                              <img
+                                src={photo}
+                                alt={`${selectedContainer.name} ${pIdx + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Maximize2 className="w-3.5 h-3.5 text-white" />
+                              </div>
+                              {isAuthenticated && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveDetailPhoto(pIdx);
+                                  }}
+                                  className="absolute top-1 right-1 p-1 rounded-md bg-rose-600/90 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                  title="Kép törlése"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-2">
+                      <div className="w-10 h-10 mx-auto rounded-xl bg-[var(--surface-bg,#465362)] flex items-center justify-center text-[var(--text-sub,#B5BDC6)]">
+                        <ImageIcon className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-white text-xs sm:text-sm">Még nincs fénykép feltöltve ehhez a tárolóhoz</p>
+                        <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] max-w-sm mx-auto">
+                          Tölts fel fotót a dobozról, fiókról vagy polcról, hogy azonnal felismerd a fizikai helyét!
+                        </p>
+                      </div>
+                      {isAuthenticated && (
+                        <label className={`mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white font-semibold text-xs border border-[var(--border-color,#56616D)] cursor-pointer transition-colors ${
+                          isUploadingDetailPhoto ? 'opacity-50 pointer-events-none' : ''
+                        }`}>
+                          {isUploadingDetailPhoto ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--color-primary-blue,#2563EB)]" />
+                          ) : (
+                            <Upload className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
+                          )}
+                          <span>{isUploadingDetailPhoto ? 'Feltöltés...' : 'Első kép feltöltése'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleUploadDetailPhoto}
+                            disabled={isUploadingDetailPhoto}
+                          />
+                        </label>
+                      )}
+                    </div>
                   )}
                 </div>
-
-                {selectedContainer.items.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedContainer.items.map(item => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/60 text-xs"
-                      >
-                        <div className="min-w-0 flex-1 pr-2">
-                          <p className="font-bold text-white truncate">{item.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[var(--text-sub,#B5BDC6)]">
-                            <span className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" />
-                              <span>{item.category}</span>
-                            </span>
-                            <span>•</span>
-                            <span className="font-mono text-blue-400">{item.code}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {item.isRealItem && (
-                            <button
-                              onClick={() => setSelectedItemId(item.id)}
-                              className="p-1.5 rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-[var(--card-bg,#3A4551)]/80 text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors"
-                              title="Tárgy adatlapja"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {item.isRealItem && (
-                            <button
-                              onClick={() => handleUnassignItem(item.id)}
-                              className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
-                              title="Eltávolítás a tárolóból"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-1">
-                    <p>Még nincs Thingor-tárgy ehhez a tárolóhoz rendelve.</p>
-                    {isAuthenticated && (
-                      <button
-                        onClick={() => setIsAssignItemModalOpen(true)}
-                        className="text-[var(--color-primary-blue,#2563EB)] font-semibold hover:underline"
-                      >
-                        Kattints ide tárgy hozzárendeléséhez
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* SECTION 2: Bulk / Consumable Items */}
-              <div className="space-y-3 pt-2 border-t border-[var(--border-color,#56616D)]/60">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-amber-400" />
-                    <span>Ömlesztett / Mennyiségi Készlettételek</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)]">
-                      {selectedContainer.bulkItems.length} tétel
-                    </span>
-                  </h3>
-
-                  <button
-                    onClick={() => setIsAddBulkModalOpen(true)}
-                    className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Új készlettétel</span>
-                  </button>
-                </div>
-
-                {selectedContainer.bulkItems.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedContainer.bulkItems.map(bulk => (
-                      <div
-                        key={bulk.id}
-                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border border-[var(--border-color,#56616D)]/60 text-xs"
-                      >
-                        <div className="min-w-0 flex-1 pr-2">
-                          <p className="font-bold text-white truncate">{bulk.name}</p>
-                          <p className="text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5">
-                            Mértékegység: <span className="font-semibold text-white">{bulk.unit}</span>
-                            {bulk.minQuantity !== null && bulk.minQuantity !== undefined && (
-                              <span className="ml-2 text-amber-400/80">Min: {bulk.minQuantity} {bulk.unit}</span>
-                            )}
-                          </p>
-                        </div>
-
-                        {/* Interactive Counter & Delete */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className="flex items-center gap-1 bg-[var(--surface-bg,#465362)] p-1 rounded-xl border border-[var(--border-color,#56616D)]/80 shrink-0">
-                            <button
-                              onClick={() => handleAdjustQuantity(bulk.id, -1)}
-                              disabled={bulk.quantity <= 0}
-                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-rose-600 disabled:opacity-30 disabled:hover:bg-[var(--card-bg,#3A4551)] text-white transition-colors active:scale-95 cursor-pointer"
-                              title="Csökkentés (-1)"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-xs font-mono font-bold text-white px-1.5 min-w-[32px] text-center">
-                              {bulk.quantity}
-                            </span>
-                            <button
-                              onClick={() => handleAdjustQuantity(bulk.id, 1)}
-                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg bg-[var(--card-bg,#3A4551)] hover:bg-emerald-600 text-white transition-colors active:scale-95 cursor-pointer"
-                              title="Növelés (+1)"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          <button
-                            onClick={() => handleDeleteBulkItem(bulk.id)}
-                            className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
-                            title="Készlettétel törlése"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-[var(--surface-bg,#465362)]/30 border border-dashed border-[var(--border-color,#56616D)]/50 text-center text-xs text-[var(--text-sub,#B5BDC6)] space-y-1">
-                    <p>Nincsenek ömlesztett / mennyiségi cikkek ebben a tárolóban.</p>
-                    <button
-                      onClick={() => setIsAddBulkModalOpen(true)}
-                      className="text-amber-400 font-semibold hover:underline"
-                    >
-                      Kattints ide készlettétel felvételéhez
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           ) : (
             <div className="rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] p-6 sm:p-8 text-center text-[var(--text-sub,#B5BDC6)] text-xs space-y-2">
