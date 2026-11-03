@@ -2715,7 +2715,16 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) setBulkPhotoFile(file);
+                            if (file) {
+                              if (!file.type.startsWith('image/')) {
+                                setBulkPhotoError('Csak képfájlok (JPG, PNG, WebP) tölthetők fel.');
+                              } else if (file.size > 15 * 1024 * 1024) {
+                                setBulkPhotoError('A kép mérete maximum 15 MB lehet.');
+                              } else {
+                                setBulkPhotoError(null);
+                                setBulkPhotoFile(file);
+                              }
+                            }
                             e.target.value = '';
                           }}
                         />
@@ -2723,7 +2732,10 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setBulkPhotoFile(null)}
+                      onClick={() => {
+                        setBulkPhotoFile(null);
+                        setBulkPhotoError(null);
+                      }}
                       className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
                       title="Kép eltávolítása"
                     >
@@ -2745,11 +2757,27 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setBulkPhotoFile(file);
+                        if (file) {
+                          if (!file.type.startsWith('image/')) {
+                            setBulkPhotoError('Csak képfájlok (JPG, PNG, WebP) tölthetők fel.');
+                          } else if (file.size > 15 * 1024 * 1024) {
+                            setBulkPhotoError('A kép mérete maximum 15 MB lehet.');
+                          } else {
+                            setBulkPhotoError(null);
+                            setBulkPhotoFile(file);
+                          }
+                        }
                         e.target.value = '';
                       }}
                     />
                   </label>
+                )}
+
+                {bulkPhotoError && (
+                  <p className="text-[11px] text-rose-400 flex items-center gap-1 mt-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{bulkPhotoError}</span>
+                  </p>
                 )}
               </div>
 
@@ -2759,6 +2787,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                   onClick={() => {
                     setIsAddBulkModalOpen(false);
                     setBulkPhotoFile(null);
+                    setBulkPhotoError(null);
                   }}
                   className="px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] text-white text-xs font-bold"
                 >
