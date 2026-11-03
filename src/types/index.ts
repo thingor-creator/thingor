@@ -547,6 +547,7 @@ export interface ContainerItem {
   unit: ContainerItemUnit | string;
   min_quantity?: number | null;
   notes?: string | null;
+  photo_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }

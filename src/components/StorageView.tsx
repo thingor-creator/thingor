@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp, useModalBack } from '../context/AppContext';
-import { uploadFileToStorage } from '../lib/storage';
+import { uploadFileToStorage, deleteFileFromStorage } from '../lib/storage';
 import type { ContainerType, ContainerItemUnit } from '../types';
 
 export interface StorageViewProps {
@@ -53,6 +53,7 @@ export interface ContainerBulkItemDisplay {
   unit: string;
   minQuantity?: number | null;
   notes?: string | null;
+  photoUrl?: string | null;
 }
 
 export interface StorageContainerDisplay {
@@ -211,6 +212,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     updateStorageContainer,
     deleteStorageContainer,
     addContainerItem,
+    updateContainerItem,
     deleteContainerItem,
     adjustContainerItemQuantity,
     assignItemToContainer,
@@ -226,6 +228,24 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isAssignItemModalOpen, setIsAssignItemModalOpen] = useState(false);
   const [isAddBulkModalOpen, setIsAddBulkModalOpen] = useState(false);
+  // Bulk item photo handling
+  const [bulkPhotoFile, setBulkPhotoFile] = useState<File | null>(null);
+  const [isUploadingBulkPhoto, setIsUploadingBulkPhoto] = useState(false);
+  const [uploadingBulkItemId, setUploadingBulkItemId] = useState<string | null>(null);
+  const [bulkPhotoError, setBulkPhotoError] = useState<string | null>(null);
+
+  const bulkPhotoPreviewUrl = useMemo(() => {
+    if (!bulkPhotoFile) return null;
+    return URL.createObjectURL(bulkPhotoFile);
+  }, [bulkPhotoFile]);
+
+  useEffect(() => {
+    return () => {
+      if (bulkPhotoPreviewUrl) {
+        URL.revokeObjectURL(bulkPhotoPreviewUrl);
+      }
+    };
+  }, [bulkPhotoPreviewUrl]);
   const [searchQuery, setSearchQuery] = useState('');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'bulk' | 'items' | 'photos'>('overview');
@@ -340,6 +360,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
             unit: ci.unit,
             minQuantity: ci.min_quantity,
             notes: ci.notes,
+            photoUrl: ci.photo_url || null,
           }));
 
         return {
@@ -517,18 +538,81 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     }
   };
 
-  // Delete bulk item
+  // Delete bulk item (and safe R2 photo cleanup after DB deletion)
   const handleDeleteBulkItem = async (bulkItemId: string) => {
     if (!window.confirm('Biztosan törölni szeretnéd ezt a készlettételt?')) return;
+    const itemToDelete = selectedContainer?.bulkItems.find(b => b.id === bulkItemId);
     try {
       if (isRealDataActive) {
         await deleteContainerItem(bulkItemId);
+        if (itemToDelete?.photoUrl) {
+          try {
+            await deleteFileFromStorage(itemToDelete.photoUrl);
+          } catch (delErr) {
+            console.warn('R2 photo delete error:', delErr);
+          }
+        }
         showToast('Készlettétel törölve.');
       } else {
         showToast('Minta tétel törölve.');
       }
     } catch (err: any) {
       showToast(err?.message || 'Hiba a tétel törlésekor');
+    }
+  };
+
+  // Update photo for existing bulk item
+  const handleUpdateBulkItemPhoto = async (bulkId: string, currentPhotoUrl: string | null | undefined, file: File) => {
+    if (!user?.id || !file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Csak képfájlok tölthetők fel.');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('A kép mérete maximum 15 MB lehet.');
+      return;
+    }
+    setUploadingBulkItemId(bulkId);
+    try {
+      const res = await uploadFileToStorage(file, 'photos', user.id);
+      const newPhotoUrl = res.signedUrl || res.path;
+      if (!newPhotoUrl) {
+        throw new Error(res.error || 'A feltöltés nem sikerült');
+      }
+      // Update database first
+      await updateContainerItem(bulkId, { photo_url: newPhotoUrl });
+      // Only clean up old photo after DB update succeeds
+      if (currentPhotoUrl && currentPhotoUrl !== newPhotoUrl) {
+        try {
+          await deleteFileFromStorage(currentPhotoUrl);
+        } catch (delErr) {
+          console.warn('Old photo cleanup warning:', delErr);
+        }
+      }
+      showToast('Kép sikeresen frissítve!');
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a kép mentésekor');
+    } finally {
+      setUploadingBulkItemId(null);
+    }
+  };
+
+  // Remove photo from existing bulk item
+  const handleRemoveBulkItemPhoto = async (bulkId: string, photoUrl: string) => {
+    if (!window.confirm('Biztosan törölni szeretnéd a készlettétel fényképét?')) return;
+    setUploadingBulkItemId(bulkId);
+    try {
+      await updateContainerItem(bulkId, { photo_url: null });
+      try {
+        await deleteFileFromStorage(photoUrl);
+      } catch (delErr) {
+        console.warn('R2 photo delete warning:', delErr);
+      }
+      showToast('Kép sikeresen eltávolítva.');
+    } catch (err: any) {
+      showToast(err?.message || 'Hiba a kép eltávolításakor');
+    } finally {
+      setUploadingBulkItemId(null);
     }
   };
 
@@ -767,9 +851,20 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
     if (!selectedContainer || !newBulkName.trim()) return;
 
     setIsSubmitting(true);
+    setIsUploadingBulkPhoto(Boolean(bulkPhotoFile));
     try {
+      let uploadedPhotoUrl: string | null = null;
+      if (bulkPhotoFile && user?.id) {
+        const uploadRes = await uploadFileToStorage(bulkPhotoFile, 'photos', user.id);
+        if (uploadRes.signedUrl || uploadRes.path) {
+          uploadedPhotoUrl = uploadRes.signedUrl || uploadRes.path || null;
+        } else if (uploadRes.error) {
+          showToast(`Kép feltöltési hiba: ${uploadRes.error}`);
+        }
+      }
+
       if (isRealDataActive) {
-        await addContainerItem({
+        const created = await addContainerItem({
           container_id: selectedContainer.id,
           user_id: '',
           ownership_scope: household ? 'household' : 'private',
@@ -779,6 +874,14 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           min_quantity: newBulkMinQty ? Number(newBulkMinQty) : null,
           notes: newBulkNotes.trim() || null,
         });
+
+        if (uploadedPhotoUrl && created?.id) {
+          try {
+            await updateContainerItem(created.id, { photo_url: uploadedPhotoUrl });
+          } catch (updErr) {
+            console.warn('Failed to attach photo_url to new bulk item:', updErr);
+          }
+        }
         showToast(`"${newBulkName.trim()}" tétel hozzáadva!`);
       } else {
         showToast(`Minta készlettétel hozzáadva!`);
@@ -790,10 +893,13 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
       setNewBulkUnit('db');
       setNewBulkMinQty('');
       setNewBulkNotes('');
+      setBulkPhotoFile(null);
+      setBulkPhotoError(null);
     } catch (err: any) {
       showToast(err?.message || 'Hiba a készlettétel mentésekor');
     } finally {
       setIsSubmitting(false);
+      setIsUploadingBulkPhoto(false);
     }
   };
 
@@ -1536,7 +1642,14 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                         <div className="space-y-1.5">
                           {selectedContainer.bulkItems.slice(0, 3).map(b => (
                             <div key={b.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--card-bg,#3A4551)]/60">
-                              <span className="text-white font-medium truncate max-w-[150px]">{b.name}</span>
+                              <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                                {b.photoUrl ? (
+                                  <img src={b.photoUrl} alt={b.name} className="w-5 h-5 rounded-md object-contain bg-black/20 shrink-0" />
+                                ) : (
+                                  <Package className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                )}
+                                <span className="text-white font-medium truncate">{b.name}</span>
+                              </div>
                               <span className="font-mono text-amber-300 font-bold text-[11px] shrink-0">{b.quantity} {b.unit}</span>
                             </div>
                           ))}
@@ -1625,39 +1738,72 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                         return (
                           <div
                             key={bulk.id}
-                            className={`flex items-center justify-between p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border text-xs transition-all ${
+                            className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[var(--surface-bg,#465362)]/60 border text-xs transition-all gap-2.5 sm:gap-3 ${
                               isLowStock ? 'border-amber-500/50 bg-amber-500/5' : 'border-[var(--border-color,#56616D)]/60'
                             }`}
                           >
-                            <div className="min-w-0 flex-1 pr-3">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-bold text-white truncate text-xs sm:text-sm">{bulk.name}</p>
-                                {isLowStock && (
-                                  <span className="text-[10px] px-1.5 py-0.2 rounded-md font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                    Alacsony készlet!
-                                  </span>
+                            {/* Left: Thumbnail & Name / Info */}
+                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                              {/* 56-64px thumbnail frame */}
+                              <div
+                                onClick={() => {
+                                  if (bulk.photoUrl) {
+                                    openImageViewer([bulk.photoUrl], { title: bulk.name, activeIndex: 0 });
+                                  }
+                                }}
+                                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-black/20 border border-[var(--border-color,#56616D)] flex items-center justify-center shrink-0 relative group ${
+                                  bulk.photoUrl ? 'cursor-pointer hover:border-amber-400/80 transition-colors' : ''
+                                }`}
+                                title={bulk.photoUrl ? 'Kattints a nagyobb mérethez' : undefined}
+                              >
+                                {bulk.photoUrl ? (
+                                  <>
+                                    <img
+                                      src={bulk.photoUrl}
+                                      alt={bulk.name}
+                                      className="w-full h-full object-contain p-0.5 group-hover:scale-105 transition-transform duration-200"
+                                      loading="lazy"
+                                    />
+                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <Maximize2 className="w-3.5 h-3.5 text-white drop-shadow" />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <Package className="w-6 h-6 text-[var(--text-sub,#B5BDC6)]/60" />
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5 flex-wrap">
-                                <span>Mértékegység: <strong className="text-white">{bulk.unit}</strong></span>
-                                {bulk.minQuantity !== null && bulk.minQuantity !== undefined && (
-                                  <>
-                                    <span>•</span>
-                                    <span className={isLowStock ? 'text-amber-400 font-semibold' : ''}>
-                                      Min. szint: {bulk.minQuantity} {bulk.unit}
+
+                              {/* Details */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-bold text-white truncate text-xs sm:text-sm">{bulk.name}</p>
+                                  {isLowStock && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded-md font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                      Alacsony készlet!
                                     </span>
-                                  </>
-                                )}
-                                {bulk.notes && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="italic truncate max-w-[200px]">{bulk.notes}</span>
-                                  </>
-                                )}
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-[var(--text-sub,#B5BDC6)] mt-0.5 flex-wrap">
+                                  <span>Mértékegység: <strong className="text-white">{bulk.unit}</strong></span>
+                                  {bulk.minQuantity !== null && bulk.minQuantity !== undefined && (
+                                    <>
+                                      <span>•</span>
+                                      <span className={isLowStock ? 'text-amber-400 font-semibold' : ''}>
+                                        Min. szint: {bulk.minQuantity} {bulk.unit}
+                                      </span>
+                                    </>
+                                  )}
+                                  {bulk.notes && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="italic truncate max-w-[200px]">{bulk.notes}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
-                            {/* Interactive Counter & Delete */}
+                            {/* Right: Interactive Counter, Photo Actions & Delete */}
                             <div className="flex items-center gap-1.5 shrink-0">
                               <div className="flex items-center gap-1 bg-[var(--card-bg,#3A4551)] p-1 rounded-xl border border-[var(--border-color,#56616D)]/80 shrink-0">
                                 <button
@@ -1679,6 +1825,47 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                                   <Plus className="w-3.5 h-3.5" />
                                 </button>
                               </div>
+
+                              {/* Photo upload / replace button */}
+                              {isAuthenticated && (
+                                <label
+                                  className={`p-2 rounded-xl bg-[var(--card-bg,#3A4551)] hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white transition-colors cursor-pointer border border-[var(--border-color,#56616D)]/60 ${
+                                    uploadingBulkItemId === bulk.id ? 'opacity-50 pointer-events-none' : ''
+                                  }`}
+                                  title={bulk.photoUrl ? 'Kép cseréje' : 'Kép hozzáadása'}
+                                >
+                                  {uploadingBulkItemId === bulk.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                                  ) : (
+                                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                                  )}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    disabled={uploadingBulkItemId === bulk.id}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        handleUpdateBulkItemPhoto(bulk.id, bulk.photoUrl, file);
+                                      }
+                                      e.target.value = '';
+                                    }}
+                                  />
+                                </label>
+                              )}
+
+                              {/* Remove photo button (if photo exists) */}
+                              {isAuthenticated && bulk.photoUrl && (
+                                <button
+                                  onClick={() => handleRemoveBulkItemPhoto(bulk.id, bulk.photoUrl!)}
+                                  disabled={uploadingBulkItemId === bulk.id}
+                                  className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-colors cursor-pointer border border-amber-500/20"
+                                  title="Kép törlése"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
 
                               <button
                                 onClick={() => handleDeleteBulkItem(bulk.id)}
@@ -2509,10 +2696,70 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 />
               </div>
 
+              {/* Photo Upload for new bulk item */}
+              <div>
+                <label className="text-xs font-bold text-white block mb-1">Fénykép (Opcionális)</label>
+                {bulkPhotoFile && bulkPhotoPreviewUrl ? (
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--surface-bg,#465362)] border border-[var(--border-color,#56616D)]">
+                    <div className="w-14 h-14 rounded-lg overflow-hidden bg-black/30 border border-[var(--border-color,#56616D)] shrink-0 flex items-center justify-center">
+                      <img src={bulkPhotoPreviewUrl} alt="Előnézet" className="w-full h-full object-contain p-0.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-white truncate">{bulkPhotoFile.name}</p>
+                      <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">{(bulkPhotoFile.size / 1024).toFixed(0)} KB</p>
+                      <label className="text-xs text-amber-400 hover:underline cursor-pointer font-semibold inline-block mt-1">
+                        Kép cseréje
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setBulkPhotoFile(file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBulkPhotoFile(null)}
+                      className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                      title="Kép eltávolítása"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-dashed border-[var(--border-color,#56616D)] hover:border-amber-400/80 bg-[var(--surface-bg,#465362)]/40 hover:bg-[var(--surface-bg,#465362)]/60 cursor-pointer transition-colors group">
+                    <div className="w-9 h-9 rounded-lg bg-[var(--card-bg,#3A4551)] flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+                      <ImageIcon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-white">Kép feltöltése vagy készítése</p>
+                      <p className="text-[10px] text-[var(--text-sub,#B5BDC6)]">JPG, PNG vagy WebP (opcionális)</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setBulkPhotoFile(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddBulkModalOpen(false)}
+                  onClick={() => {
+                    setIsAddBulkModalOpen(false);
+                    setBulkPhotoFile(null);
+                  }}
                   className="px-4 py-2 rounded-xl bg-[var(--surface-bg,#465362)] text-white text-xs font-bold"
                 >
                   Mégse
@@ -2520,9 +2767,9 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Mentés...' : 'Tétel Mentése'}
+                  {isSubmitting ? (isUploadingBulkPhoto ? 'Kép feltöltése...' : 'Mentés...') : 'Tétel Mentése'}
                 </button>
               </div>
             </form>
