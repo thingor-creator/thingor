@@ -297,6 +297,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   useModalBack(isAssignItemModalOpen, () => setIsAssignItemModalOpen(false), 'storage-assign-modal');
   useModalBack(isAddBulkModalOpen, () => setIsAddBulkModalOpen(false), 'storage-add-bulk-modal');
   useModalBack(isEditModalOpen, () => setIsEditModalOpen(false), 'storage-edit-modal');
+  useModalBack(mobileView === 'detail', () => setMobileView('tree'), 'storage-detail-view');
 
   // Real data is active whenever user is authenticated
   const isRealDataActive = isAuthenticated;
@@ -389,12 +390,13 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash;
-      if (hash.startsWith('#storage/')) {
+      if (hash.startsWith('#storage/') && hash.length > 9) {
         const targetId = hash.replace('#storage/', '').trim();
         if (targetId) {
           const match = containers.find(c => c.id === targetId || c.code === targetId);
           if (match) {
             setSelectedContainerId(match.id);
+            setMobileView('detail');
             // Expand ancestors
             const expandSet = new Set<string>();
             let cur = match.parentId ? containers.find(c => c.id === match.parentId) : null;
@@ -405,9 +407,13 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
             if (expandSet.size > 0) {
               setExpandedIds(prev => new Set([...prev, ...expandSet]));
             }
+            return;
           }
         }
       }
+
+      // Default or generic storage navigation (#storage, etc.): always ensure tree view on mobile
+      setMobileView('tree');
     };
 
     handleHash();
@@ -445,9 +451,6 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const handleSelectContainer = (containerId: string, shouldScroll = true) => {
     setSelectedContainerId(containerId);
     setMobileView('detail');
-    if (typeof window !== 'undefined' && window.history?.replaceState) {
-      window.history.replaceState(window.history.state, '', `#storage/${containerId}`);
-    }
 
     // Expand all ancestors in tree
     const expandSet = new Set<string>();
@@ -1129,9 +1132,15 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
           <div className="flex items-center gap-2.5 sm:gap-3">
             {onClose && (
               <button
-                onClick={onClose}
+                onClick={() => {
+                  if (mobileView === 'detail' && typeof window !== 'undefined' && window.innerWidth < 1024) {
+                    setMobileView('tree');
+                  } else {
+                    onClose();
+                  }
+                }}
                 className="p-2 rounded-xl bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-white transition-colors border border-[var(--border-color,#56616D)] shrink-0 min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
-                title="Vissza a fő nézetre"
+                title="Vissza"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
