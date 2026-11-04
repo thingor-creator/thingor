@@ -249,7 +249,7 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'bulk' | 'items' | 'photos'>('overview');
-  const [mobileView, setMobileView] = useState<'tree' | 'detail'>('detail');
+  const [mobileView, setMobileView] = useState<'tree' | 'detail'>('tree');
   const [bulkSearchQuery, setBulkSearchQuery] = useState('');
   const [assignedItemSearchQuery, setAssignedItemSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
