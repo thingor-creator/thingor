@@ -13,6 +13,9 @@ import {
   Image as ImageIcon,
   AlertCircle,
   Maximize2,
+  Plus,
+  CornerDownRight,
+  Layers,
 } from 'lucide-react';
 
 export const LocationsView: React.FC = () => {
@@ -306,36 +309,69 @@ export const LocationsView: React.FC = () => {
     setCurrentView('items');
   };
 
+  const handleOpenAddSubLocation = (parentLocId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    resetCreateModal();
+    setParentId(parentLocId);
+    setIsLocationModalOpen(true);
+  };
+
   // Group root locations vs children
   const rootLocations = locations.filter((l) => !l.parent_id);
 
-  const renderLocationBranch = (loc: LocationItem, depth = 0) => {
-    const children = locations.filter((l) => l.parent_id === loc.id);
+  const renderLocationCard = (loc: LocationItem, depth = 0, childCount = 0) => {
+    const parentLoc = loc.parent_id
+      ? locations.find((l) => l.id === loc.parent_id) || null
+      : null;
     const locItems = items.filter(
       (i) => i.location_id === loc.id && (isVaultUnlocked || !i.is_vault_protected)
     );
     const totalItemCount = locItems.length;
-    const totalVal = locItems.reduce(
-      (s, i) => s + (i.current_value ?? i.purchase_price ?? 0),
-      0
-    );
     const isDeleting = deletingLocId === loc.id;
+    const isRoot = depth === 0;
+
+    const imageHeightClass = isRoot
+      ? 'h-44 sm:h-48'
+      : depth === 1
+      ? 'h-32 sm:h-36'
+      : 'h-28 sm:h-32';
+
+    const levelBadgeLabel = isRoot
+      ? isHu
+        ? 'Fő helyszín'
+        : 'Main Location'
+      : depth === 1
+      ? isHu
+        ? 'Alhelyszín'
+        : 'Sub-location'
+      : isHu
+      ? `${depth}. szintű alhelyszín`
+      : `Level ${depth} Sub-location`;
 
     return (
-      <div key={loc.id} className="space-y-2">
-        <div
-          className={`group flex items-center justify-between p-3.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)] hover:border-[var(--color-primary-blue,#2563EB)]/60 transition-all ${
-            depth > 0
-              ? 'ml-6 sm:ml-8 border-l-2 border-l-[var(--color-primary-blue,#2563EB)]'
-              : ''
-          }`}
-        >
-          <div
-            onClick={() => handleSelectLocationFilter(loc.id)}
-            className="flex items-center gap-3 cursor-pointer min-w-0 flex-1 pr-3"
-          >
-            {loc.photo_url ? (
-              <div
+      <div
+        onClick={() => handleSelectLocationFilter(loc.id)}
+        data-location-id={loc.id}
+        data-depth={depth}
+        className={`group location-card relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-200 cursor-pointer ${
+          isRoot
+            ? 'bg-[var(--card-bg,#3A4551)] border-[var(--border-color,#56616D)] hover:border-[var(--color-primary-blue,#2563EB)] shadow-lg hover:shadow-xl'
+            : 'bg-[var(--card-bg,#3A4551)]/90 border-[var(--border-color,#56616D)]/80 hover:border-[var(--color-primary-blue,#2563EB)]/80 shadow-md hover:shadow-lg'
+        }`}
+      >
+        {/* Prominent Image Header */}
+        <div className={`relative w-full ${imageHeightClass} overflow-hidden bg-[var(--surface-bg,#465362)] shrink-0`}>
+          {loc.photo_url ? (
+            <>
+              <img
+                src={loc.photo_url}
+                alt={loc.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-slate-950/35 pointer-events-none" />
+              <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   openImageViewer({
@@ -344,134 +380,283 @@ export const LocationsView: React.FC = () => {
                   });
                 }}
                 title={isHu ? 'Helyszínkép nagyítása' : 'View larger location image'}
-                className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] shrink-0 group/img"
+                className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-lg bg-slate-900/70 hover:bg-[var(--color-primary-blue,#2563EB)] text-white/90 hover:text-white border border-white/15 backdrop-blur-sm transition-colors cursor-pointer"
               >
-                <img
-                  src={loc.photo_url}
-                  alt={loc.name}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                  <Maximize2 className="w-3.5 h-3.5 text-white" />
-                </div>
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          ) : (
+            <div className="w-full h-full relative flex flex-col items-center justify-center bg-gradient-to-br from-[#465362] via-[#3A4551] to-[#2B333C] overflow-hidden">
+              <div
+                className="absolute inset-0 opacity-15 pointer-events-none"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.35) 1px, transparent 0)',
+                  backgroundSize: '18px 18px',
+                }}
+              />
+              <div
+                className={`${
+                  isRoot ? 'w-14 h-14 rounded-2xl' : 'w-11 h-11 rounded-xl'
+                } bg-[var(--card-bg,#3A4551)]/90 border border-[var(--border-color,#56616D)] text-[var(--color-primary-blue,#2563EB)] group-hover:bg-[var(--color-primary-blue,#2563EB)] group-hover:text-white group-hover:border-blue-400/50 transition-all duration-200 flex items-center justify-center shadow-inner`}
+              >
+                <MapPin className={isRoot ? 'w-6 h-6' : 'w-5 h-5'} />
               </div>
-            ) : (
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)] group-hover:bg-[var(--color-primary-blue,#2563EB)] group-hover:text-white transition-colors flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5" />
-              </div>
-            )}
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-[var(--text-main,#E0E3E6)] group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors truncate">
-                  {loc.name}
-                </h3>
-                {depth === 0 && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] shrink-0">
-                    {isHu ? 'Fő Helyszín' : 'Root Area'}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-[var(--text-sub,#B5BDC6)] truncate">
-                {getLocationPath(loc.id)}
-              </p>
+              <span className="mt-2 text-[11px] font-medium text-[var(--text-sub,#B5BDC6)]/80">
+                {isHu ? 'Nincs feltöltött helyszínkép' : 'No location photo'}
+              </span>
             </div>
+          )}
+
+          {/* Top-left hierarchy badge */}
+          <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 flex-wrap pr-10">
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg backdrop-blur-md border shadow-sm ${
+                isRoot
+                  ? 'bg-[var(--color-primary-blue,#2563EB)]/90 text-white border-blue-400/40'
+                  : 'bg-slate-900/80 text-[var(--text-main,#E0E3E6)] border-white/15'
+              }`}
+            >
+              {isRoot ? (
+                <MapPin className="w-3 h-3 shrink-0" />
+              ) : (
+                <CornerDownRight className="w-3 h-3 text-[var(--color-primary-blue,#2563EB)] shrink-0" />
+              )}
+              <span>{levelBadgeLabel}</span>
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="text-right">
-              <span className="text-xs font-bold text-[var(--text-main,#E0E3E6)] block">
-                {totalItemCount} {isHu ? 'tárgy' : 'items'}
-              </span>
-              <span className="text-[11px] text-emerald-400 font-medium">
-                {isHu
-                  ? `${totalVal.toLocaleString('hu-HU')} Ft`
-                  : `€${totalVal.toLocaleString('en-US')}`}
-              </span>
-            </div>
+          {/* Bottom-left secondary badges over image */}
+          <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-slate-900/75 text-[11px] font-semibold text-[var(--text-main,#E0E3E6)] border border-white/10 backdrop-blur-sm">
+              {totalItemCount} {isHu ? 'tárgy' : 'items'}
+            </span>
 
-            <button
-              type="button"
-              onClick={(e) => handleOpenEditLocation(loc, e)}
-              className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] transition-colors cursor-pointer"
-              title={
-                isHu
-                  ? 'Helyszín képe és szerkesztése'
-                  : 'Edit location & image'
-              }
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSelectLocationFilter(loc.id);
-              }}
-              className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] transition-colors cursor-pointer"
-              title={
-                isHu
-                  ? 'Tárgyak megtekintése ezen a helyszínen'
-                  : 'View items in location'
-              }
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-
-            {isDeleting ? (
-              <div
-                className="flex items-center gap-1.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="text-[11px] text-rose-400 font-semibold">
-                  {isHu ? 'Törlöd?' : 'Delete?'}
+            {childCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-900/75 text-[11px] font-semibold text-blue-300 border border-blue-400/20 backdrop-blur-sm">
+                <Layers className="w-3 h-3" />
+                <span>
+                  {childCount} {isHu ? 'alhelyszín' : 'sub-spots'}
                 </span>
-                <button
-                  type="button"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await deleteLocation(loc.id);
-                    setDeletingLocId(null);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors cursor-pointer"
-                >
-                  {isHu ? 'Igen' : 'Yes'}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeletingLocId(null);
-                  }}
-                  className="px-2 py-1 text-[11px] bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] rounded-lg transition-colors cursor-pointer"
-                >
-                  {isHu ? 'Mégse' : 'No'}
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeletingLocId(loc.id);
-                }}
-                className="p-1.5 rounded-lg text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
-                title={isHu ? 'Helyszín törlése' : 'Delete location'}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              </span>
             )}
           </div>
         </div>
 
-        {/* Render child locations */}
-        {children.length > 0 && (
-          <div className="space-y-2">
-            {children.map((child) => renderLocationBranch(child, depth + 1))}
+        {/* Card Content & Actions */}
+        <div className="flex-1 flex flex-col justify-between p-3.5 sm:p-4 gap-3">
+          <div className="min-w-0 space-y-1">
+            <h3
+              className={`${
+                isRoot ? 'text-base sm:text-lg' : 'text-sm sm:text-base'
+              } font-extrabold text-[var(--text-main,#E0E3E6)] group-hover:text-[var(--color-primary-blue,#2563EB)] transition-colors truncate`}
+            >
+              {loc.name}
+            </h3>
+
+            {parentLoc ? (
+              <div className="space-y-0.5">
+                <p className="text-xs text-[var(--text-sub,#B5BDC6)] flex items-center gap-1.5 truncate">
+                  <span className="text-[var(--text-sub,#B5BDC6)]/75">
+                    {isHu ? 'Szülőhelyszín:' : 'Parent:'}
+                  </span>
+                  <span className="font-semibold text-[var(--text-main,#E0E3E6)] truncate">
+                    {parentLoc.name}
+                  </span>
+                </p>
+                {depth >= 2 && (
+                  <p className="text-[11px] text-[var(--text-sub,#B5BDC6)]/75 truncate">
+                    {getLocationPath(loc.id)}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--text-sub,#B5BDC6)] truncate">
+                {childCount > 0
+                  ? isHu
+                    ? `Fő terület • ${childCount} közvetlen alhelyszín`
+                    : `Primary area • ${childCount} direct sub-locations`
+                  : isHu
+                  ? 'Önálló fő helyszín'
+                  : 'Standalone main location'}
+              </p>
+            )}
           </div>
-        )}
+
+          {/* Card Footer Action Bar */}
+          <div
+            className="pt-2.5 border-t border-[var(--border-color,#56616D)]/60 flex items-center justify-between gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isDeleting ? (
+              <div className="flex items-center justify-between w-full gap-1.5">
+                <span className="text-[11px] text-rose-400 font-semibold truncate">
+                  {isHu ? 'Biztosan törlöd?' : 'Delete location?'}
+                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await deleteLocation(loc.id);
+                      setDeletingLocId(null);
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors cursor-pointer"
+                  >
+                    {isHu ? 'Igen' : 'Yes'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingLocId(null);
+                    }}
+                    className="px-2 py-1 text-[11px] bg-[var(--surface-bg,#465362)] hover:bg-[var(--surface-bg,#465362)]/80 text-[var(--text-main,#E0E3E6)] rounded-lg transition-colors cursor-pointer"
+                  >
+                    {isHu ? 'Mégse' : 'No'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectLocationFilter(loc.id);
+                  }}
+                  title={
+                    isHu
+                      ? 'Tárgyak megtekintése ezen a helyszínen'
+                      : 'View items in location'
+                  }
+                  className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-primary-blue,#2563EB)] hover:text-blue-400 transition-colors cursor-pointer"
+                >
+                  <span>{isHu ? 'Megnyitás' : 'Open'}</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenAddSubLocation(loc.id, e)}
+                    className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] transition-colors cursor-pointer"
+                    title={
+                      isHu
+                        ? 'Alhelyszín hozzáadása ehhez a helyszínhez'
+                        : 'Add sub-location here'
+                    }
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenEditLocation(loc, e)}
+                    className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white hover:bg-[var(--color-primary-blue,#2563EB)] transition-colors cursor-pointer"
+                    title={
+                      isHu
+                        ? 'Helyszín képe és szerkesztése'
+                        : 'Edit location & image'
+                    }
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingLocId(loc.id);
+                    }}
+                    className="p-1.5 rounded-lg bg-[var(--surface-bg,#465362)]/60 text-[var(--text-sub,#B5BDC6)] hover:text-rose-400 hover:bg-rose-500/15 transition-colors cursor-pointer"
+                    title={isHu ? 'Helyszín törlése' : 'Delete location'}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Recursive renderer for sub-locations (depth >= 1) preserving arbitrary hierarchy depth
+  const renderSubLocationBranch = (loc: LocationItem, depth: number): React.ReactNode => {
+    const children = locations.filter((l) => l.parent_id === loc.id);
+
+    if (children.length === 0) {
+      return <div key={loc.id}>{renderLocationCard(loc, depth, 0)}</div>;
+    }
+
+    return (
+      <div
+        key={loc.id}
+        className="col-span-full rounded-2xl border border-[var(--border-color,#56616D)]/60 bg-[var(--surface-bg,#465362)]/20 p-3 sm:p-4 space-y-3.5"
+      >
+        <div className="max-w-sm">
+          {renderLocationCard(loc, depth, children.length)}
+        </div>
+
+        <div className="ml-3 sm:ml-6 pl-3 sm:pl-5 border-l-2 border-[var(--color-primary-blue,#2563EB)]/50 space-y-2.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-sub,#B5BDC6)]">
+            <CornerDownRight className="w-3.5 h-3.5 text-[var(--color-primary-blue,#2563EB)]" />
+            <span>
+              {loc.name} — {isHu ? 'alhelyszínei' : 'sub-locations'} ({children.length})
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {children.map((child) => renderSubLocationBranch(child, depth + 1))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRootLocationSection = (rootLoc: LocationItem) => {
+    const children = locations.filter((l) => l.parent_id === rootLoc.id);
+
+    if (children.length === 0) {
+      return <div key={rootLoc.id}>{renderLocationCard(rootLoc, 0, 0)}</div>;
+    }
+
+    return (
+      <div
+        key={rootLoc.id}
+        className="col-span-full rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)]/35 p-4 sm:p-5 space-y-4 shadow-sm"
+      >
+        {/* Root Location Card + Group Summary Header */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
+          <div className="sm:col-span-1 lg:col-span-1">
+            {renderLocationCard(rootLoc, 0, children.length)}
+          </div>
+
+          {/* Connected Sub-locations Indented Group */}
+          <div className="sm:col-span-1 lg:col-span-2 xl:col-span-3 ml-2 sm:ml-0 pl-3 sm:pl-5 border-l-2 border-[var(--color-primary-blue,#2563EB)]/60 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-sub,#B5BDC6)]">
+                <CornerDownRight className="w-4 h-4 text-[var(--color-primary-blue,#2563EB)]" />
+                <span>
+                  {rootLoc.name} — {isHu ? 'alhelyszínek' : 'sub-locations'} ({children.length})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => handleOpenAddSubLocation(rootLoc.id, e)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--surface-bg,#465362)] hover:bg-[var(--color-primary-blue,#2563EB)] text-[var(--text-main,#E0E3E6)] hover:text-white text-[11px] font-semibold transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isHu ? 'Új alhelyszín ide' : 'Add sub-location'}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {children.map((child) => renderSubLocationBranch(child, 1))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -867,8 +1052,8 @@ export const LocationsView: React.FC = () => {
         </div>
       )}
 
-      {/* LOCATIONS TREE DISPLAY */}
-      <div className="space-y-4">
+      {/* LOCATIONS CARD HIERARCHY DISPLAY */}
+      <div>
         {rootLocations.length === 0 ? (
           <div className="p-12 text-center rounded-2xl border border-[var(--border-color,#56616D)] bg-[var(--card-bg,#3A4551)]/40 text-[var(--text-sub,#B5BDC6)] text-xs">
             {isHu
@@ -876,7 +1061,9 @@ export const LocationsView: React.FC = () => {
               : 'No locations created yet. Click "Add Location" to start mapping your rooms and cabinets.'}
           </div>
         ) : (
-          rootLocations.map((root) => renderLocationBranch(root))
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+            {rootLocations.map((root) => renderRootLocationSection(root))}
+          </div>
         )}
       </div>
     </div>
