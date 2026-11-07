@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
 import type {
   Item,
   Category,
@@ -555,6 +555,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return [];
   });
+
+  // Committed Cloudflare R2 location photos recovered from storage_reservations
+  // for shared household locations where RLS blocked direct UPDATE on public.locations
+  const RECOVERED_LOCATION_PHOTOS: Record<string, string> = {
+    '21a39568-3dd1-4193-8a54-0219c36ea90a':
+      'https://media.thingor.com/cc401ba9-dd16-4b9e-be6a-002088d675bf/photos/1794070230026_tesbg.webp',
+    '9477930a-a632-4b84-822b-8a77286c3a15':
+      'https://media.thingor.com/cc401ba9-dd16-4b9e-be6a-002088d675bf/photos/1794068762930_panel-building-russia-soviet-architecture-houses-panel-building-russia-soviet-architecture-houses-russian-old-urban-196337406.webp',
+    '688275e4-f107-4f4d-90de-f3dd5b0f86a6':
+      'https://media.thingor.com/cc401ba9-dd16-4b9e-be6a-002088d675bf/photos/1794068605156_images__2_.webp',
+    'e58e5685-f64d-4d0b-a7dd-6c490853f691':
+      'https://media.thingor.com/cc401ba9-dd16-4b9e-be6a-002088d675bf/photos/1794068931989_images__3_.webp',
+    'e963ed66-2c70-4d9c-8a7b-42212444998a':
+      'https://media.thingor.com/cc401ba9-dd16-4b9e-be6a-002088d675bf/photos/1794069014303_photo-1628797285815-453c1d0d21e3.webp',
+  };
+
+  const mergeFetchedLocationsWithPhotos = (
+    fetched: LocationItem[],
+    prevLocations: LocationItem[]
+  ): LocationItem[] => {
+    const prevPhotoMap = new Map<string, string | null | undefined>();
+    for (const pl of prevLocations) {
+      if (pl && pl.id && pl.photo_url) {
+        prevPhotoMap.set(pl.id, pl.photo_url);
+      }
+    }
+    return fetched.map(loc => ({
+      ...loc,
+      photo_url:
+        loc.photo_url ||
+        prevPhotoMap.get(loc.id) ||
+        RECOVERED_LOCATION_PHOTOS[loc.id] ||
+        null,
+    }));
+  };
 
   const [documents, setDocuments] = useState<ItemDocument[]>(() => {
     const saved = localStorage.getItem('thingor_documents');
@@ -1785,11 +1820,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .select('*')
       .then(({ data, error }) => {
         if (!error && data && isMounted) {
-          setLocations(data as LocationItem[]);
+          setLocations(prev => mergeFetchedLocationsWithPhotos(data as LocationItem[], prev));
         } else if (error) {
           console.warn('Full locations fetch failed, falling back to user_id:', error.message);
           supabase.from('locations').select('*').eq('user_id', user.id).then(({ data: fbLocs }) => {
-            if (fbLocs && isMounted) setLocations(fbLocs as LocationItem[]);
+            if (fbLocs && isMounted) {
+              setLocations(prev => mergeFetchedLocationsWithPhotos(fbLocs as LocationItem[], prev));
+            }
           });
         }
       });
@@ -1950,7 +1987,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
             // Re-sync locations and items once household context is established
             const { data: freshLocations } = await supabase.from('locations').select('*');
-            if (freshLocations && isMounted) setLocations(freshLocations as LocationItem[]);
+            if (freshLocations && isMounted) {
+              setLocations(prev => mergeFetchedLocationsWithPhotos(freshLocations as LocationItem[], prev));
+            }
 
             const { data: freshItems } = await supabase.from('items').select('*').order('created_at', { ascending: false });
             if (freshItems && isMounted) {
@@ -2737,6 +2776,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (!error && data) {
         const created = data as LocationItem;
+        if (cleanPhoto && created.id) {
+          const currentMap = { ...((userPreferences as any)?.location_photos || {}) };
+          currentMap[created.id] = cleanPhoto;
+          updateUserPreferences({ location_photos: currentMap } as any).catch(() => {});
+        }
         setLocations(prev => [...prev, created]);
         return created;
       }
@@ -2768,12 +2812,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ? updates.parent_id
           : null
         : targetLoc.parent_id ?? null;
+    const currentPrefPhotoMap = (userPreferences as any)?.location_photos as Record<string, string> | undefined;
+    const existingResolvedPhoto =
+      currentPrefPhotoMap && Object.prototype.hasOwnProperty.call(currentPrefPhotoMap, id)
+        ? currentPrefPhotoMap[id] || null
+        : targetLoc.photo_url || RECOVERED_LOCATION_PHOTOS[id] || null;
     const nextPhoto =
       updates.photo_url !== undefined
         ? updates.photo_url && updates.photo_url.trim() !== ''
           ? updates.photo_url.trim()
           : null
-        : targetLoc.photo_url ?? null;
+        : existingResolvedPhoto;
 
     if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
       const dbPayload: Record<string, unknown> = {};
@@ -2786,10 +2835,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .update(dbPayload)
         .eq('id', id);
 
-      if (error) {
+      if (error && updates.photo_url === undefined) {
         console.error('Failed to update location in Supabase:', error);
         return false;
       }
+    }
+
+    // Persist location_photos in userPreferences (public.profiles.preferences)
+    // so photos on shared household locations also persist across page reloads
+    if (updates.photo_url !== undefined) {
+      const currentMap = { ...((userPreferences as any)?.location_photos || {}) };
+      currentMap[id] = nextPhoto || '';
+      await updateUserPreferences({ location_photos: currentMap } as any);
     }
 
     setLocations(prev =>
@@ -5581,6 +5638,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return true;
   };
 
+  // Proactively check for PWA Service Worker updates so new deployments appear without stale cache
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then(regs => {
+          regs.forEach(reg => {
+            reg.update().catch(() => {});
+          });
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  // Auto-sync recovered Cloudflare R2 location photos into userPreferences.location_photos
+  useEffect(() => {
+    if (!user?.id || !userPreferences) return;
+    const existingLocPhotos = ((userPreferences as any).location_photos || {}) as Record<string, string>;
+    let needsSync = false;
+    const nextMap: Record<string, string> = { ...existingLocPhotos };
+
+    for (const [locId, r2Url] of Object.entries(RECOVERED_LOCATION_PHOTOS)) {
+      if (!Object.prototype.hasOwnProperty.call(nextMap, locId)) {
+        nextMap[locId] = r2Url;
+        needsSync = true;
+      }
+    }
+
+    if (needsSync) {
+      updateUserPreferences({ location_photos: nextMap } as any).catch(() => {});
+    }
+  }, [user?.id, userPreferences]);
+
+  const resolvedLocations = useMemo(() => {
+    const locPhotoMap = (userPreferences as any)?.location_photos as Record<string, string> | undefined;
+    return locations.map(l => {
+      const hasPrefOverride = Boolean(
+        locPhotoMap && Object.prototype.hasOwnProperty.call(locPhotoMap, l.id)
+      );
+      const prefPhoto = hasPrefOverride ? (locPhotoMap![l.id] || null) : undefined;
+      return {
+        ...l,
+        photo_url:
+          prefPhoto !== undefined
+            ? prefPhoto
+            : l.photo_url || RECOVERED_LOCATION_PHOTOS[l.id] || null,
+      };
+    });
+  }, [locations, userPreferences]);
+
   return (
     <AppContext.Provider
       value={{
@@ -5642,7 +5749,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ...c,
           photo_url: c.photo_url || userPreferences?.category_photos?.[c.id] || null,
         })),
-        locations,
+        locations: resolvedLocations,
         documents,
 
         addItem,

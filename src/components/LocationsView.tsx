@@ -57,6 +57,7 @@ export const LocationsView: React.FC = () => {
 
   // Delete location confirmation state
   const [deletingLocId, setDeletingLocId] = useState<string | null>(null);
+  const [failedImageIds, setFailedImageIds] = useState<Record<string, boolean>>({});
 
   const createPreviewUrl = useMemo(() => {
     if (!createPhotoFile) return null;
@@ -255,6 +256,12 @@ export const LocationsView: React.FC = () => {
         deleteFileFromStorage(oldPhotoUrl).catch(() => {});
       }
 
+      setFailedImageIds((prev) => {
+        if (!prev[editingLocation.id]) return prev;
+        const next = { ...prev };
+        delete next[editingLocation.id];
+        return next;
+      });
       setIsSavingEdit(false);
       setEditingLocation(null);
       setEditPhotoFile(null);
@@ -331,10 +338,14 @@ export const LocationsView: React.FC = () => {
     const isRoot = depth === 0;
 
     const imageHeightClass = isRoot
-      ? 'h-44 sm:h-48'
+      ? 'h-48 sm:h-52'
       : depth === 1
-      ? 'h-32 sm:h-36'
-      : 'h-28 sm:h-32';
+      ? 'h-36 sm:h-40'
+      : 'h-32 sm:h-36';
+
+    const hasValidPhoto = Boolean(
+      loc.photo_url && loc.photo_url.trim() !== '' && !failedImageIds[loc.id]
+    );
 
     const levelBadgeLabel = isRoot
       ? isHu
@@ -361,15 +372,18 @@ export const LocationsView: React.FC = () => {
       >
         {/* Prominent Image Header */}
         <div className={`relative w-full ${imageHeightClass} overflow-hidden bg-[var(--surface-bg,#465362)] shrink-0`}>
-          {loc.photo_url ? (
+          {hasValidPhoto ? (
             <>
               <img
-                src={loc.photo_url}
+                src={loc.photo_url!}
                 alt={loc.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
+                onError={() => {
+                  setFailedImageIds((prev) => ({ ...prev, [loc.id]: true }));
+                }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-slate-950/35 pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-slate-950/75 to-transparent pointer-events-none" />
               <button
                 type="button"
                 onClick={(e) => {
@@ -1061,7 +1075,7 @@ export const LocationsView: React.FC = () => {
               : 'No locations created yet. Click "Add Location" to start mapping your rooms and cabinets.'}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 grid-flow-row-dense items-start">
             {rootLocations.map((root) => renderRootLocationSection(root))}
           </div>
         )}
