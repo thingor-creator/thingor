@@ -17,7 +17,6 @@ import {
   Tag,
   Info,
   Check,
-  Printer,
   Minus,
   Trash2,
   ExternalLink,
@@ -29,7 +28,7 @@ import {
   Upload,
   Maximize2
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeModal } from './QRCodeModal';
 import { useApp, useModalBack } from '../context/AppContext';
 import { uploadFileToStorage, deleteFileFromStorage } from '../lib/storage';
 import type { ContainerType, ContainerItemUnit } from '../types';
@@ -2818,62 +2817,26 @@ export const StorageView: React.FC<StorageViewProps> = ({ onClose }) => {
       )}
 
       {/* MODAL 4: QR-kód és Címkenyomtatás */}
-      {isQrModalOpen && selectedContainer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-sm rounded-2xl sm:rounded-3xl bg-[var(--card-bg,#3A4551)] border border-[var(--border-color,#56616D)] shadow-2xl p-5 sm:p-6 text-center space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color,#56616D)]/60">
-              <h3 className="font-bold text-white text-sm">Tároló QR Címke</h3>
-              <button
-                onClick={() => setIsQrModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-[var(--surface-bg,#465362)] text-[var(--text-sub,#B5BDC6)] hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Printable Label Preview Box */}
-            <div id="storage-printable-label" className="p-4 rounded-2xl bg-white text-black space-y-2 shadow-inner inline-block mx-auto border-2 border-slate-300">
-              <p className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                THINGOR TÁROLÓ
-              </p>
-              <div className="p-2 bg-white flex justify-center">
-                <QRCodeSVG
-                  value={typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#storage/${selectedContainer.id}` : selectedContainer.code}
-                  size={150}
-                  level="M"
-                  includeMargin={false}
-                />
-              </div>
-              <p className="text-xs font-extrabold text-slate-900 truncate max-w-[180px] mx-auto">
-                {selectedContainer.name}
-              </p>
-              <p className="font-mono text-[10px] text-slate-600 font-bold">
-                {selectedContainer.code}
-              </p>
-            </div>
-
-            <p className="text-[11px] text-[var(--text-sub,#B5BDC6)]">
-              A QR-kód beolvasása a Thingor beépített szkennerével közvetlenül megnyitja ezt a tárolót.
-            </p>
-
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 min-h-[38px] rounded-xl bg-[var(--color-primary-blue,#2563EB)] hover:bg-[var(--color-primary-blue,#2563EB)]/90 text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Nyomtatás</span>
-              </button>
-              <button
-                onClick={() => setIsQrModalOpen(false)}
-                className="px-4 py-2 min-h-[38px] rounded-xl bg-[var(--surface-bg,#465362)] text-white font-bold text-xs cursor-pointer"
-              >
-                Bezárás
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <QRCodeModal
+        isOpen={isQrModalOpen && Boolean(selectedContainer)}
+        onClose={() => setIsQrModalOpen(false)}
+        container={
+          selectedContainer
+            ? {
+                id: selectedContainer.id,
+                name: selectedContainer.name,
+                code: selectedContainer.code,
+                locationName: selectedContainer.locationName,
+              }
+            : null
+        }
+        allContainers={containers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          code: c.code,
+          locationName: c.locationName,
+        }))}
+      />
     </div>
   );
 };
