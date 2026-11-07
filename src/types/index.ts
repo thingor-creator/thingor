@@ -2,9 +2,10 @@ export type ItemCondition = 'New' | 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Br
 
 export interface Category {
   id: string;
-  user_id?: string;
+  user_id?: string | null;
   name: string;
   is_custom?: boolean;
+  photo_url?: string | null;
   created_at?: string;
 }
 
@@ -13,6 +14,7 @@ export interface LocationItem {
   user_id?: string;
   parent_id?: string | null;
   name: string;
+  photo_url?: string | null;
   created_at?: string;
   children?: LocationItem[];
 }
@@ -214,6 +216,7 @@ export interface UserPreferences {
   mobile_bottom_bar_slot4?: string;
   theme_id?: string;
   accent_color?: string;
+  category_photos?: Record<string, string>;
 }
 
 export interface UserProfile {

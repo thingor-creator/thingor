@@ -149,7 +149,7 @@ export const Navbar: React.FC = () => {
 
   // Active state helpers for grouped menus
   const isStorageActive = currentView === 'storage' || currentHash === '#storage' || currentHash.startsWith('#storage/');
-  const isThingsActive = (isStorageActive && currentView !== 'storage') || currentView === 'items' || currentView === 'locations' || currentView === 'categories';
+  const isThingsActive = !isStorageActive && (currentView === 'items' || currentView === 'locations' || currentView === 'categories');
   const isModulesActive = !isStorageActive && (currentView === 'repairs' || currentView === 'financing' || currentView === 'household' || currentView === 'lending' || currentView === 'collections' || currentView === 'pantry' || currentView === 'vault');
 
   const renderBottomNavButton = (slotOptionId: string, slotPosition: string) => {
@@ -458,15 +458,6 @@ export const Navbar: React.FC = () => {
                       >
                         <Tag className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
                         <span>{t('categories')}</span>
-                      </button>
-                      <button
-                        onClick={() => handleNav('storage')}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          isStorageActive ? 'bg-[var(--surface-bg,#465362)] text-[var(--color-primary-blue,#2563EB)]' : 'text-[var(--text-secondary,var(--text-sub,#B5BDC6))] hover:bg-[var(--surface-bg,#465362)]/60 hover:text-[var(--text-primary,var(--text-main,#E0E3E6))]'
-                        }`}
-                      >
-                        <Package className="h-4 w-4 text-[var(--color-primary-blue,#2563EB)]" />
-                        <span>{isHu ? 'Fizikai tárolók' : 'Physical storage'}</span>
                       </button>
                     </div>
                   )}

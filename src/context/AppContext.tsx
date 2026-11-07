@@ -147,8 +147,10 @@ interface AppContextType {
   updateItem: (id: string, updates: Partial<Item>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 
-  addCategory: (name: string) => Promise<Category>;
-  addLocation: (name: string, parentId?: string | null) => Promise<LocationItem>;
+  addCategory: (name: string, photoUrl?: string | null) => Promise<Category>;
+  updateCategory: (id: string, updates: { name?: string; photo_url?: string | null }) => Promise<boolean>;
+  addLocation: (name: string, parentId?: string | null, photoUrl?: string | null) => Promise<LocationItem>;
+  updateLocation: (id: string, updates: { name?: string; parent_id?: string | null; photo_url?: string | null }) => Promise<boolean>;
   deleteLocation: (id: string) => Promise<void>;
 
   addDocument: (itemId: string, fileName: string, fileUrl: string, docType: ItemDocument['document_type']) => Promise<ItemDocument>;
@@ -535,10 +537,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.some((c: Category) => c.name === 'Electronics' || c.name === 'Tools')) {
-          return DEFAULT_CATEGORIES;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
-        return parsed;
       } catch (e) {}
     }
     return DEFAULT_CATEGORIES;
@@ -2613,35 +2614,107 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // CRUD Categories (M6 Cloud Integration)
-  const addCategory = async (name: string): Promise<Category> => {
+  const addCategory = async (name: string, photoUrl?: string | null): Promise<Category> => {
+    const trimmed = name.trim();
+    const cleanPhoto = photoUrl && photoUrl.trim() !== '' ? photoUrl.trim() : null;
+
     if (isSupabaseConfigured && supabase && user?.id) {
+      const insertPayload: Record<string, unknown> = {
+        name: trimmed,
+        is_custom: true,
+        user_id: user.id,
+        photo_url: cleanPhoto,
+      };
       const { data, error } = await supabase
         .from('categories')
-        .insert([{ name, is_custom: true, user_id: user.id }])
+        .insert([insertPayload])
         .select()
         .single();
 
       if (!error && data) {
-        setCategories(prev => [...prev, data as Category]);
-        return data as Category;
+        const created = data as Category;
+        setCategories(prev => [...prev, created]);
+        return created;
       }
     }
 
     const newCat: Category = {
       id: 'cat-' + Date.now(),
-      name,
+      name: trimmed,
       is_custom: true,
       user_id: user?.id,
+      photo_url: cleanPhoto,
       created_at: new Date().toISOString(),
     };
     setCategories(prev => [...prev, newCat]);
     return newCat;
   };
 
+  const updateCategory = async (
+    id: string,
+    updates: { name?: string; photo_url?: string | null }
+  ): Promise<boolean> => {
+    const targetCat = categories.find(c => c.id === id);
+    if (!targetCat) return false;
+
+    const nextName = updates.name !== undefined ? updates.name.trim() : targetCat.name;
+    const nextPhoto =
+      updates.photo_url !== undefined
+        ? updates.photo_url && updates.photo_url.trim() !== ''
+          ? updates.photo_url.trim()
+          : null
+        : targetCat.photo_url ?? null;
+
+    const isUserOwnedCustom = Boolean(targetCat.is_custom && targetCat.user_id && isUUID(id));
+    if (isSupabaseConfigured && supabase && user?.id && isUserOwnedCustom) {
+      const dbPayload: Record<string, unknown> = {};
+      if (updates.name !== undefined) dbPayload.name = nextName;
+      if (updates.photo_url !== undefined) dbPayload.photo_url = nextPhoto;
+
+      const { error } = await supabase
+        .from('categories')
+        .update(dbPayload)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to update category in Supabase:', error);
+        return false;
+      }
+    }
+
+    if (updates.photo_url !== undefined) {
+      const currentMap = { ...(userPreferences?.category_photos || {}) };
+      if (nextPhoto) {
+        currentMap[id] = nextPhoto;
+      } else {
+        delete currentMap[id];
+      }
+      await updateUserPreferences({ category_photos: currentMap });
+    }
+
+    setCategories(prev =>
+      prev.map(c =>
+        c.id === id
+          ? {
+              ...c,
+              name: nextName,
+              photo_url: nextPhoto,
+            }
+          : c
+      )
+    );
+    return true;
+  };
+
   // CRUD Locations (M7 Cloud Integration)
-  const addLocation = async (name: string, parentId?: string | null): Promise<LocationItem> => {
+  const addLocation = async (
+    name: string,
+    parentId?: string | null,
+    photoUrl?: string | null
+  ): Promise<LocationItem> => {
     const trimmed = name.trim();
     const safeParentId = parentId && parentId !== '' ? parentId : null;
+    const cleanPhoto = photoUrl && photoUrl.trim() !== '' ? photoUrl.trim() : null;
 
     // Prevent duplicate location creation (case-insensitive check)
     const existing = locations.find(l => l.name.trim().toLowerCase() === trimmed.toLowerCase());
@@ -2650,15 +2723,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     if (isSupabaseConfigured && supabase && user?.id) {
+      const insertPayload: Record<string, unknown> = {
+        name: trimmed,
+        parent_id: safeParentId,
+        user_id: user.id,
+        photo_url: cleanPhoto,
+      };
       const { data, error } = await supabase
         .from('locations')
-        .insert([{ name: trimmed, parent_id: safeParentId, user_id: user.id }])
+        .insert([insertPayload])
         .select()
         .single();
 
       if (!error && data) {
-        setLocations(prev => [...prev, data as LocationItem]);
-        return data as LocationItem;
+        const created = data as LocationItem;
+        setLocations(prev => [...prev, created]);
+        return created;
       }
     }
 
@@ -2667,15 +2747,73 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       name: trimmed,
       parent_id: safeParentId,
       user_id: user?.id,
+      photo_url: cleanPhoto,
       created_at: new Date().toISOString(),
     };
     setLocations(prev => [...prev, newLoc]);
     return newLoc;
   };
 
+  const updateLocation = async (
+    id: string,
+    updates: { name?: string; parent_id?: string | null; photo_url?: string | null }
+  ): Promise<boolean> => {
+    const targetLoc = locations.find(l => l.id === id);
+    if (!targetLoc) return false;
+
+    const nextName = updates.name !== undefined ? updates.name.trim() : targetLoc.name;
+    const nextParentId =
+      updates.parent_id !== undefined
+        ? updates.parent_id && updates.parent_id !== ''
+          ? updates.parent_id
+          : null
+        : targetLoc.parent_id ?? null;
+    const nextPhoto =
+      updates.photo_url !== undefined
+        ? updates.photo_url && updates.photo_url.trim() !== ''
+          ? updates.photo_url.trim()
+          : null
+        : targetLoc.photo_url ?? null;
+
+    if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
+      const dbPayload: Record<string, unknown> = {};
+      if (updates.name !== undefined) dbPayload.name = nextName;
+      if (updates.parent_id !== undefined) dbPayload.parent_id = nextParentId;
+      if (updates.photo_url !== undefined) dbPayload.photo_url = nextPhoto;
+
+      const { error } = await supabase
+        .from('locations')
+        .update(dbPayload)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to update location in Supabase:', error);
+        return false;
+      }
+    }
+
+    setLocations(prev =>
+      prev.map(l =>
+        l.id === id
+          ? {
+              ...l,
+              name: nextName,
+              parent_id: nextParentId,
+              photo_url: nextPhoto,
+            }
+          : l
+      )
+    );
+    return true;
+  };
+
   const deleteLocation = async (id: string): Promise<void> => {
+    const targetLoc = locations.find(l => l.id === id);
     if (isSupabaseConfigured && supabase && user?.id) {
       await supabase.from('locations').delete().eq('id', id).eq('user_id', user.id);
+    }
+    if (targetLoc?.photo_url) {
+      deleteFileFromStorage(targetLoc.photo_url).catch(() => {});
     }
     setLocations(prev => prev.filter(l => l.id !== id && l.parent_id !== id));
   };
@@ -5500,7 +5638,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         refreshDashboardMetrics,
         userPreferences,
         updateUserPreferences,
-        categories,
+        categories: categories.map(c => ({
+          ...c,
+          photo_url: c.photo_url || userPreferences?.category_photos?.[c.id] || null,
+        })),
         locations,
         documents,
 
@@ -5508,7 +5649,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateItem,
         deleteItem,
         addCategory,
+        updateCategory,
         addLocation,
+        updateLocation,
         deleteLocation,
         addDocument,
         deleteDocument,
