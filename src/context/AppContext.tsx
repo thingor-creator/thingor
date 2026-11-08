@@ -571,6 +571,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       'https://media.thingor.com/cc401ba9-dd16-4b9e-be6a-002088d675bf/photos/1794069014303_photo-1628797285815-453c1d0d21e3.webp',
   };
 
+  const getDescendantLocationIds = (rootId: string, allLocs: LocationItem[]): Set<string> => {
+    const descendants = new Set<string>();
+    const queue = [rootId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      descendants.add(current);
+      allLocs
+        .filter(l => l.parent_id === current)
+        .forEach(child => {
+          if (!descendants.has(child.id)) {
+            queue.push(child.id);
+          }
+        });
+    }
+    return descendants;
+  };
+
   const mergeFetchedLocationsWithPhotos = (
     fetched: LocationItem[],
     prevLocations: LocationItem[]
@@ -2812,6 +2829,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ? updates.parent_id
           : null
         : targetLoc.parent_id ?? null;
+
+    // DATA INTEGRITY: Prevent circular hierarchy or location becoming its own parent
+    if (nextParentId) {
+      if (nextParentId === id) {
+        console.error('Cannot set location as its own parent (id === parent_id)');
+        return false;
+      }
+      const descendants = getDescendantLocationIds(id, locations);
+      if (descendants.has(nextParentId)) {
+        console.error('Circular location hierarchy prevented: target cannot be child of itself or its descendant');
+        return false;
+      }
+    }
+
     const currentPrefPhotoMap = (userPreferences as any)?.location_photos as Record<string, string> | undefined;
     const existingResolvedPhoto =
       currentPrefPhotoMap && Object.prototype.hasOwnProperty.call(currentPrefPhotoMap, id)
@@ -2824,29 +2855,63 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           : null
         : existingResolvedPhoto;
 
+    let dbUpdateSuccess = false;
+
     if (isSupabaseConfigured && supabase && user?.id && isUUID(id)) {
       const dbPayload: Record<string, unknown> = {};
       if (updates.name !== undefined) dbPayload.name = nextName;
       if (updates.parent_id !== undefined) dbPayload.parent_id = nextParentId;
       if (updates.photo_url !== undefined) dbPayload.photo_url = nextPhoto;
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('locations')
         .update(dbPayload)
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error && updates.photo_url === undefined) {
-        console.error('Failed to update location in Supabase:', error);
-        return false;
+      if (error) {
+        console.warn('Direct location update in Supabase reported error:', error.message || error);
+        // If error was caused by photo_url or other non-essential field, retry with just name & parent_id
+        if (dbPayload.photo_url !== undefined) {
+          const minimalPayload: Record<string, unknown> = {};
+          if (updates.name !== undefined) minimalPayload.name = nextName;
+          if (updates.parent_id !== undefined) minimalPayload.parent_id = nextParentId;
+          const { data: fbData, error: fbError } = await supabase
+            .from('locations')
+            .update(minimalPayload)
+            .eq('id', id)
+            .select();
+          if (!fbError && fbData && fbData.length > 0) {
+            dbUpdateSuccess = true;
+          }
+        }
+      } else if (data && data.length > 0) {
+        dbUpdateSuccess = true;
       }
     }
 
-    // Persist location_photos in userPreferences (public.profiles.preferences)
-    // so photos on shared household locations also persist across page reloads
+    // Persist location_parents and location_photos in userPreferences (public.profiles.preferences)
+    // so hierarchy changes on both owned and shared household locations persist across page reloads
+    const prefUpdates: Record<string, any> = {};
+
+    if (updates.parent_id !== undefined) {
+      const currentParentMap = { ...(((userPreferences as any)?.location_parents) || {}) };
+      currentParentMap[id] = nextParentId;
+      prefUpdates.location_parents = currentParentMap;
+    }
+
     if (updates.photo_url !== undefined) {
-      const currentMap = { ...((userPreferences as any)?.location_photos || {}) };
-      currentMap[id] = nextPhoto || '';
-      await updateUserPreferences({ location_photos: currentMap } as any);
+      const currentPhotoMap = { ...(((userPreferences as any)?.location_photos) || {}) };
+      if (nextPhoto) {
+        currentPhotoMap[id] = nextPhoto;
+      } else {
+        delete currentPhotoMap[id];
+      }
+      prefUpdates.location_photos = currentPhotoMap;
+    }
+
+    if (Object.keys(prefUpdates).length > 0) {
+      await updateUserPreferences(prefUpdates as any);
     }
 
     setLocations(prev =>
@@ -2872,6 +2937,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (targetLoc?.photo_url) {
       deleteFileFromStorage(targetLoc.photo_url).catch(() => {});
     }
+
+    const currentParents = (userPreferences as any)?.location_parents;
+    const currentPhotos = (userPreferences as any)?.location_photos;
+    if (
+      (currentParents && Object.prototype.hasOwnProperty.call(currentParents, id)) ||
+      (currentPhotos && Object.prototype.hasOwnProperty.call(currentPhotos, id))
+    ) {
+      const nextParents = { ...(currentParents || {}) };
+      const nextPhotos = { ...(currentPhotos || {}) };
+      delete nextParents[id];
+      delete nextPhotos[id];
+      updateUserPreferences({ location_parents: nextParents, location_photos: nextPhotos } as any).catch(() => {});
+    }
+
     setLocations(prev => prev.filter(l => l.id !== id && l.parent_id !== id));
   };
 
@@ -5673,13 +5752,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const resolvedLocations = useMemo(() => {
     const locPhotoMap = (userPreferences as any)?.location_photos as Record<string, string> | undefined;
+    const locParentMap = (userPreferences as any)?.location_parents as Record<string, string | null> | undefined;
+
     return locations.map(l => {
       const hasPrefOverride = Boolean(
         locPhotoMap && Object.prototype.hasOwnProperty.call(locPhotoMap, l.id)
       );
       const prefPhoto = hasPrefOverride ? (locPhotoMap![l.id] || null) : undefined;
+
+      const hasParentOverride = Boolean(
+        locParentMap && Object.prototype.hasOwnProperty.call(locParentMap, l.id)
+      );
+      const prefParent = hasParentOverride ? (locParentMap![l.id] ?? null) : undefined;
+
       return {
         ...l,
+        parent_id: prefParent !== undefined ? prefParent : l.parent_id,
         photo_url:
           prefPhoto !== undefined
             ? prefPhoto

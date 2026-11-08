@@ -231,12 +231,28 @@ export const LocationsView: React.FC = () => {
         nextPhotoUrl = newlyUploadedUrl;
       }
 
-      // 2. Save updated location to DB
-      const ok = await updateLocation(editingLocation.id, {
+      // 2. Validate hierarchy and save updated location to DB
+      if (editParentId) {
+        if (editParentId === editingLocation.id || getDescendantIds(editingLocation.id).has(editParentId)) {
+          setEditError(
+            isHu
+              ? 'Körkörös hierarchia nem hozható létre! A helyszín nem lehet saját maga vagy saját leszármazottja szülője.'
+              : 'Circular hierarchy cannot be created! A location cannot be a child of itself or its descendants.'
+          );
+          setIsSavingEdit(false);
+          return;
+        }
+      }
+
+      const updatesPayload: { name: string; parent_id: string | null; photo_url?: string | null } = {
         name: trimmedName,
-        parent_id: editParentId || null,
-        photo_url: nextPhotoUrl,
-      });
+        parent_id: editParentId && editParentId !== '' ? editParentId : null,
+      };
+      if (editPhotoFile || nextPhotoUrl !== oldPhotoUrl) {
+        updatesPayload.photo_url = nextPhotoUrl;
+      }
+
+      const ok = await updateLocation(editingLocation.id, updatesPayload);
 
       if (!ok) {
         if (newlyUploadedUrl) {
