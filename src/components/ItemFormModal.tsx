@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import type { ItemCondition, ItemStatus, ItemOwnershipScope } from '../types';
 import {
@@ -55,12 +55,21 @@ export const ItemFormModal: React.FC = () => {
   const [newLocName, setNewLocName] = useState('');
   const [showAddLoc, setShowAddLoc] = useState(false);
 
+  // Hierarchically sorted locations grouped by their full tree path
+  const sortedLocations = useMemo(() => {
+    return [...locations].sort((a, b) => {
+      const pathA = getLocationPath(a.id);
+      const pathB = getLocationPath(b.id);
+      return pathA.localeCompare(pathB, undefined, { sensitivity: 'base' });
+    });
+  }, [locations, getLocationPath]);
+
   useEffect(() => {
     if (editingItem) {
       setName(editingItem.name || '');
       setDescription(editingItem.description || '');
       setCategoryId(editingItem.category_id || (categories[0]?.id || ''));
-      setLocationId(editingItem.location_id || (locations[0]?.id || ''));
+      setLocationId(editingItem.location_id || (sortedLocations[0]?.id || locations[0]?.id || ''));
       setPhotoUrl(editingItem.photo_url || '');
       setAdditionalPhotos(editingItem.additional_photos || []);
       setPurchaseDate(editingItem.purchase_date || '');
@@ -78,7 +87,7 @@ export const ItemFormModal: React.FC = () => {
       setName('');
       setDescription('');
       setCategoryId(categories[0]?.id || '');
-      setLocationId(locations[0]?.id || '');
+      setLocationId(sortedLocations[0]?.id || locations[0]?.id || '');
       setPhotoUrl('');
       setAdditionalPhotos([]);
       setPurchaseDate('');
@@ -92,7 +101,7 @@ export const ItemFormModal: React.FC = () => {
       setWarrantyEnd('');
       setNotes('');
     }
-  }, [editingItem, isAddEditItemModalOpen, categories, locations]);
+  }, [editingItem, isAddEditItemModalOpen, categories, locations, sortedLocations]);
 
   if (!isAddEditItemModalOpen) return null;
 
@@ -267,7 +276,7 @@ export const ItemFormModal: React.FC = () => {
                     onChange={(e) => setLocationId(e.target.value)}
                     className="w-full p-2.5 rounded-xl border border-[var(--border-color,#56616D)] bg-[var(--surface-bg,#465362)] text-[var(--text-main,#E0E3E6)] text-sm focus:border-[var(--color-primary-blue,#2563EB)] focus:outline-none transition-colors"
                   >
-                    {locations.map(loc => (
+                    {sortedLocations.map(loc => (
                       <option key={loc.id} value={loc.id}>
                         {getLocationPath(loc.id)}
                       </option>

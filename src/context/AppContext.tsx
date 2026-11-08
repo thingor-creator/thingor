@@ -588,24 +588,69 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return descendants;
   };
 
+
+  const resolvedLocations = useMemo(() => {
+    const locPhotoMap = (userPreferences as any)?.location_photos as Record<string, string> | undefined;
+    const locParentMap = (userPreferences as any)?.location_parents as Record<string, string | null> | undefined;
+
+    return locations.map(l => {
+      const hasPrefOverride = Boolean(
+        locPhotoMap && Object.prototype.hasOwnProperty.call(locPhotoMap, l.id)
+      );
+      const prefPhoto = hasPrefOverride ? (locPhotoMap![l.id] || null) : undefined;
+
+      const hasParentOverride = Boolean(
+        locParentMap && Object.prototype.hasOwnProperty.call(locParentMap, l.id)
+      );
+      const prefParent = hasParentOverride ? (locParentMap![l.id] ?? null) : undefined;
+
+      return {
+        ...l,
+        parent_id: prefParent !== undefined ? prefParent : l.parent_id,
+        photo_url:
+          prefPhoto !== undefined
+            ? prefPhoto
+            : l.photo_url || RECOVERED_LOCATION_PHOTOS[l.id] || null,
+      };
+    });
+  }, [locations, userPreferences]);
+
   const mergeFetchedLocationsWithPhotos = (
     fetched: LocationItem[],
     prevLocations: LocationItem[]
   ): LocationItem[] => {
     const prevPhotoMap = new Map<string, string | null | undefined>();
+    const prevParentMap = new Map<string, string | null | undefined>();
     for (const pl of prevLocations) {
-      if (pl && pl.id && pl.photo_url) {
-        prevPhotoMap.set(pl.id, pl.photo_url);
+      if (pl && pl.id) {
+        if (pl.photo_url) prevPhotoMap.set(pl.id, pl.photo_url);
+        if (pl.parent_id !== undefined) prevParentMap.set(pl.id, pl.parent_id);
       }
     }
-    return fetched.map(loc => ({
-      ...loc,
-      photo_url:
-        loc.photo_url ||
-        prevPhotoMap.get(loc.id) ||
-        RECOVERED_LOCATION_PHOTOS[loc.id] ||
-        null,
-    }));
+    const prefParentMap = (userPreferences as any)?.location_parents as Record<string, string | null> | undefined;
+    const prefPhotoMap = (userPreferences as any)?.location_photos as Record<string, string> | undefined;
+
+    return fetched.map(loc => {
+      const hasPrefParent = Boolean(
+        prefParentMap && Object.prototype.hasOwnProperty.call(prefParentMap, loc.id)
+      );
+      const parent_id = hasPrefParent
+        ? (prefParentMap![loc.id] ?? null)
+        : (loc.parent_id !== undefined && loc.parent_id !== null ? loc.parent_id : (prevParentMap.get(loc.id) ?? null));
+
+      const hasPrefPhoto = Boolean(
+        prefPhotoMap && Object.prototype.hasOwnProperty.call(prefPhotoMap, loc.id)
+      );
+      const photo_url = hasPrefPhoto
+        ? (prefPhotoMap![loc.id] || null)
+        : (loc.photo_url || prevPhotoMap.get(loc.id) || RECOVERED_LOCATION_PHOTOS[loc.id] || null);
+
+      return {
+        ...loc,
+        parent_id,
+        photo_url,
+      };
+    });
   };
 
   const [documents, setDocuments] = useState<ItemDocument[]>(() => {
@@ -1491,11 +1536,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     if (user) {
-      localStorage.setItem('thingor_locations', JSON.stringify(locations));
+      localStorage.setItem('thingor_locations', JSON.stringify(resolvedLocations));
     } else {
       localStorage.removeItem('thingor_locations');
     }
-  }, [locations, user]);
+  }, [resolvedLocations, user]);
 
   useEffect(() => {
     if (user) {
@@ -2444,7 +2489,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Helper location path builder
   const getLocationPath = useCallback((locationId: string): string => {
-    const locMap = new Map(locations.map(l => [l.id, l]));
+    const locMap = new Map(resolvedLocations.map(l => [l.id, l]));
     const parts: string[] = [];
     const visited = new Set<string>();
     let currentId: string | null | undefined = locationId;
@@ -2457,7 +2502,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     return parts.length > 0 ? parts.join(' → ') : (language === 'hu' ? 'Nincs megadva' : 'Unspecified');
-  }, [locations, language]);
+  }, [resolvedLocations, language]);
 
   const getCategoryName = useCallback((categoryId: string): string => {
     const cat = categories.find(c => c.id === categoryId);
@@ -2773,7 +2818,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const cleanPhoto = photoUrl && photoUrl.trim() !== '' ? photoUrl.trim() : null;
 
     // Prevent duplicate location creation (case-insensitive check)
-    const existing = locations.find(l => l.name.trim().toLowerCase() === trimmed.toLowerCase());
+    const existing = resolvedLocations.find(l => l.name.trim().toLowerCase() === trimmed.toLowerCase());
     if (existing) {
       return existing;
     }
@@ -2819,7 +2864,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     id: string,
     updates: { name?: string; parent_id?: string | null; photo_url?: string | null }
   ): Promise<boolean> => {
-    const targetLoc = locations.find(l => l.id === id);
+    const targetLoc = resolvedLocations.find(l => l.id === id);
     if (!targetLoc) return false;
 
     const nextName = updates.name !== undefined ? updates.name.trim() : targetLoc.name;
@@ -2836,7 +2881,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.error('Cannot set location as its own parent (id === parent_id)');
         return false;
       }
-      const descendants = getDescendantLocationIds(id, locations);
+      const descendants = getDescendantLocationIds(id, resolvedLocations);
       if (descendants.has(nextParentId)) {
         console.error('Circular location hierarchy prevented: target cannot be child of itself or its descendant');
         return false;
@@ -5750,31 +5795,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [user?.id, userPreferences]);
 
-  const resolvedLocations = useMemo(() => {
-    const locPhotoMap = (userPreferences as any)?.location_photos as Record<string, string> | undefined;
-    const locParentMap = (userPreferences as any)?.location_parents as Record<string, string | null> | undefined;
-
-    return locations.map(l => {
-      const hasPrefOverride = Boolean(
-        locPhotoMap && Object.prototype.hasOwnProperty.call(locPhotoMap, l.id)
-      );
-      const prefPhoto = hasPrefOverride ? (locPhotoMap![l.id] || null) : undefined;
-
-      const hasParentOverride = Boolean(
-        locParentMap && Object.prototype.hasOwnProperty.call(locParentMap, l.id)
-      );
-      const prefParent = hasParentOverride ? (locParentMap![l.id] ?? null) : undefined;
-
-      return {
-        ...l,
-        parent_id: prefParent !== undefined ? prefParent : l.parent_id,
-        photo_url:
-          prefPhoto !== undefined
-            ? prefPhoto
-            : l.photo_url || RECOVERED_LOCATION_PHOTOS[l.id] || null,
-      };
-    });
-  }, [locations, userPreferences]);
 
   return (
     <AppContext.Provider
